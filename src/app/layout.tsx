@@ -1,9 +1,13 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
-// ── Optimized Google Fonts via next/font ────────────────────────────────
+// Fonts
 import { Almarai, Open_Sans, Roboto } from "next/font/google";
+
+// ── NEW: Import the client-side Providers ────────────────────────────────
+import { Providers } from "@/components/providers/Providers";
 
 const almarai = Almarai({
   subsets: ["latin"],
@@ -49,7 +53,7 @@ export default function RootLayout({
         {/* Replace YOUR_KIT_ID with your actual kit ID from fonts.adobe.com */}
         <link rel="stylesheet" href="https://use.typekit.net/YOUR_KIT_ID.css" />
 
-        {/* Preconnect to Google APIs (only needed for icons now) */}
+        {/* Preconnect to Google APIs */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -57,7 +61,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
 
-        {/* Material Icons Round & Symbols Outlined */}
+        {/* Material Icons */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
@@ -69,9 +73,12 @@ export default function RootLayout({
       </head>
 
       <body className="antialiased">
-        {children}
+        {/* ── Wrap everything with Providers ── */}
+        <Providers>
+          {children}
+        </Providers>
 
-        {/* Global toast container */}
+        {/* Global toast container — stays outside Providers is also fine */}
         <Toaster
           position="bottom-right"
           richColors

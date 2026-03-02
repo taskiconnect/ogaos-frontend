@@ -1,6 +1,13 @@
 // src/lib/api/auth.ts
 import api from './client'
-import { RegisterRequest, LoginRequest, AuthResponse } from './types'
+import {
+  RegisterRequest,
+  LoginRequest,
+  AuthResponse,
+  MeResponse,
+  StatesResponse,
+  LGAsResponse,
+} from './types'
 
 export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {
   const res = await api.post<AuthResponse>('/auth/register', data)
@@ -21,9 +28,30 @@ export const logoutUser = async (): Promise<void> => {
   await api.post('/auth/logout')
 }
 
-export const verifyEmail = async (token: string): Promise<{ message: string }> => {
-  const res = await api.get<{ message: string }>('/auth/verify', {
+export const verifyEmail = async (token: string): Promise<{ success: boolean; message: string }> => {
+  const res = await api.get<{ success: boolean; message: string }>('/auth/verify', {
     params: { token },
   })
   return res.data
+}
+
+export const getMe = async (): Promise<MeResponse> => {
+  const res = await api.get<{ success: boolean; data: MeResponse }>('/auth/me')
+  return res.data.data
+}
+
+// ────────────────────────────────────────────────
+// Location helpers (used during signup)
+// ────────────────────────────────────────────────
+
+export const getNigeriaStates = async (): Promise<string[]> => {
+  const res = await api.get<StatesResponse>('/locations/states')
+  return res.data.data
+}
+
+export const getNigeriaLGAs = async (state: string): Promise<string[]> => {
+  const res = await api.get<LGAsResponse>('/locations/lgas', {
+    params: { state },
+  })
+  return res.data.data
 }
