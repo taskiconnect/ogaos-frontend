@@ -1,58 +1,120 @@
-// components/dashboard/OutstandingDebts.tsx
-'use client';
+'use client'
 
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { WhatsApp, AlertCircle } from 'lucide-react'; // or use MessageCircle
+import Link from 'next/link'
+import { AlertTriangle, ArrowRight } from 'lucide-react'
+import type { Debt } from '@/lib/api/types'
 
-const mockDebts = [
-  { id: 1, customer: 'Mama Ngozi Provisions', amount: 42500, due: '2 days', phone: '08031234567' },
-  { id: 2, customer: 'Chukwudi Electricals', amount: 18500, due: '5 days', phone: '09087654321' },
-  { id: 3, customer: 'Aisha Fashion Store', amount: 67000, due: 'Today', phone: '08123456789' },
-];
+function fmt(kobo: number) {
+  return `₦${Math.round(kobo / 100).toLocaleString('en-NG')}`
+}
 
-export default function OutstandingDebts() {
-  const sendReminder = (debt: any) => {
-    toast.success(`WhatsApp reminder sent to ${debt.customer}`);
-    // In real app: call API with debt.phone + template
-  };
+function daysOverdue(dueDateStr: string | null): number {
+  if (!dueDateStr) return 0
+  const diff = Date.now() - new Date(dueDateStr).getTime()
+  return Math.max(0, Math.floor(diff / 86400000))
+}
+
+function urgencyColor(days: number) {
+  if (days >= 21) return 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20'
+  if (days >= 7)  return 'text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20'
+  return                  'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+}
+
+function partyName(debt: Debt): string {
+  if (debt.customer) return `${debt.customer.first_name} ${debt.customer.last_name}`.trim()
+  return debt.supplier_name ?? 'Unknown'
+}
+
+interface Props {
+  debts:     Debt[]
+  isLoading: boolean
+}
+
+export default function OutstandingDebts({ debts, isLoading }: Props) {
+  const total = debts.reduce((s, d) => s + d.amount_due, 0)
 
   return (
-    <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-3xl p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-400" />
+    <div className="rounded-2xl border border-dash-border bg-dash-surface p-6 h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 text-orange-500 dark:text-orange-400" />
+          </div>
           <div>
-            <div className="font-semibold">Outstanding Debts</div>
-            <div className="text-xs text-gray-400">₦128,000 total • 3 customers</div>
+            <h3 className="font-semibold text-foreground text-sm">Outstanding Debts</h3>
+            <p className="text-[11px] text-muted-foreground">
+              {isLoading ? '…' : `${debts.length} overdue`}
+            </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" className="border-white/20 text-xs">
-          View all
-        </Button>
+        {isLoading
+          ? <div className="h-5 w-20 rounded bg-foreground/10 animate-pulse" />
+          : <p className="text-lg font-bold text-red-600 dark:text-red-400">{fmt(total)}</p>
+        }
       </div>
 
-      <div className="space-y-4">
-        {mockDebts.map((debt) => (
-          <div key={debt.id} className="flex items-center justify-between bg-white/5 rounded-2xl p-5 group">
-            <div>
-              <div className="font-medium text-sm">{debt.customer}</div>
-              <div className="text-xs text-gray-400">Due {debt.due}</div>
-            </div>
-            <div className="text-right">
-              <div className="font-semibold text-lg">₦{debt.amount.toLocaleString()}</div>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="text-primary text-xs hover:bg-primary/10 mt-1"
-                onClick={() => sendReminder(debt)}
+      {/* Loading skeleton */}
+      {isLoading && (
+        <div className="space-y-2 flex-1">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-14 rounded-xl bg-foreground/5 animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && debts.length === 0 && (
+        <div className="flex-1 flex flex-col items-center justify-center py-10 text-center">
+          <p className="text-sm font-medium text-foreground mb-1">All clear!</p>
+          <p className="text-xs text-muted-foreground">No outstanding debts right now</p>
+        </div>
+      )}
+
+      {/* Real data */}
+      {!isLoading && debts.length > 0 && (
+        <div className="space-y-2 flex-1">
+          {debts.map(debt => {
+            const days = daysOverdue(debt.due_date)
+            const name = partyName(debt)
+            return (
+              <div
+                key={debt.id}
+                className="flex items-center justify-between py-3 px-3 rounded-xl bg-dash-subtle border border-dash-border hover:bg-dash-hover transition-all"
               >
-                Send WhatsApp Reminder
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
+                  >
+                    {name[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{name}</p>
+                    <span className="text-[10px] text-muted-foreground capitalize">{debt.direction}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-3">
+                  {days > 0 && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${urgencyColor(days)}`}>
+                      {days}d
+                    </span>
+                  )}
+                  <span className="text-sm font-semibold text-foreground">{fmt(debt.amount_due)}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Footer */}
+      <Link
+        href="/dashboard/debts"
+        className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-dash-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-dash-hover transition-all"
+      >
+        View all debts <ArrowRight className="w-3.5 h-3.5" />
+      </Link>
     </div>
-  );
+  )
 }

@@ -1,43 +1,86 @@
-// components/dashboard/DashboardHeader.tsx
-'use client';
+'use client'
 
-import { Search, Bell, ChevronDown } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react'
+import { useTheme }     from 'next-themes'
+import { Sun, Moon, Bell, Search } from 'lucide-react'
+import { usePathname }  from 'next/navigation'
+import { useAuthStore } from '@/stores/authStore'
+import { getInitials }  from '@/lib/utils'
+
+const ROUTE_LABELS: Record<string, string> = {
+  '/dashboard':             'Dashboard',
+  '/dashboard/sales':       'Sales',
+  '/dashboard/invoices':    'Invoices',
+  '/dashboard/expenses':    'Expenses',
+  '/dashboard/debts':       'Debts',
+  '/dashboard/products':    'Products',
+  '/dashboard/digital':     'Digital Store',
+  '/dashboard/stores':      'Stores',
+  '/dashboard/customers':   'Customers',
+  '/dashboard/recruitment': 'Recruitment',
+  '/dashboard/settings':    'Settings',
+}
 
 export default function DashboardHeader() {
-  const { user } = useAuthStore();
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  const pathname = usePathname()
+  const { user } = useAuthStore()
+
+  const pageTitle   = ROUTE_LABELS[pathname] ?? 'Dashboard'
+
+  // All from authStore — already populated by LoginForm → getMe() → setUser()
+  const fullName    = user ? `${user.first_name} ${user.last_name}`.trim() : ''
+  const businessName = user?.business?.name ?? ''
+  const isDark      = resolvedTheme === 'dark'
 
   return (
-    <header className="h-20 border-b border-white/10 bg-[rgba(255,255,255,0.01)] backdrop-blur-xl px-8 flex items-center justify-between lg:pl-[288px] z-40">
-      <div className="flex-1 max-w-md relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-        <Input
-          placeholder="Search transactions, customers, debts..."
-          className="pl-11 bg-white/5 border-white/10 h-11 text-sm placeholder-gray-500 focus:border-primary"
-        />
+    <header className="sticky top-0 z-10 h-16 flex items-center gap-4 px-6 lg:px-10 border-b border-dash-border bg-dash-subtle/80 backdrop-blur-md">
+
+      {/* Page title */}
+      <div className="flex-1 min-w-0">
+        <h1 className="text-base font-semibold text-foreground truncate">{pageTitle}</h1>
+        {businessName && (
+          <p className="text-[11px] text-muted-foreground truncate hidden sm:block">{businessName}</p>
+        )}
       </div>
 
-      <div className="flex items-center gap-6">
-        {/* Notifications */}
-        <div className="relative cursor-pointer">
-          <Bell className="w-5 h-5 text-gray-400 hover:text-white transition-colors" />
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] font-bold">3</div>
-        </div>
+      {/* Search */}
+      <div className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-xl bg-dash-subtle border border-dash-border text-muted-foreground text-sm w-52 cursor-text hover:border-border transition-colors">
+        <Search className="w-3.5 h-3.5 shrink-0" />
+        <span className="text-xs">Search…</span>
+        <span className="ml-auto text-[10px] border border-dash-border rounded px-1.5 py-0.5">⌘K</span>
+      </div>
 
-        {/* User */}
-        <div className="flex items-center gap-3 cursor-pointer group">
-          <div className="w-9 h-9 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/20">
-            {user?.name ? user.name[0].toUpperCase() : 'O'}
-          </div>
-          <div className="hidden md:block">
-            <div className="font-medium text-sm leading-none">Oga {user?.name?.split(' ')[0] || 'Chinedu'}</div>
-            <div className="text-xs text-gray-500">Business Owner</div>
-          </div>
-          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-white transition" />
-        </div>
+      {/* Notifications */}
+      <button
+        className="relative w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-dash-hover transition-all"
+        aria-label="Notifications"
+      >
+        <Bell className="w-4 h-4" />
+        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary ring-2 ring-dash-subtle" />
+      </button>
+
+      {/* Theme toggle */}
+      <button
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        disabled={!mounted}
+        className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-dash-hover transition-all disabled:opacity-0"
+        aria-label="Toggle theme"
+      >
+        {mounted && (isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />)}
+      </button>
+
+      {/* Avatar — initials from real name, tooltip shows full name + role */}
+      <div
+        className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold text-white cursor-pointer ring-2 ring-primary/30 hover:ring-primary/60 transition-all shrink-0"
+        style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
+        title={fullName ? `${fullName}${user?.role ? ` · ${user.role}` : ''}` : 'Profile'}
+      >
+        {fullName ? getInitials(fullName) : '?'}
       </div>
     </header>
-  );
+  )
 }

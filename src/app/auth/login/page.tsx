@@ -1,9 +1,8 @@
 // src/app/auth/login/page.tsx
-// NO 'use client' here – keep it as Server Component
 
 import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
-import AnimatedLoginWrapper from './AnimatedLoginWrapper'   // ← new file
+import AnimatedLoginWrapper from './AnimatedLoginWrapper'   
 
 export default function LoginPage() {
   return (

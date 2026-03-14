@@ -1,91 +1,277 @@
-// components/dashboard/Sidebar.tsx
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, CreditCard, AlertTriangle, Users, Wallet, UserCheck, Settings, LogOut, Menu } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  LayoutDashboard, ShoppingCart, Receipt, TrendingDown,
+  Landmark, Package, Users, Briefcase, ShoppingBag,
+  Store, Settings, LogOut, Zap, ChevronLeft, ChevronRight, X, Menu,
+} from 'lucide-react'
+import { cn, getInitials } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
+import { logoutUser } from '@/lib/api/auth'
+import { toast } from 'sonner'
 
-const navItems = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { href: '/ledger', label: 'Smart Ledger', icon: CreditCard },
-  { href: '/debts', label: 'Debts & Reminders', icon: AlertTriangle },
-  { href: '/staff', label: 'Staff Manager', icon: Users },
-  { href: '/payments', label: 'Payments', icon: Wallet },
-  { href: '/identity', label: 'Professional Identity', icon: UserCheck },
-  { href: '/settings', label: 'Settings', icon: Settings },
-];
+const NAV_GROUPS = [
+  {
+    label: 'Overview',
+    items: [{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
+  },
+  {
+    label: 'Finance',
+    items: [
+      { label: 'Sales',    href: '/dashboard/sales',    icon: ShoppingCart },
+      { label: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
+      { label: 'Expenses', href: '/dashboard/expenses', icon: TrendingDown },
+      { label: 'Debts',    href: '/dashboard/debts',    icon: Landmark },
+    ],
+  },
+  {
+    label: 'Catalogue',
+    items: [
+      { label: 'Products',      href: '/dashboard/products', icon: Package },
+      { label: 'Digital Store', href: '/dashboard/digital',  icon: ShoppingBag },
+      { label: 'Stores',        href: '/dashboard/stores',   icon: Store },
+    ],
+  },
+  {
+    label: 'People',
+    items: [
+      { label: 'Customers',   href: '/dashboard/customers',   icon: Users },
+      { label: 'Recruitment', href: '/dashboard/recruitment', icon: Briefcase },
+    ],
+  },
+  {
+    label: 'System',
+    items: [{ label: 'Settings', href: '/dashboard/settings', icon: Settings }],
+  },
+]
 
-export default function Sidebar() {
-  const pathname = usePathname();
-  const { user, logout } = useAuthStore(); // logout can be added to store if needed
+interface NavItemProps {
+  href: string
+  icon: React.ElementType
+  label: string
+  collapsed: boolean
+  active: boolean
+}
+
+function NavItem({ href, icon: Icon, label, collapsed, active }: NavItemProps) {
+  return (
+    <Link
+      href={href}
+      title={collapsed ? label : undefined}
+      className={cn(
+        'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group',
+        active
+          ? 'bg-primary/15 text-primary border border-primary/25'
+          : 'text-muted-foreground hover:text-foreground hover:bg-dash-hover'
+      )}
+    >
+      {active && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full" />
+      )}
+      <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary' : '')} />
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.span
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            exit={{ opacity: 0, width: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden whitespace-nowrap"
+          >
+            {label}
+          </motion.span>
+        )}
+      </AnimatePresence>
+      {/* Tooltip when collapsed */}
+      {collapsed && (
+        <span className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 rounded-lg bg-popover border border-border text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl text-popover-foreground">
+          {label}
+        </span>
+      )}
+    </Link>
+  )
+}
+
+function SidebarInner({ collapsed, onCollapse }: { collapsed: boolean; onCollapse?: () => void }) {
+  const pathname = usePathname()
+  const { user, clearAuth } = useAuthStore()
+  const router = useRouter()
+
+  const isActive = (href: string) =>
+    href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+
+  const handleLogout = async () => {
+    try { await logoutUser() } catch {}
+    clearAuth()
+    toast.success('Logged out')
+    router.push('/auth/login')
+  }
+
+  const displayName = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : 'User'
 
   return (
-    <div className="w-72 border-r border-white/10 bg-[rgba(255,255,255,0.015)] backdrop-blur-2xl flex flex-col h-screen fixed left-0 top-0 z-50 hidden lg:flex">
-      {/* Logo */}
-      <div className="p-8 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-9 h-9 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(0,43,157,0.15)', border: '1px solid rgba(0,43,157,0.3)' }}
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Logo row */}
+      <div className={cn(
+        'flex items-center h-16 px-4 border-b border-dash-border shrink-0',
+        collapsed ? 'justify-center' : 'justify-between'
+      )}>
+        {!collapsed && (
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
+              <Zap className="w-4 h-4 text-white" fill="white" />
+            </div>
+            <span className="font-bold text-base tracking-tight text-foreground">
+              Oga<span className="text-primary">OS</span>
+            </span>
+          </Link>
+        )}
+        {collapsed && (
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
+            <Zap className="w-4 h-4 text-white" fill="white" />
+          </div>
+        )}
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            className="hidden md:flex w-6 h-6 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-dash-hover transition-all"
           >
-            <span className="text-2xl font-black text-primary tracking-tighter">O</span>
-          </div>
-          <div className="leading-none">
-            <div className="font-bold text-2xl tracking-[-0.02em] text-white">OgaOS</div>
-            <div className="text-[10px] text-gray-500 -mt-0.5">TaskiConnect</div>
-          </div>
-        </div>
+            {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+          </button>
+        )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`group flex items-center gap-3.5 px-5 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? 'bg-white/10 text-white shadow-inner'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Icon className="w-4 h-4 transition-transform group-hover:scale-110" />
-              {item.label}
-            </Link>
-          );
-        })}
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5 scrollbar-none">
+        {NAV_GROUPS.map(group => (
+          <div key={group.label}>
+            <AnimatePresence initial={false}>
+              {!collapsed && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="px-3 mb-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.12em]"
+                >
+                  {group.label}
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <div className="space-y-0.5">
+              {group.items.map(item => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.label}
+                  collapsed={collapsed}
+                  active={isActive(item.href)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Plan & Logout */}
-      <div className="p-6 border-t border-white/10 mt-auto">
-        <div className="rounded-2xl bg-white/5 p-5 text-xs border border-white/10">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-gray-400">Starter Plan</span>
-            <span className="px-2.5 py-0.5 bg-primary/20 text-primary text-[10px] rounded font-medium">Active</span>
+      {/* User + Logout */}
+      <div className="shrink-0 border-t border-dash-border p-2 space-y-1">
+        {!collapsed && (
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+              style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
+            >
+              {getInitials(displayName)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+              <p className="text-xs text-muted-foreground truncate capitalize">{user?.role ?? 'owner'}</p>
+            </div>
           </div>
-          <div className="font-semibold text-white">₦1,200 / month</div>
-          <div className="text-gray-500 text-xs mt-0.5">2 staff • 4 modules</div>
-          <Button size="sm" variant="outline" className="mt-4 w-full text-xs border-white/20 hover:bg-white/10">
-            Upgrade to Pro
-          </Button>
-        </div>
-
+        )}
         <button
-          onClick={() => {
-            logout?.();
-            // router.push('/auth/login') if needed
-          }}
-          className="mt-6 flex w-full items-center justify-center gap-2 py-3 text-sm text-red-400/90 hover:text-red-400 hover:bg-white/5 rounded-xl transition-all"
+          onClick={handleLogout}
+          className={cn(
+            'flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-red-500 hover:bg-red-500/8 transition-all',
+            collapsed ? 'justify-center' : ''
+          )}
+          title={collapsed ? 'Log out' : undefined}
         >
-          <LogOut className="w-4 h-4" />
-          Sign out
+          <LogOut className="w-4 h-4 shrink-0" />
+          <AnimatePresence initial={false}>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden whitespace-nowrap"
+              >
+                Log out
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
       </div>
     </div>
-  );
+  )
+}
+
+export default function Sidebar() {
+  const [collapsed,   setCollapsed]   = useState(false)
+  const [mobileOpen,  setMobileOpen]  = useState(false)
+
+  return (
+    <>
+      {/* Mobile trigger */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-30 w-9 h-9 flex items-center justify-center rounded-xl bg-dash-surface border border-dash-border text-muted-foreground hover:text-foreground transition-all"
+        aria-label="Open menu"
+      >
+        <Menu className="w-4 h-4" />
+      </button>
+
+      {/* Desktop sidebar */}
+      <motion.aside
+        animate={{ width: collapsed ? 72 : 288 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 z-20 bg-dash-surface border-r border-dash-border overflow-hidden"
+      >
+        <SidebarInner collapsed={collapsed} onCollapse={() => setCollapsed(c => !c)} />
+      </motion.aside>
+
+      {/* Mobile overlay + drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="lg:hidden fixed inset-0 bg-black/70 z-40 backdrop-blur-sm"
+              onClick={() => setMobileOpen(false)}
+            />
+            <motion.aside
+              initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:hidden fixed top-0 left-0 bottom-0 w-72 z-50 bg-dash-surface border-r border-dash-border"
+            >
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-dash-hover transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <SidebarInner collapsed={false} />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  )
 }

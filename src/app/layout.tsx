@@ -1,84 +1,60 @@
 // src/app/layout.tsx
-import type { Metadata } from "next";
-import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
-
-// Fonts
-import { Almarai, Open_Sans, Roboto } from "next/font/google";
-
-// ── NEW: Import the client-side Providers ────────────────────────────────
-import { Providers } from "@/components/providers/Providers";
+import type { Metadata } from 'next'
+import './globals.css'
+import { Toaster } from '@/components/ui/sonner'
+import { Almarai, Open_Sans, Roboto } from 'next/font/google'
+import { Providers } from '@/components/providers/Providers'
 
 const almarai = Almarai({
-  subsets: ["latin"],
-  weight: ["300", "400", "700", "800"],
-  variable: "--font-almarai",
-  display: "swap",
-});
+  subsets: ['latin'],
+  weight: ['300', '400', '700', '800'],
+  variable: '--font-almarai',
+  display: 'swap',
+})
 
 const openSans = Open_Sans({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
-  variable: "--font-open-sans",
-  display: "swap",
-});
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  style: ['normal', 'italic'],
+  variable: '--font-open-sans',
+  display: 'swap',
+})
 
 const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["100", "300", "400", "500", "700", "900"],
-  style: ["normal", "italic"],
-  variable: "--font-roboto",
-  display: "swap",
-});
+  subsets: ['latin'],
+  weight: ['100', '300', '400', '500', '700', '900'],
+  style: ['normal', 'italic'],
+  variable: '--font-roboto',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: "OgaOS – Business Operating System for Nigerian SMEs",
+  title: 'OgaOS – Business Operating System for Nigerian SMEs',
   description:
-    "Track money, manage debts, staff, payments, and more — simple, WhatsApp-integrated, built for traders and shop owners.",
-};
+    'Track money, manage debts, staff, payments, and more — simple, built for traders and shop owners.',
+}
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
+    /*
+     * suppressHydrationWarning is REQUIRED here.
+     * next-themes adds the "dark" class to <html> on the client after SSR,
+     * which causes a React hydration mismatch warning without this prop.
+     */
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${almarai.variable} ${openSans.variable} ${roboto.variable}`}
     >
       <head>
-        {/* Adobe Fonts / Typekit – haboro-soft */}
-        {/* Replace YOUR_KIT_ID with your actual kit ID from fonts.adobe.com */}
         <link rel="stylesheet" href="https://use.typekit.net/YOUR_KIT_ID.css" />
-
-        {/* Preconnect to Google APIs */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-
-        {/* Material Icons */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-        />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-
       <body className="antialiased">
-        {/* ── Wrap everything with Providers ── */}
         <Providers>
           {children}
         </Providers>
-
-        {/* Global toast container — stays outside Providers is also fine */}
         <Toaster
           position="bottom-right"
           richColors
@@ -87,16 +63,14 @@ export default function RootLayout({
           toastOptions={{
             classNames: {
               toast:
-                "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-              description: "group-[.toast]:text-muted-foreground",
-              actionButton:
-                "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-              cancelButton:
-                "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+                'group toast group-[.toaster]:bg-card group-[.toaster]:text-card-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
+              description: 'group-[.toast]:text-muted-foreground',
+              actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
+              cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
             },
           }}
         />
       </body>
     </html>
-  );
+  )
 }

@@ -1,61 +1,114 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Users, Clock, CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import AddStaffModal from './AddStaffModal';
-
-const mockStaff = [
-  { id: 1, name: 'Aisha Bello', role: 'Sales Staff', status: 'online', avatar: 'AB' },
-  { id: 2, name: 'Emeka Okafor', role: 'Store Keeper', status: 'offline', avatar: 'EO' },
-];
+import { useQuery } from '@tanstack/react-query'
+import { listStaff } from '@/lib/api/business'
+import { Users, UserPlus, Circle } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 export default function StaffOverview() {
-  const [showModal, setShowModal] = useState(false);
+  const { data, isLoading } = useQuery({
+    queryKey: ['staff'],
+    queryFn: listStaff,
+    staleTime: 60_000,
+  })
+
+  const staff = Array.isArray(data) ? data : []
+  const activeCount = staff.filter((s: any) => s.is_active !== false).length
 
   return (
-    <>
-      <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-3xl p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Users className="w-6 h-6 text-primary" />
-            <div>
-              <div className="font-semibold text-lg">Your Team</div>
-              <div className="text-sm text-gray-400">2 of 5 staff slots used • Starter Plan</div>
-            </div>
+    <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl p-6 h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <Users className="w-4 h-4 text-blue-400" />
           </div>
-          <Button onClick={() => setShowModal(true)} className="bg-primary hover:bg-primary/90">
-            + Add Staff
-          </Button>
+          <div>
+            <h3 className="font-semibold text-white text-sm">Staff Overview</h3>
+            <p className="text-[11px] text-gray-500">
+              {isLoading ? '...' : `${activeCount} active member${activeCount !== 1 ? 's' : ''}`}
+            </p>
+          </div>
         </div>
+        <Link href="/dashboard/settings"
+          className="text-xs text-primary hover:text-primary/80 font-semibold transition-colors">
+          Manage
+        </Link>
+      </div>
 
-        <div className="space-y-4">
-          {mockStaff.map((staff) => (
-            <div key={staff.id} className="flex items-center justify-between bg-white/5 rounded-2xl p-4">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold">
-                  {staff.avatar}
-                </div>
-                <div>
-                  <div className="font-medium">{staff.name}</div>
-                  <div className="text-xs text-gray-500">{staff.role}</div>
-                </div>
-              </div>
-
-              <div className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${staff.status === 'online' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                <div className={`w-2 h-2 rounded-full ${staff.status === 'online' ? 'bg-emerald-400' : 'bg-gray-400'}`} />
-                {staff.status === 'online' ? 'Online now' : 'Offline'}
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex-1 space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="flex items-center gap-3 animate-pulse">
+              <div className="w-9 h-9 rounded-xl bg-white/5" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-28 bg-white/5 rounded" />
+                <div className="h-2 w-20 bg-white/5 rounded" />
               </div>
             </div>
           ))}
         </div>
+      )}
 
-        <Button variant="outline" className="w-full mt-6 border-white/20 text-sm" onClick={() => window.location.href = '/staff'}>
-          Manage Full Team & Attendance →
-        </Button>
-      </div>
+      {/* Empty state */}
+      {!isLoading && staff.length === 0 && (
+        <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
+            <UserPlus className="w-6 h-6 text-blue-400" />
+          </div>
+          <p className="text-sm font-medium text-white mb-1">No staff added yet</p>
+          <p className="text-xs text-gray-500 mb-5 max-w-[200px] leading-relaxed">
+            Invite team members to help manage your business
+          </p>
+          <Link href="/dashboard/settings"
+            className="h-9 px-5 rounded-xl text-xs font-semibold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
+            Invite Staff
+          </Link>
+        </div>
+      )}
 
-      <AddStaffModal open={showModal} onOpenChange={setShowModal} />
-    </>
-  );
+      {/* Staff list */}
+      {!isLoading && staff.length > 0 && (
+        <div className="flex-1 space-y-3">
+          {staff.slice(0, 5).map((member: any) => (
+            <div key={member.id} className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                <span className="text-sm font-bold text-primary">
+                  {member.first_name?.[0]?.toUpperCase() ?? '?'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {member.first_name} {member.last_name}
+                </p>
+                <p className="text-xs text-gray-500 truncate">{member.email}</p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Circle className={cn('w-2 h-2 fill-current',
+                  member.is_active !== false ? 'text-emerald-400' : 'text-gray-600')} />
+                <span className={cn('text-[10px] font-semibold',
+                  member.is_active !== false ? 'text-emerald-400' : 'text-gray-500')}>
+                  {member.is_active !== false ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      {!isLoading && staff.length > 0 && (
+        <div className="pt-4 mt-4 border-t border-white/5">
+          <Link href="/dashboard/settings"
+            className="text-xs text-gray-500 hover:text-white transition-colors flex items-center justify-between">
+            <span>View all staff</span>
+            <span className="text-primary font-semibold">{staff.length} total</span>
+          </Link>
+        </div>
+      )}
+    </div>
+  )
 }

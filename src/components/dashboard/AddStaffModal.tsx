@@ -1,89 +1,110 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { UserPlus } from 'lucide-react';
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { toast } from 'sonner'
+import { UserPlus, X, Info } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-const staffSchema = z.object({
-  name: z.string().min(2, 'Name too short'),
-  email: z.string().email('Invalid email'),
-  phone: z.string().min(10, 'Phone number required'),
-  role: z.enum(['staff', 'manager']),
-});
+const schema = z.object({
+  first_name: z.string().min(1, 'Required'),
+  last_name:  z.string().min(1, 'Required'),
+  email:      z.string().email('Valid email required'),
+  role:       z.enum(['staff', 'manager']),
+})
+type FormValues = z.infer<typeof schema>
 
-type StaffForm = z.infer<typeof staffSchema>;
-
-interface AddStaffModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface Props {
+  open: boolean
+  onOpenChange: (v: boolean) => void
 }
 
-export default function AddStaffModal({ open, onOpenChange }: AddStaffModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
+export default function AddStaffModal({ open, onOpenChange }: Props) {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { role: 'staff' },
+  })
 
-  const form = useForm<StaffForm>({
-    resolver: zodResolver(staffSchema),
-    defaultValues: { name: '', email: '', phone: '', role: 'staff' },
-  });
+  const onSubmit = (v: FormValues) => {
+    toast.success(`Invite sent to ${v.email}`)
+    form.reset()
+    onOpenChange(false)
+  }
 
-  const onSubmit = async (data: StaffForm) => {
-    setIsLoading(true);
-    // TODO: Call your real API (create staff with business_id)
-    await new Promise((r) => setTimeout(r, 1200));
+  if (!open) return null
 
-    toast.success(`Staff member ${data.name} added successfully! They will receive login details via WhatsApp.`);
-    form.reset();
-    onOpenChange(false);
-    setIsLoading(false);
-  };
+  const inp = 'w-full h-10 px-3 rounded-xl bg-dash-subtle border border-dash-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all'
+  const lbl = 'block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5'
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[rgba(255,255,255,0.03)] border-white/10 text-white rounded-3xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-2xl">
-            <UserPlus className="w-6 h-6 text-primary" />
-            Add New Staff Member
-          </DialogTitle>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
+      <div className="relative z-10 w-full max-w-md bg-dash-raised border border-dash-border rounded-3xl p-6 shadow-2xl">
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
-          <div className="space-y-1.5">
-            <Label>Full Name</Label>
-            <Input {...form.register('name')} placeholder="Chukwudi Okeke" className="inputClass" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input {...form.register('email')} type="email" placeholder="chukwudi@business.com" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <UserPlus className="w-4 h-4 text-blue-500 dark:text-blue-400" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Phone (WhatsApp)</Label>
-              <Input {...form.register('phone')} placeholder="0803 123 4567" />
+            <div>
+              <h2 className="font-bold text-foreground">Add Staff Member</h2>
+              <p className="text-xs text-muted-foreground">They&apos;ll receive an invite email</p>
             </div>
           </div>
+          <button onClick={() => onOpenChange(false)} className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-dash-hover transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-          <div className="space-y-1.5">
-            <Label>Role</Label>
-            <select {...form.register('role')} className="w-full h-11 bg-white/5 border border-white/10 rounded-lg px-4 text-white">
-              <option value="staff">Staff (can record sales & view ledger)</option>
-              <option value="manager">Manager (full access except billing)</option>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>First Name *</label>
+              <input className={inp} placeholder="Emeka" {...form.register('first_name')} />
+              {form.formState.errors.first_name && <p className="text-xs text-red-500 mt-1">{form.formState.errors.first_name.message}</p>}
+            </div>
+            <div>
+              <label className={lbl}>Last Name *</label>
+              <input className={inp} placeholder="Okafor" {...form.register('last_name')} />
+              {form.formState.errors.last_name && <p className="text-xs text-red-500 mt-1">{form.formState.errors.last_name.message}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className={lbl}>Email Address *</label>
+            <input type="email" className={inp} placeholder="staff@yourcompany.com" {...form.register('email')} />
+            {form.formState.errors.email && <p className="text-xs text-red-500 mt-1">{form.formState.errors.email.message}</p>}
+          </div>
+
+          <div>
+            <label className={lbl}>Role *</label>
+            <select className={cn(inp, 'cursor-pointer')} {...form.register('role')}>
+              <option value="staff">Staff (limited access)</option>
+              <option value="manager">Manager (full access)</option>
             </select>
           </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full h-12 text-lg">
-            {isLoading ? 'Adding staff...' : 'Add Staff & Send Login Details'}
-          </Button>
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-dash-subtle border border-dash-border">
+            <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              The staff member will receive an email invitation to create their OgaOS account and join your business.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => onOpenChange(false)}
+              className="flex-1 h-11 rounded-xl border border-dash-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-dash-hover transition-all">
+              Cancel
+            </button>
+            <button type="submit"
+              className="flex-1 h-11 rounded-xl text-sm font-semibold text-white"
+              style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
+              Send Invite
+            </button>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
+      </div>
+    </div>
+  )
 }

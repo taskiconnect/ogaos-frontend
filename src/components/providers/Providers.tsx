@@ -1,20 +1,18 @@
-// src/app/Providers.tsx
+// src/components/providers/Providers.tsx
 'use client'
 
 import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-// Optional: import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { ThemeProvider } from 'next-themes'
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Create a new QueryClient instance per render tree (important!)
   const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Reasonable defaults for most apps
-            staleTime: 1000 * 60,           // 1 minute
-            gcTime: 1000 * 60 * 10,         // 10 minutes
+            staleTime: 1000 * 60,
+            gcTime: 1000 * 60 * 10,
             refetchOnWindowFocus: false,
             retry: 1,
           },
@@ -27,9 +25,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      {/* Uncomment during development if you want devtools */}
-      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        {children}
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }
