@@ -42,7 +42,7 @@ export default function DashboardPage() {
           {/* Greeting */}
           <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-              Good morning, Oga {firstName} 👋
+              Good morning, Oga {firstName}
             </h1>
             <p className="text-muted-foreground mt-2 text-lg">
               Here&apos;s what&apos;s happening with your business today &middot;{' '}

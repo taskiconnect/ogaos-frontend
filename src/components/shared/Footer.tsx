@@ -5,27 +5,32 @@ import { Twitter, Instagram, Facebook, Linkedin, Youtube, MessageCircle } from '
 
 const footerColumns = [
   {
+    title: 'Features',
+    items: [
+      { label: 'Sales Record',       href: '/features/sales'       },
+      { label: 'Debt Tracking',      href: '/features/debt'        },
+      { label: 'Tax Calculation',    href: '/features/tax'         },
+      { label: 'Recruitment',        href: '/features/recruitment' },
+      { label: 'Staff Management',   href: '/features/staff'       },
+      { label: 'Digital Store',      href: '/features/store'       },
+      { label: 'Business Directory', href: '/features/directory'   },
+    ],
+  },
+  {
     title: 'Product',
     items: [
-      { label: 'Features', href: '#features' },
-      { label: 'Pricing', href: '#pricing' },
-      { label: 'Blog', href: '/blog' },
+      { label: 'Pricing', href: '/pricing' },
+      { label: 'Blog',    href: '/blog'    },
+      { label: 'FAQs',    href: '/faqs'    },
+      { label: 'Reviews', href: '/reviews' },
     ],
   },
   {
     title: 'Legal',
     items: [
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Reviews', href: '/reviews' },
-      { label: 'FAQs', href: '/faqs' },
-    ],
-  },
-  {
-    title: 'Others',
-    items: [
-      { label: 'Contact', href: '/contact' },
-      { label: '404', href: '/404' },
+      { label: 'Terms of Service', href: '/terms'   },
+      { label: 'Privacy Policy',   href: '/privacy' },
+      { label: 'Contact',          href: '/contact' },
     ],
   },
 ]
@@ -46,8 +51,8 @@ export function Footer() {
         className="absolute inset-0 pointer-events-none opacity-10"
         style={{
           backgroundImage: `
-            linear-gradient(to right, rgba(0, 43, 157, 0.08) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0, 43, 157, 0.08) 1px, transparent 1px)
+            linear-gradient(to right, rgba(28, 53, 234, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(28, 53, 234, 0.08) 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px',
         }}
@@ -68,14 +73,15 @@ export function Footer() {
 
       <div className="relative z-10 container mx-auto px-6 lg:px-8">
         {/* Main content */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16 mb-16">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-10 lg:gap-12 mb-16">
           {/* Brand column */}
-          <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-xl shadow-md">
-                O
-              </div>
-              <span className="text-2xl font-bold text-white tracking-tight">OgaOS</span>
+          <div className="col-span-2 md:col-span-2">
+            <Link href="/" className="flex items-center mb-6">
+              <img
+                src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/OgaOS%20logo.png"
+                alt="OgaOS"
+                className="h-9 w-auto object-contain"
+              />
             </Link>
 
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs mb-8">

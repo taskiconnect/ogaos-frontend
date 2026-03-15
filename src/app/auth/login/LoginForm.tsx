@@ -69,13 +69,13 @@ export default function LoginForm() {
         const me = await getMe()
         setUser(me)
 
-        toast.success('Welcome back! 🎉')
+        toast.success('Welcome back!')
 
         const path = getRedirectPath(me.role, me.is_platform)
         router.push(path)
       } catch {
         // Login succeeded but /me failed — still redirect to a safe default
-        toast.success('Welcome back! 🎉')
+        toast.success('Welcome back!')
         router.push('/dashboard')
       }
     },

@@ -11,14 +11,14 @@ const benefits = [
 
 export function UpgradeHero() {
   return (
-    <section className="relative py-16 md:py-24 overflow-hidden bg-linear-to-br from-purple-950 via-indigo-950 to-black">
+    <section className="relative py-16 md:py-24 overflow-hidden bg-linear-to-br from-[#060b28] via-[#0c1550] to-black">
       {/* Subtle geometric grid – visible on dark bg */}
       <div
         className="absolute inset-0 pointer-events-none opacity-20"
         style={{
           backgroundImage: `
-            linear-gradient(to right, rgba(139, 92, 246, 0.18) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(139, 92, 246, 0.18) 1px, transparent 1px)
+            linear-gradient(to right, rgba(28, 53, 234, 0.18) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(28, 53, 234, 0.18) 1px, transparent 1px)
           `,
           backgroundSize: '60px 60px',
         }}
@@ -34,7 +34,7 @@ export function UpgradeHero() {
           transition={{ delay: 0.2, duration: 0.6 }}
           className="inline-flex items-center gap-2.5 rounded-full bg-white/10 backdrop-blur-md px-5 py-2 text-sm font-medium text-white border border-white/20 mb-6 md:mb-8"
         >
-          <span className="text-purple-300">•••</span> UPGRADE YOUR BUSINESS
+          <span className="text-[#7b93ff]">•••</span> UPGRADE YOUR BUSINESS
         </motion.div>
 
         {/* Headline – slightly smaller & tighter */}
@@ -46,7 +46,7 @@ export function UpgradeHero() {
           className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-tight mb-6 md:mb-8"
         >
           OgaOS powered business management <br className="hidden sm:block" />
-          for <span className="text-purple-400">productive</span> SMEs
+          for <span className="text-[#6b82ff]">productive</span> SMEs
         </motion.h2>
 
         {/* CTA – prominent but not oversized */}
@@ -58,9 +58,9 @@ export function UpgradeHero() {
         >
           <Button
             size="lg"
-            className="min-w-65 md:min-w-[320px] h-12 md:h-14 text-base md:text-lg font-semibold rounded-full bg-white text-black hover:bg-gray-100 shadow-2xl shadow-purple-950/40 transition-all hover:scale-105"
+            className="min-w-65 md:min-w-[320px] h-12 md:h-14 text-base md:text-lg font-semibold rounded-full bg-white text-black hover:bg-gray-100 shadow-2xl shadow-brand-blue/30 transition-all hover:scale-105"
           >
-            Get Started - It's free
+            Get Started
           </Button>
         </motion.div>
 

@@ -48,10 +48,10 @@
   --font-sans: "haboro-soft", var(--font-almarai), var(--font-roboto), var(--font-open-sans), system-ui, sans-serif;
   --font-mono: "haboro-soft", var(--font-almarai), var(--font-roboto), ui-monospace, monospace;
 
-  --color-brand-blue:      #3f9af5;
+  --color-brand-blue:      #1C35EA;     /* ← Vigio-complex electric blue */
   --color-brand-red:       #d04340;
-  --color-brand-navy:      #112960;
-  --color-brand-offwhite:  #fbffff;
+  --color-brand-navy:      #000000;     /* ← pure black (was navy #112960) */
+  --color-brand-offwhite:  #ffffff;
   --color-brand-surface:   #fafafa;
   --color-brand-scrollbar: #c9d6df;
 
@@ -80,20 +80,20 @@
   --card-foreground:   oklch(0.12 0 0);
   --popover:           oklch(1 0 0);
   --popover-foreground: oklch(0.12 0 0);
-  --primary:           oklch(0.45 0.2 254.73);
-  --primary-foreground: oklch(0.98 0.01 254.73);
+  --primary:           oklch(0.44 0.27 264);   /* #1C35EA electric blue */
+  --primary-foreground: oklch(0.98 0.01 264);
   --secondary:         oklch(0.95 0.02 0);
   --secondary-foreground: oklch(0.12 0 0);
   --muted:             oklch(0.93 0.01 0);
   --muted-foreground:  oklch(0.50 0.01 0);
-  --accent:            oklch(0.45 0.2 254.73);
-  --accent-foreground: oklch(0.98 0.01 254.73);
+  --accent:            oklch(0.44 0.27 264);   /* #1C35EA electric blue */
+  --accent-foreground: oklch(0.98 0.01 264);
   --destructive:       oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0.01 0);
   --border:            oklch(0.88 0.01 0);
   --input:             oklch(0.93 0.01 0);
-  --ring:              oklch(0.45 0.2 254.73);
-  --chart-1:           oklch(0.45 0.2 254.73);
+  --ring:              oklch(0.44 0.27 264);   /* #1C35EA electric blue */
+  --chart-1:           oklch(0.44 0.27 264);   /* #1C35EA electric blue */
   --chart-2:           oklch(0.6 0.118 184.704);
   --chart-3:           oklch(0.398 0.07 227.392);
   --chart-4:           oklch(0.828 0.189 84.429);
@@ -101,12 +101,12 @@
 
   --sidebar:                    oklch(0.97 0.01 0);
   --sidebar-foreground:         oklch(0.12 0 0);
-  --sidebar-primary:            oklch(0.45 0.2 254.73);
+  --sidebar-primary:            oklch(0.44 0.27 264);   /* #1C35EA electric blue */
   --sidebar-primary-foreground: oklch(0.98 0.01 0);
   --sidebar-accent:             oklch(0.93 0.01 0);
   --sidebar-accent-foreground:  oklch(0.12 0 0);
   --sidebar-border:             oklch(0.88 0.01 0);
-  --sidebar-ring:               oklch(0.45 0.2 254.73);
+  --sidebar-ring:               oklch(0.44 0.27 264);   /* #1C35EA electric blue */
 
   /* ── OgaOS surface tokens — light ─────────────────────────────────────────  */
   --dash-bg:      oklch(0.96 0.005 240);   /* page background: very light blue-grey */
@@ -125,20 +125,20 @@
   --card-foreground:   oklch(0.98 0.01 0);
   --popover:           oklch(0.17 0 0);
   --popover-foreground: oklch(0.98 0.01 0);
-  --primary:           oklch(0.65 0.2 254.73);
-  --primary-foreground: oklch(0.12 0 0);
+  --primary:           oklch(0.55 0.27 264);   /* #1C35EA electric blue, lightened for dark bg */
+  --primary-foreground: oklch(0.98 0 0);
   --secondary:         oklch(0.25 0.01 0);
   --secondary-foreground: oklch(0.98 0.01 0);
   --muted:             oklch(0.28 0.01 0);
   --muted-foreground:  oklch(0.62 0.01 0);
-  --accent:            oklch(0.65 0.2 254.73);
-  --accent-foreground: oklch(0.12 0 0);
+  --accent:            oklch(0.55 0.27 264);   /* #1C35EA electric blue, lightened for dark bg */
+  --accent-foreground: oklch(0.98 0 0);
   --destructive:       oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0.01 0);
   --border:            oklch(0.28 0.01 0);
   --input:             oklch(0.25 0.01 0);
-  --ring:              oklch(0.65 0.2 254.73);
-  --chart-1:           oklch(0.65 0.2 254.73);
+  --ring:              oklch(0.55 0.27 264);   /* #1C35EA electric blue */
+  --chart-1:           oklch(0.55 0.27 264);   /* #1C35EA electric blue */
   --chart-2:           oklch(0.696 0.17 162.48);
   --chart-3:           oklch(0.769 0.188 70.08);
   --chart-4:           oklch(0.627 0.265 303.9);
@@ -146,12 +146,12 @@
 
   --sidebar:                    oklch(0.15 0 0);
   --sidebar-foreground:         oklch(0.98 0.01 0);
-  --sidebar-primary:            oklch(0.65 0.2 254.73);
+  --sidebar-primary:            oklch(0.55 0.27 264);   /* #1C35EA electric blue */
   --sidebar-primary-foreground: oklch(0.98 0.01 0);
   --sidebar-accent:             oklch(0.25 0.01 0);
   --sidebar-accent-foreground:  oklch(0.98 0.01 0);
   --sidebar-border:             oklch(0.25 0.01 0);
-  --sidebar-ring:               oklch(0.65 0.2 254.73);
+  --sidebar-ring:               oklch(0.55 0.27 264);   /* #1C35EA electric blue */
 
   /* ── OgaOS surface tokens — dark ──────────────────────────────────────────  */
   --dash-bg:      oklch(0.10 0 0);     /* page background: very dark */
@@ -204,9 +204,9 @@
   }
 
   [data-radix-popper-content-wrapper][data-side] {
-    background-color: #112960 !important;
-    color: #fbffff !important;
-    border: 1px solid rgba(63, 154, 245, 0.3) !important;
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(28, 53, 234, 0.4) !important; /* #1C35EA electric blue border */
   }
 
   ::-webkit-scrollbar { width: 8px; }
