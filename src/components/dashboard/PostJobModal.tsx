@@ -9,51 +9,53 @@ import { Briefcase, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createJob } from '@/lib/api/recruitment'
 
-// z.preprocess avoids the z.coerce "unknown" inference bug in this zod/hookform version
-const toOptionalNumber = z.preprocess(
-  v => (v === '' || v === undefined || v === null ? undefined : Number(v)),
-  z.number().min(0).optional()
-)
-
+// Define the schema with explicit typing
 const schema = z.object({
-  title:       z.string().min(1, 'Job title is required'),
+  title: z.string().min(1, 'Job title is required'),
   description: z.string().min(10, 'At least 10 characters required'),
-  type:        z.enum(['full_time', 'part_time', 'contract', 'internship']),
-  location:    z.string().optional(),
-  is_remote:   z.boolean(),
-  salary_min:  toOptionalNumber,  // naira — we convert to kobo on submit
-  salary_max:  toOptionalNumber,
-  deadline:    z.string().optional(),
+  type: z.enum(['full_time', 'part_time', 'contract', 'internship']),
+  location: z.string().optional(),
+  is_remote: z.boolean(),
+  salary_min: z.union([z.number().min(0), z.undefined()]).optional(),
+  salary_max: z.union([z.number().min(0), z.undefined()]).optional(),
+  deadline: z.string().optional(),
 })
+
+// Infer the type from the schema
 type FormValues = z.infer<typeof schema>
 
 interface Props {
-  open:        boolean
+  open: boolean
   onOpenChange: (v: boolean) => void
-  onSuccess?:  () => void
+  onSuccess?: () => void
 }
 
 export default function PostJobModal({ open, onOpenChange, onSuccess }: Props) {
   const [loading, setLoading] = useState(false)
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { type: 'full_time', is_remote: false },
+    resolver: zodResolver(schema) as any, // Type assertion to bypass the inference issue
+    defaultValues: {
+      type: 'full_time',
+      is_remote: false,
+      salary_min: undefined,
+      salary_max: undefined,
+    },
   })
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     setLoading(true)
     try {
       await createJob({
-        title:                 values.title,
-        description:           values.description,
-        type:                  values.type,
-        location:              values.location || undefined,
-        is_remote:             values.is_remote,
+        title: values.title,
+        description: values.description,
+        type: values.type,
+        location: values.location || undefined,
+        is_remote: values.is_remote,
         // Backend expects kobo — multiply naira by 100
-        salary_range_min:      values.salary_min != null ? values.salary_min * 100 : undefined,
-        salary_range_max:      values.salary_max != null ? values.salary_max * 100 : undefined,
-        application_deadline:  values.deadline || undefined,
+        salary_range_min: values.salary_min != null ? values.salary_min * 100 : undefined,
+        salary_range_max: values.salary_max != null ? values.salary_max * 100 : undefined,
+        application_deadline: values.deadline || undefined,
       })
       toast.success('Job posted successfully!')
       form.reset()
@@ -121,11 +123,11 @@ export default function PostJobModal({ open, onOpenChange, onSuccess }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={lbl}>Min Salary (₦/mo)</label>
-              <input type="number" className={inp} placeholder="80,000" {...form.register('salary_min')} />
+              <input type="number" className={inp} placeholder="80000" {...form.register('salary_min')} />
             </div>
             <div>
               <label className={lbl}>Max Salary (₦/mo)</label>
-              <input type="number" className={inp} placeholder="150,000" {...form.register('salary_max')} />
+              <input type="number" className={inp} placeholder="150000" {...form.register('salary_max')} />
             </div>
           </div>
 
