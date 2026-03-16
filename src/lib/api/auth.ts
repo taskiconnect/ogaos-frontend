@@ -58,7 +58,7 @@ export const getNigeriaLGAs = async (state: string): Promise<string[]> => {
 }
 
 // ────────────────────────────────────────────────
-// Staff Management (Owner only) — added from your backend
+// Staff Management (Owner only) 
 // ────────────────────────────────────────────────
 
 export const createStaff = async (data: InviteStaffRequest) => {

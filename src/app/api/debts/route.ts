@@ -1,4 +1,10 @@
 import { proxyRequest } from '@/lib/api/proxy'
 import { NextRequest } from 'next/server'
-export const GET  = (req: NextRequest) => proxyRequest(req, '/debts', 'GET')
-export const POST = (req: NextRequest) => proxyRequest(req, '/debts', 'POST')
+
+export const GET = async (req: NextRequest) => {
+  return proxyRequest(req, '/debts', 'GET')
+}
+
+export const POST = async (req: NextRequest) => {
+  return proxyRequest(req, '/debts', 'POST')
+}

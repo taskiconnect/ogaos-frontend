@@ -1,4 +1,10 @@
 import { proxyRequest } from '@/lib/api/proxy'
 import { NextRequest } from 'next/server'
-export const GET = (req: NextRequest, { params }: { params: { id: string } }) =>
-  proxyRequest(req, `/sales/${params.id}`, 'GET')
+
+export const GET = async (
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) => {
+  const { id } = await params
+  return proxyRequest(req, `/sales/${id}`, 'GET')
+}

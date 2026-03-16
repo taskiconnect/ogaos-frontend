@@ -1,3 +1,6 @@
 import { proxyRequest } from '@/lib/api/proxy'
 import { NextRequest } from 'next/server'
-export const POST = (req: NextRequest) => proxyRequest(req, '/business/me/logo', 'POST', { multipart: true })
+
+export const POST = async (req: NextRequest) => {
+  return proxyRequest(req, '/business/me/logo', 'POST', { multipart: true })
+}

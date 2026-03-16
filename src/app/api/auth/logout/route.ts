@@ -1,3 +1,6 @@
 import { proxyRequest } from '@/lib/api/proxy'
 import { NextRequest } from 'next/server'
-export const POST = (req: NextRequest) => proxyRequest(req, '/auth/logout', 'POST')
+
+export const POST = async (req: NextRequest) => {
+  return proxyRequest(req, '/auth/logout', 'POST')
+}

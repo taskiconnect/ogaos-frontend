@@ -1,3 +1,6 @@
 import { proxyRequest } from '@/lib/api/proxy'
 import { NextRequest } from 'next/server'
-export const GET = (req: NextRequest) => proxyRequest(req, '/applications', 'GET')
+
+export const GET = async (req: NextRequest) => {
+  return proxyRequest(req, '/applications', 'GET')
+}

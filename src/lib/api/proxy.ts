@@ -1,28 +1,53 @@
 // src/lib/api/proxy.ts
 import { NextRequest, NextResponse } from 'next/server'
 
+interface ProxyOptions {
+  multipart?: boolean;
+}
+
 export async function proxyRequest(
   req: NextRequest,
   backendPath: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST'
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'POST',
+  options?: ProxyOptions
 ) {
   try {
-    const body = method !== 'GET' ? await req.json() : undefined
-
     const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${backendPath}`
 
     const headers = new Headers(req.headers)
-    headers.delete('host') // avoid confusion
+    headers.delete('host')
+
+    let body: BodyInit | undefined
+
+    if (method !== 'GET') {
+      if (options?.multipart) {
+        // For multipart/form-data, forward the original form data
+        body = await req.formData()
+        // Don't set Content-Type header for multipart; let fetch set it with the boundary
+        headers.delete('content-type')
+      } else {
+        // For JSON requests
+        body = JSON.stringify(await req.json())
+        headers.set('content-type', 'application/json')
+      }
+    }
 
     const response = await fetch(backendUrl, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body,
       credentials: 'include',
       cache: 'no-store',
     })
 
-    const data = await response.json().catch(() => ({})) // safe json parse
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type')
+    let data
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json()
+    } else {
+      data = await response.text()
+    }
 
     const nextResponse = NextResponse.json(data, { status: response.status })
 
