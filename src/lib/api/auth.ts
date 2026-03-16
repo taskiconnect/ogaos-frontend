@@ -7,6 +7,7 @@ import {
   MeResponse,
   StatesResponse,
   LGAsResponse,
+  InviteStaffRequest,   // ← added
 } from './types'
 
 export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {
@@ -54,4 +55,17 @@ export const getNigeriaLGAs = async (state: string): Promise<string[]> => {
     params: { state },
   })
   return res.data.data
+}
+
+// ────────────────────────────────────────────────
+// Staff Management (Owner only) — added from your backend
+// ────────────────────────────────────────────────
+
+export const createStaff = async (data: InviteStaffRequest) => {
+  const res = await api.post('/staff', data)
+  return res.data
+}
+
+export const deactivateStaff = async (id: string): Promise<void> => {
+  await api.delete(`/staff/${id}`)
 }

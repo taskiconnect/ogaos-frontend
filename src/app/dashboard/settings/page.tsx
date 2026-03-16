@@ -127,7 +127,7 @@ function AddStaffInline({ onSuccess }: { onSuccess: () => void }) {
   )
 
   return (
-    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-4 space-y-3">
+    <div className="bg-white/2 border border-white/10 rounded-xl p-4 space-y-3">
       <p className="text-sm font-semibold text-white">Invite New Staff</p>
       <div className="grid grid-cols-2 gap-3">
         <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name"
