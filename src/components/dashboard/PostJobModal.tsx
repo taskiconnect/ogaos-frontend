@@ -34,7 +34,7 @@ export default function PostJobModal({ open, onOpenChange, onSuccess }: Props) {
   const [loading, setLoading] = useState(false)
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema) as any, // Type assertion to bypass the inference issue
+    resolver: zodResolver(schema) as any, 
     defaultValues: {
       type: 'full_time',
       is_remote: false,

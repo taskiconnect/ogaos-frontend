@@ -16,57 +16,64 @@ const CATEGORIES = [
   'food', 'software', 'other',
 ]
 
+// Define the schema with explicit typing
 const schema = z.object({
-  title:        z.string().min(1, 'Required'),
-  amount:       z.coerce.number().min(1, 'Must be > 0'),
-  category:     z.string().min(1, 'Required'),
+  description: z.string().min(1, 'Required'),
+  amount: z.preprocess(
+    v => (v === '' || v === undefined || v === null ? undefined : Number(v)),
+    z.number().min(1, 'Must be > 0')
+  ),
+  expense_type: z.enum(['opex', 'capex']),
+  category: z.string().min(1, 'Required'),
   expense_date: z.string().min(1, 'Required'),
-  vendor:       z.string().optional(),
-  notes:        z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
 
 interface Props {
-  open:         boolean
+  open: boolean
   onOpenChange: (v: boolean) => void
-  onSuccess?:   () => void
-  editing?:     Expense | null
+  onSuccess?: () => void
+  editing?: Expense | null
 }
 
 export default function AddExpenseModal({ open, onOpenChange, onSuccess, editing }: Props) {
   const qc = useQueryClient()
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { expense_date: new Date().toISOString().split('T')[0] },
+    resolver: zodResolver(schema) as any, // Type assertion to bypass inference issues
+    defaultValues: {
+      expense_date: new Date().toISOString().split('T')[0],
+      expense_type: 'opex',
+    },
   })
 
   // Pre-fill form when editing
   useEffect(() => {
     if (editing) {
       reset({
-        title:        editing.title,
-        amount:       editing.amount / 100,
-        category:     editing.category,
+        description: editing.description,
+        amount: editing.amount / 100,
+        expense_type: (editing.expense_type as 'opex' | 'capex') ?? 'opex',
+        category: editing.category,
         expense_date: editing.expense_date.split('T')[0],
-        vendor:       editing.vendor ?? '',
-        notes:        editing.notes  ?? '',
       })
     } else {
-      reset({ expense_date: new Date().toISOString().split('T')[0] })
+      reset({
+        expense_date: new Date().toISOString().split('T')[0],
+        expense_type: 'opex',
+      })
     }
   }, [editing, reset])
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => {
       const payload = {
-        title:        data.title,
-        amount:       Math.round(data.amount * 100),
-        category:     data.category,
+        description: data.description,
+        amount: Math.round(data.amount * 100), // naira → kobo
+        expense_type: data.expense_type,
+        category: data.category,
         expense_date: data.expense_date,
-        vendor:       data.vendor  || undefined,
-        notes:        data.notes   || undefined,
       }
       return editing
         ? updateExpense(editing.id, payload)
@@ -112,9 +119,9 @@ export default function AddExpenseModal({ open, onOpenChange, onSuccess, editing
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Title</label>
-            <input {...register('title')} placeholder="e.g. Office rent, Diesel, Staff salary" className={inputCls} />
-            {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title.message}</p>}
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Description</label>
+            <input {...register('description')} placeholder="e.g. Office rent, Diesel, Staff salary" className={inputCls} />
+            {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -130,24 +137,29 @@ export default function AddExpenseModal({ open, onOpenChange, onSuccess, editing
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Category</label>
-            <select {...register('category')} className={inputCls + ' capitalize'}>
-              <option value="">Select category</option>
-              {CATEGORIES.map(c => <option key={c} value={c} className="capitalize">{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-            </select>
-            {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category.message}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Type</label>
+              <select {...register('expense_type')} className={inputCls + ' cursor-pointer'}>
+                <option value="opex">OpEx (Operating)</option>
+                <option value="capex">CapEx (Capital)</option>
+              </select>
+              {errors.expense_type && <p className="text-xs text-red-500 mt-1">{errors.expense_type.message}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Category</label>
+              <select {...register('category')} className={inputCls + ' capitalize cursor-pointer'}>
+                <option value="">Select category</option>
+                {CATEGORIES.map(c => (
+                  <option key={c} value={c} className="capitalize">
+                    {c.charAt(0).toUpperCase() + c.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category.message}</p>}
+            </div>
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Vendor / Payee (optional)</label>
-            <input {...register('vendor')} placeholder="e.g. EKEDC, MTN, Shoprite" className={inputCls} />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes (optional)</label>
-            <textarea {...register('notes')} rows={3} placeholder="Any additional details..." className="w-full rounded-xl bg-dash-bg border border-dash-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-          </div>
         </div>
 
         {/* Footer */}
@@ -156,7 +168,7 @@ export default function AddExpenseModal({ open, onOpenChange, onSuccess, editing
             Cancel
           </button>
           <button
-            onClick={handleSubmit(d => mutation.mutate(d))}
+            onClick={() => handleSubmit(d => mutation.mutate(d))()}
             disabled={mutation.isPending}
             className="px-8 py-2.5 rounded-xl font-semibold text-white text-sm disabled:opacity-50 transition-all active:scale-95"
             style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}

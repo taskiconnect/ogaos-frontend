@@ -22,14 +22,30 @@ export interface FeaturePageProps {
   prevFeature: { label: string; href: string }
 }
 
+// Use proper easing values from Framer Motion
+const easing = [0.22, 1, 0.36, 1] as const
+
 const item = {
   hidden: { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { 
+      duration: 0.7, 
+      ease: easing // Use the const assertion
+    } 
+  },
 }
 
 const container = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
+  visible: { 
+    opacity: 1, 
+    transition: { 
+      staggerChildren: 0.1, 
+      delayChildren: 0.1 
+    } 
+  },
 }
 
 export function FeaturePageLayout({
@@ -111,7 +127,7 @@ export function FeaturePageLayout({
             <motion.div
               initial={{ opacity: 0, y: 32, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+              transition={{ duration: 0.9, ease: easing, delay: 0.2 }} // Use the const assertion
               className="flex justify-center lg:justify-end relative"
             >
               <div

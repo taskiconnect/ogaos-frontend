@@ -161,7 +161,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     register, control, handleSubmit, watch, setValue, reset,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any, // Type assertion to bypass inference issues
     defaultValues: {
       items: [{ product_name: '', unit_price: 0, quantity: 1, discount: 0 }],
       payment_method: 'cash',
@@ -593,7 +593,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             </div>
             <button
               type="button"
-              onClick={handleSubmit(d => mutation.mutate(d))}
+              onClick={() => handleSubmit(d => mutation.mutate(d))()}
               disabled={mutation.isPending}
               className="px-8 py-3 rounded-xl font-semibold text-white text-sm disabled:opacity-50 transition-all active:scale-95 shadow-lg"
               style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
