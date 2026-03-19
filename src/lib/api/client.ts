@@ -28,7 +28,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn('[API] 401 – token expired or missing')
       useAuthStore.getState().clearAuth()
-      if (typeof window !== 'undefined') window.location.href = '/login'
+      if (typeof window !== 'undefined') window.location.href = '/auth/login'
     }
     return Promise.reject(error)
   }

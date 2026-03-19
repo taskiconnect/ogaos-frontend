@@ -94,7 +94,7 @@ export default function DashboardPage() {
               <RevenueChart data={dash.monthlyRevenue} isLoading={dash.isLoading} />
             </div>
             <div className="lg:col-span-3">
-              <OutstandingDebts debts={[]} isLoading={dash.isLoading} />
+              <OutstandingDebts debts={dash.overdueDebts} isLoading={dash.isLoading} />
             </div>
           </div>
 

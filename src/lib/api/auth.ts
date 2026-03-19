@@ -7,7 +7,7 @@ import {
   MeResponse,
   StatesResponse,
   LGAsResponse,
-  InviteStaffRequest,   // ← added
+  InviteStaffRequest,   
 } from './types'
 
 export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {

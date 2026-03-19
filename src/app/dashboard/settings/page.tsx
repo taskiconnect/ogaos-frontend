@@ -10,6 +10,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader'
 import {
   Building2, Globe, MapPin, Camera, Loader2,
   Users, UserPlus, UserX, Eye, EyeOff, Check, X,
+  Copy, ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Business } from '@/lib/api/types'
@@ -127,7 +128,7 @@ function AddStaffInline({ onSuccess }: { onSuccess: () => void }) {
   )
 
   return (
-    <div className="bg-white/2 border border-white/10 rounded-xl p-4 space-y-3">
+    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-4 space-y-3">
       <p className="text-sm font-semibold text-white">Invite New Staff</p>
       <div className="grid grid-cols-2 gap-3">
         <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name"
@@ -152,6 +153,48 @@ function AddStaffInline({ onSuccess }: { onSuccess: () => void }) {
           style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
           {mut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Send Invite
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Storefront Link Component ────────────────────────────────────────────────
+
+function StorefrontLink({ slug, isPublic }: { slug: string; isPublic: boolean }) {
+  const [copied, setCopied] = useState(false)
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const url = `${baseUrl}/public/${slug}`
+
+  function handleCopy() {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="mt-4 space-y-3">
+      <p className="text-xs text-gray-500">Your storefront link:</p>
+      <div className="flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3">
+        <span className="flex-1 text-xs font-mono text-primary truncate">{url}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-colors shrink-0 font-semibold">
+          {copied
+            ? <><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
+            : <><Copy className="w-3.5 h-3.5" />Copy</>
+          }
+        </button>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors shrink-0 font-semibold">
+          <ExternalLink className="w-3.5 h-3.5" /> Open
+        </a>
+      </div>
+      <div className="flex items-center gap-2 text-xs">
+        {isPublic
+          ? <><Eye className="w-3.5 h-3.5 text-emerald-400" /><span className="text-emerald-400">Live — customers can visit this link</span></>
+          : <><EyeOff className="w-3.5 h-3.5 text-gray-500" /><span className="text-gray-500">Hidden — enable the toggle above to go live</span></>
+        }
       </div>
     </div>
   )
@@ -307,14 +350,14 @@ export default function SettingsPage() {
             </div>
           </Section>
 
-          {/* Visibility */}
-          <Section title="Public Profile">
+          {/* Visibility + Storefront Link */}
+          <Section title="Public Storefront">
+            {/* Toggle */}
             <div className="flex items-center justify-between gap-6">
               <div>
                 <p className="text-sm font-medium text-white">Public storefront</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  When enabled, customers can find your business at{' '}
-                  <span className="text-primary font-mono text-[11px]">/public/{business?.slug}</span>
+                  Allow customers to find and view your business online
                 </p>
               </div>
               <button
@@ -326,12 +369,11 @@ export default function SettingsPage() {
                   business?.is_profile_public ? 'left-5' : 'left-0.5')} />
               </button>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
-              {business?.is_profile_public
-                ? <><Eye className="w-3.5 h-3.5 text-emerald-400" /><span className="text-emerald-400">Visible to the public</span></>
-                : <><EyeOff className="w-3.5 h-3.5" /><span>Hidden from public</span></>
-              }
-            </div>
+
+            {/* Storefront link box */}
+            {business?.slug && (
+              <StorefrontLink slug={business.slug} isPublic={business.is_profile_public} />
+            )}
           </Section>
 
           {/* Staff Management */}
