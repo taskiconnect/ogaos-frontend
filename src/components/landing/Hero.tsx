@@ -70,12 +70,10 @@ export function Hero() {
 
   useEffect(() => {
     const sync = () => {
-      // target the fixed header element
       const header = document.querySelector('header')
       if (header) setNavH(header.offsetHeight)
     }
     sync()
-    // slight delay to ensure header is fully painted
     setTimeout(sync, 100)
     window.addEventListener('resize', sync)
     return () => window.removeEventListener('resize', sync)
@@ -177,16 +175,20 @@ export function Hero() {
                 <Button
                   size="lg"
                   className="h-13 px-8 text-base font-semibold rounded-full bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all"
+                  asChild
                 >
-                  Get started — it's free
+                  <a href="/auth/signup">Get started — it's free</a>
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
                   className="h-13 px-8 text-base font-semibold rounded-full border-2 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                  asChild
                 >
-                  See how it works
-                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  <a href="/auth/login">
+                    Login
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  </a>
                 </Button>
               </motion.div>
 
@@ -225,7 +227,7 @@ export function Hero() {
                   aria-hidden
                 />
 
-                {/* ── Hero image — bottom tucks under the dashboard ── */}
+                {/* ── Hero image ── */}
                 <img
                   src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/herooga?updatedAt=1773584899994"
                   alt="Business owner using OgaOS dashboard"
@@ -237,7 +239,7 @@ export function Hero() {
                   }}
                 />
 
-                {/* ── Floating stat cards — hidden on small mobile, shown sm+ ── */}
+                {/* ── Floating stat cards ── */}
                 <FloatCard
                   icon={TrendingUp}
                   label="Today's Revenue"
@@ -265,7 +267,7 @@ export function Hero() {
             </motion.div>
           </div>
 
-          {/* ════════════ DASHBOARD SHOWCASE (below fold) ════════════ */}
+          {/* ════════════ DASHBOARD SHOWCASE ════════════ */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
