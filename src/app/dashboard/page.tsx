@@ -42,7 +42,7 @@ export default function DashboardPage() {
           {/* Greeting */}
           <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-              Good morning, Oga {firstName}
+              Good morning, Oga {firstName} 👋
             </h1>
             <p className="text-muted-foreground mt-2 text-lg">
               Here&apos;s what&apos;s happening with your business today &middot;{' '}
@@ -61,24 +61,28 @@ export default function DashboardPage() {
               icon={DollarSign}
               trend="up"
             />
+            {/* Outstanding = money customers still owe from partial sales */}
             <StatCard
-              title="OUTSTANDING DEBTS"
+              title="CUSTOMERS OWE YOU"
               value={dash.isLoading ? '—' : formatNaira(dash.outstandingDebtTotal * 100)}
-              change={dash.isLoading ? '…' : `${dash.outstandingDebtCount} overdue`}
+              change={dash.isLoading ? '…' : dash.outstandingDebtCount === 0
+                ? 'All paid up'
+                : `${dash.outstandingDebtCount} sale${dash.outstandingDebtCount !== 1 ? 's' : ''} unpaid`
+              }
               icon={AlertTriangle}
               trend={dash.outstandingDebtCount > 0 ? 'down' : 'neutral'}
             />
             <StatCard
               title="ACTIVE STAFF"
               value="—"
-              change="Invite staff to track"
+              change="Go to Staff page"
               icon={Users}
               trend="neutral"
             />
             <StatCard
               title="TOTAL CUSTOMERS"
               value={dash.isLoading ? '—' : dash.totalCustomers.toString()}
-              change="from your CRM"
+              change="in your CRM"
               icon={TrendingUp}
               trend="up"
             />
@@ -90,7 +94,7 @@ export default function DashboardPage() {
               <RevenueChart data={dash.monthlyRevenue} isLoading={dash.isLoading} />
             </div>
             <div className="lg:col-span-3">
-              <OutstandingDebts debts={dash.overdueDebts} isLoading={dash.isLoading} />
+              <OutstandingDebts debts={[]} isLoading={dash.isLoading} />
             </div>
           </div>
 
