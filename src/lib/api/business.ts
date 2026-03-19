@@ -29,6 +29,30 @@ export const uploadBusinessLogo = (file: File) => {
 export const setBusinessVisibility = (isPublic: boolean) =>
   api.patch<ApiMessage>('/business/me/visibility', { is_public: isPublic }).then(() => undefined)
 
+// ─── Storefront gallery ───────────────────────────────────────────────────────
+
+// Upload one gallery image (max 3). Multipart POST.
+export const addBusinessGalleryImage = (file: File) => {
+  const form = new FormData()
+  form.append('image', file)
+  return api
+    .post<ApiSuccess<Business>>('/business/me/gallery', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data.data)
+}
+
+// Remove gallery image at zero-based index.
+export const removeBusinessGalleryImage = (index: number) =>
+  api.delete<ApiMessage>(`/business/me/gallery/${index}`).then(() => undefined)
+
+// Set or clear the storefront promo video URL (link only, no upload).
+// Pass empty string to clear.
+export const setStorefrontVideo = (videoUrl: string) =>
+  api
+    .patch<ApiSuccess<Business>>('/business/me/storefront-video', { video_url: videoUrl })
+    .then((r) => r.data.data)
+
 // ─── Stores ───────────────────────────────────────────────────────────────────
 
 export const createStore = (data: CreateStoreRequest) =>
@@ -96,7 +120,8 @@ export const uploadProductImage = (id: string, file: File) => {
     .then((r) => r.data.data)
 }
 
-// Staff
+// ─── Staff ────────────────────────────────────────────────────────────────────
+
 export interface StaffMember {
   id: string
   first_name: string
