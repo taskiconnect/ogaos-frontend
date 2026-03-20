@@ -4,12 +4,11 @@ import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { generateReceipt } from '@/lib/api/finance'
 import { getBusiness } from '@/lib/api/business'
-import { X, Printer, Mail, CheckCircle2 } from 'lucide-react'
+import { X, Printer, Mail, CheckCircle2, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { Sale } from '@/lib/api/types'
 
-// kobo → "₦1,200.00"
 function naira(kobo: number) {
   return `₦${(kobo / 100).toLocaleString('en-NG', {
     minimumFractionDigits: 2,
@@ -32,7 +31,7 @@ interface Props {
 export default function ReceiptModal({ sale, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
-  const [emailSent, setEmailSent] = useState(false)
+  const [receiptGenerated, setReceiptGenerated] = useState(false)
 
   const { data: business } = useQuery({
     queryKey: ['business-me'],
@@ -41,15 +40,16 @@ export default function ReceiptModal({ sale, onClose }: Props) {
     staleTime: 5 * 60 * 1000,
   })
 
-  const emailMutation = useMutation({
-    mutationFn: () => generateReceipt(sale!.id, true),
-    onSuccess: () => {
-      setEmailSent(true)
-      toast.success('Receipt emailed to customer!')
-      qc.invalidateQueries({ queryKey: ['sale', sale?.id] })
+  // Generates a receipt number on the backend (idempotent — safe to call multiple times)
+  const receiptMutation = useMutation({
+    mutationFn: () => generateReceipt(sale!.id),
+    onSuccess: (updatedSale) => {
+      setReceiptGenerated(true)
+      qc.invalidateQueries({ queryKey: ['sales'] })
+      toast.success(`Receipt ${updatedSale.receipt_number ?? ''} generated!`)
     },
     onError: (e: any) =>
-      toast.error(e?.response?.data?.message ?? 'Failed to send receipt'),
+      toast.error(e?.response?.data?.message ?? 'Failed to generate receipt'),
   })
 
   // ── Print ──────────────────────────────────────────────────────────────────
@@ -75,6 +75,17 @@ export default function ReceiptModal({ sale, onClose }: Props) {
     win.document.close()
   }
 
+  // Email receipt — opens mail client with pre-filled body as fallback
+  // (full backend email sending to be wired up separately)
+  function handleEmailReceipt() {
+    if (!sale || !customerEmail) return
+    const subject = encodeURIComponent(`Receipt ${receiptRef} from ${bizName}`)
+    const body = encodeURIComponent(
+      `Hi ${customerName},\n\nPlease find your receipt for ${naira(sale.total_amount)} (${sale.payment_method}).\n\nReceipt No: ${receiptRef}\nDate: ${fmtDate(sale.created_at)}\n\nThank you for your business!\n\n${bizName}`
+    )
+    window.open(`mailto:${customerEmail}?subject=${subject}&body=${body}`)
+  }
+
   if (!sale) return null
 
   const customerName  = sale.customer
@@ -95,7 +106,6 @@ export default function ReceiptModal({ sale, onClose }: Props) {
   const bizName    = business?.name ?? 'Business'
   const bizInitial = bizName[0]?.toUpperCase() ?? 'B'
 
-  // ── Inline styles (survive the print window) ──────────────────────────────
   const R = {
     center:  { textAlign: 'center' as const },
     divider: { borderTop: '2px dashed #e5e7eb', margin: '14px 0' },
@@ -121,7 +131,7 @@ export default function ReceiptModal({ sale, onClose }: Props) {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-dash-surface border border-dash-border rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
 
-          {/* Modal header */}
+          {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-dash-border shrink-0">
             <h2 className="font-semibold text-foreground">Receipt Preview</h2>
             <button
@@ -132,20 +142,16 @@ export default function ReceiptModal({ sale, onClose }: Props) {
             </button>
           </div>
 
-          {/* Receipt (scrollable) */}
+          {/* Receipt body (scrollable) */}
           <div className="overflow-y-auto flex-1 p-5">
             <div ref={printRef} style={{ fontFamily: "'Helvetica Neue',Arial,sans-serif", color: '#111827' }}>
 
-              {/* ── Business header ── */}
+              {/* Business header */}
               <div style={{ ...R.center, paddingBottom: '16px', borderBottom: '2px dashed #e5e7eb', marginBottom: '16px' }}>
-                {/* Logo */}
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
                   {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt={bizName}
-                      style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '12px' }}
-                    />
+                    <img src={logoUrl} alt={bizName}
+                      style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '12px' }} />
                   ) : (
                     <div style={{
                       width: '64px', height: '64px', borderRadius: '12px',
@@ -163,7 +169,7 @@ export default function ReceiptModal({ sale, onClose }: Props) {
                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{fmtDate(sale.created_at)}</div>
               </div>
 
-              {/* ── Customer ── */}
+              {/* Customer */}
               <div style={{ marginBottom: '14px' }}>
                 <div style={R.label}>Customer</div>
                 <div style={R.val}>{customerName}</div>
@@ -171,7 +177,7 @@ export default function ReceiptModal({ sale, onClose }: Props) {
                 {customerEmail && <div style={R.valSm}>{customerEmail}</div>}
               </div>
 
-              {/* ── Staff ── */}
+              {/* Staff */}
               {sale.staff_name && (
                 <div style={{ marginBottom: '14px' }}>
                   <div style={R.label}>Served by</div>
@@ -181,7 +187,7 @@ export default function ReceiptModal({ sale, onClose }: Props) {
 
               <div style={R.divider} />
 
-              {/* ── Items ── */}
+              {/* Items */}
               <div style={{ marginBottom: '14px' }}>
                 <div style={{ ...R.label, marginBottom: '8px' }}>Items</div>
                 {(!sale.items || sale.items.length === 0) && (
@@ -203,7 +209,7 @@ export default function ReceiptModal({ sale, onClose }: Props) {
 
               <div style={R.divider} />
 
-              {/* ── Totals ── */}
+              {/* Totals */}
               <div style={{ marginBottom: '14px' }}>
                 {sale.discount_amount > 0 && (
                   <div style={R.totRow}>
@@ -229,12 +235,12 @@ export default function ReceiptModal({ sale, onClose }: Props) {
                 )}
               </div>
 
-              {/* ── Status badge ── */}
+              {/* Status badge */}
               <div style={{ ...R.center, margin: '12px 0' }}>
                 <span style={R.badge}>{statusLabel}</span>
               </div>
 
-              {/* ── Footer ── */}
+              {/* Footer */}
               <div style={R.footer}>
                 <div>Thank you for your business!</div>
                 <div style={{ marginTop: '4px', fontSize: '10px' }}>Powered by OgaOS</div>
@@ -244,6 +250,20 @@ export default function ReceiptModal({ sale, onClose }: Props) {
 
           {/* Action buttons */}
           <div className="px-5 pb-5 pt-3 border-t border-dash-border shrink-0 space-y-2">
+
+            {/* Generate receipt number if not done yet */}
+            {!sale.receipt_number && !receiptGenerated && (
+              <button
+                onClick={() => receiptMutation.mutate()}
+                disabled={receiptMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm border border-white/10 text-muted-foreground hover:bg-dash-hover transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                {receiptMutation.isPending ? 'Generating…' : 'Generate Receipt Number'}
+              </button>
+            )}
+
+            {/* Print */}
             <button
               onClick={handlePrint}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
@@ -252,24 +272,13 @@ export default function ReceiptModal({ sale, onClose }: Props) {
               <Printer className="w-4 h-4" /> Print Receipt
             </button>
 
+            {/* Email */}
             {customerEmail ? (
               <button
-                onClick={() => { setEmailSent(false); emailMutation.mutate() }}
-                disabled={emailMutation.isPending || emailSent}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm border transition-colors',
-                  emailSent
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                    : 'border-dash-border text-foreground hover:bg-dash-hover',
-                )}
+                onClick={handleEmailReceipt}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm border border-dash-border text-foreground hover:bg-dash-hover transition-colors"
               >
-                {emailSent ? (
-                  <><CheckCircle2 className="w-4 h-4" /> Sent to {customerEmail}</>
-                ) : emailMutation.isPending ? (
-                  'Sending…'
-                ) : (
-                  <><Mail className="w-4 h-4" /> Email to {customerEmail}</>
-                )}
+                <Mail className="w-4 h-4" /> Email to {customerEmail}
               </button>
             ) : (
               <p className="text-center text-xs text-muted-foreground py-1">
