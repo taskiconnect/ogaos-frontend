@@ -48,7 +48,7 @@ interface PaystackOptions {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/api\/v1\/?$/, '')
 const PAYSTACK_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? ''
 
 function fmt(kobo: number) {

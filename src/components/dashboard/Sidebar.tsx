@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, ShoppingCart, Receipt, TrendingDown,
   Landmark, Package, Users, Briefcase, ShoppingBag,
-  Store, Settings, LogOut, Zap, ChevronLeft, ChevronRight,
+  Store, Settings, LogOut, ChevronLeft, ChevronRight,
   X, Menu, UserCog,
 } from 'lucide-react'
 import { cn, getInitials } from '@/lib/utils'
@@ -126,18 +126,19 @@ function SidebarInner({
       <div className={cn('flex items-center h-16 px-4 border-b border-white/8 shrink-0', collapsed ? 'justify-center' : 'justify-between')}>
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
-              <Zap className="w-4 h-4 text-white" fill="white" />
-            </div>
-            <span className="font-bold text-base tracking-tight text-white">
-              Oga<span className="text-primary">OS</span>
-            </span>
+            <img
+              src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/OgaOS%20logo.png?updatedAt=1773595227330"
+              alt="OgaOS"
+              className="h-8 w-auto object-contain"
+            />
           </Link>
         )}
         {collapsed && (
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
-            <Zap className="w-4 h-4 text-white" fill="white" />
-          </div>
+          <img
+            src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/OgaOS%20logo.png?updatedAt=1773595227330"
+            alt="OgaOS"
+            className="w-8 h-8 object-contain"
+          />
         )}
         {onCollapse && (
           <button

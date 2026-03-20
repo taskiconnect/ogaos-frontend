@@ -1,21 +1,25 @@
-// src/lib/hooks/useDashboard.ts
+// src/hooks/useDashboard.ts
+// Single hook that fires all dashboard queries in parallel.
 import { useQueries } from '@tanstack/react-query'
 import { listSales, listDebts } from '@/lib/api/finance'
-import { listCustomers } from '@/lib/api/business'
-import type { Sale, Customer, Debt } from '@/lib/api/types'
+import { listCustomers }        from '@/lib/api/business'
+import type { Sale, Debt, Customer } from '@/lib/api/types'
 
-export const fromKobo = (kobo: number) => Math.round(kobo / 100)
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export const formatNaira = (kobo: number) =>
-  `₦${fromKobo(kobo).toLocaleString('en-NG')}`
+export const fromKobo    = (k: number) => Math.round(k / 100)
+export const formatNaira = (k: number) => `₦${fromKobo(k).toLocaleString('en-NG')}`
 
+/** Today's date as yyyy-mm-dd in Africa/Lagos timezone */
 function todayNg(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' })
 }
 
+// ─── Revenue chart ────────────────────────────────────────────────────────────
+
 export interface MonthlyRevenue {
   month:    string
-  revenue:  number
+  revenue:  number  // naira
   expenses: number
 }
 
@@ -23,7 +27,6 @@ function aggregateMonthly(sales: Sale[]): MonthlyRevenue[] {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   const map: Record<number, number> = {}
   for (const s of sales) {
-    if (s.status === 'cancelled') continue
     const m = new Date(s.created_at).getMonth()
     map[m] = (map[m] ?? 0) + (s.amount_paid ?? s.total_amount)
   }
@@ -34,75 +37,58 @@ function aggregateMonthly(sales: Sale[]): MonthlyRevenue[] {
   }))
 }
 
-// Convert a partial Sale into a Debt shape so OutstandingDebts widget can display it.
-// This handles cases where no debt record was auto-created (e.g. walk-in customers).
-function saleToDebt(sale: Sale): Debt {
-  return {
-    id:            sale.id,
-    business_id:   sale.business_id,
-    direction:     'receivable',
-    customer_id:   sale.customer_id,
-    supplier_name: null,
-    supplier_phone: null,
-    description:   `Balance from sale ${sale.sale_number}`,
-    total_amount:  sale.total_amount,
-    amount_paid:   sale.amount_paid,
-    amount_due:    sale.balance_due,
-    due_date:      null,
-    status:        'outstanding',
-    notes:         null,
-    recorded_by:   sale.recorded_by,
-    created_at:    sale.created_at,
-    updated_at:    sale.updated_at,
-    customer:      sale.customer,
-  }
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DashboardData {
-  todaySalesTotal:      number
+  todaySalesTotal:      number    // naira
   todaySalesCount:      number
-  outstandingDebtTotal: number
+  todayFullyPaid:       number    // count
+  todayPartial:         number    // count
+  todayRevenue:         number    // naira — amount actually collected today
+  outstandingDebtTotal: number    // naira — ALL unpaid balances inc. walk-in sales
   outstandingDebtCount: number
   totalCustomers:       number
   recentSales:          Sale[]
+  overdueDebts:         Debt[]
   topCustomers:         Customer[]
   monthlyRevenue:       MonthlyRevenue[]
-  overdueDebts:         Debt[]
   isLoading:            boolean
   isError:              boolean
   refetch:              () => void
 }
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useDashboard(): DashboardData {
   const today = todayNg()
 
   const results = useQueries({
     queries: [
-      // [0] Today's sales — KPI card
+      // [0] Today's sales
       {
         queryKey: ['sales', 'today', today],
         queryFn:  () => listSales({ date_from: today, date_to: today, limit: 100 }),
         staleTime: 1000 * 60 * 2,
       },
-      // [1] Recent sales — RecentTransactions widget
+      // [1] Recent sales for RecentTransactions widget
       {
         queryKey: ['sales', 'recent'],
         queryFn:  () => listSales({ limit: 8 }),
         staleTime: 1000 * 60 * 2,
       },
-      // [2] Partial/unpaid sales — both for KPI and OutstandingDebts widget
+      // [2] Outstanding debt records
       {
-        queryKey: ['sales', 'unpaid'],
-        queryFn:  () => listSales({ status: 'partial', limit: 20 }),
+        queryKey: ['debts', 'outstanding'],
+        queryFn:  () => listDebts({ status: 'outstanding', limit: 10 }),
         staleTime: 1000 * 60 * 3,
       },
-      // [3] Top customers
+      // [3] Customers
       {
         queryKey: ['customers', 'top'],
         queryFn:  () => listCustomers({ limit: 5 }),
         staleTime: 1000 * 60 * 5,
       },
-      // [4] Full year sales — RevenueChart
+      // [4] Full-year sales for revenue chart
       {
         queryKey: ['sales', 'year-chart'],
         queryFn:  () => {
@@ -111,70 +97,72 @@ export function useDashboard(): DashboardData {
         },
         staleTime: 1000 * 60 * 10,
       },
-      // [5] Manual receivable debts (recorded via Debts page)
+      // [5] Partial sales (walk-in + linked) — for outstanding balance KPI
+      // These may not have a debt record if the customer wasn't linked at sale time
       {
-        queryKey: ['debts', 'dashboard'],
-        queryFn:  () => listDebts({ direction: 'receivable', limit: 10 }),
+        queryKey: ['sales', 'partial-dashboard'],
+        queryFn:  () => listSales({ status: 'partial', limit: 100 }),
         staleTime: 1000 * 60 * 3,
       },
     ],
   })
 
-  const [todaySalesQ, recentSalesQ, unpaidSalesQ, customersQ, yearSalesQ, debtsQ] = results
+  const [todaySalesQ, recentSalesQ, debtsQ, customersQ, yearSalesQ, partialSalesQ] = results
 
   const isLoading = results.some(r => r.isLoading)
   const isError   = results.some(r => r.isError)
 
-  // KPI: today's revenue
-  const todaySalesList  = todaySalesQ.data?.data ?? []
-  const todaySalesTotal = fromKobo(
-    todaySalesList
-      .filter(s => s.status !== 'cancelled')
-      .reduce((s, x) => s + (x.amount_paid ?? x.total_amount), 0)
-  )
-  const todaySalesCount = todaySalesList.filter(s => s.status !== 'cancelled').length
+  // ── Today's sales KPIs ────────────────────────────────────────────────────
+  const todaySalesList = todaySalesQ.data?.data ?? []
+  const todaySalesTotal = todaySalesList.reduce((s, x) => s + x.total_amount, 0)
+  const todayRevenue    = todaySalesList.reduce((s, x) => s + x.amount_paid, 0)
+  const todaySalesCount = todaySalesList.length
+  const todayFullyPaid  = todaySalesList.filter(s => s.status === 'completed').length
+  const todayPartial    = todaySalesList.filter(s => s.status === 'partial').length
 
-  // Unpaid sales with balance remaining
-  const unpaidSales = (unpaidSalesQ.data?.data ?? []).filter(s => (s.balance_due ?? 0) > 0)
+  // ── Outstanding debt KPI ──────────────────────────────────────────────────
+  // Combine: manual debt records + partial sales that have no debt record
+  const debtList    = debtsQ.data?.data ?? []
+  const partialSales = partialSalesQ.data?.data ?? []
 
-  // KPI: total outstanding from partial sales
-  const outstandingDebtTotal = fromKobo(unpaidSales.reduce((s, x) => s + (x.balance_due ?? 0), 0))
-  const outstandingDebtCount = unpaidSales.length
-
-  // Manual debt records from /debts endpoint
-  const manualDebts = debtsQ.data?.data ?? []
-
-  // Combine: convert partial sales to Debt shape + manual debts
-  // Deduplicate: a sale auto-creates a debt record, so if a sale's ID appears
-  // in both lists we prefer the actual debt record.
-  const debtSaleIds = new Set(
-    manualDebts
-      .map(d => d.description)
-      .filter(desc => desc?.startsWith('Balance from sale '))
-      .map(desc => desc.replace('Balance from sale ', ''))
+  // Debt records already linked to a sale (description = "Balance from sale SL-XXXXXX")
+  const linkedSaleNumbers = new Set(
+    debtList
+      .filter(d => d.description.startsWith('Balance from sale '))
+      .map(d => d.description.replace('Balance from sale ', '').trim())
   )
 
-  const saleDerivedDebts = unpaidSales
-    .filter(s => !debtSaleIds.has(s.sale_number))
-    .map(saleToDebt)
+  // Walk-in partial sales that have no debt record
+  const unlinkedPartialBalance = partialSales
+    .filter(s => !linkedSaleNumbers.has(s.sale_number) && (s.balance_due ?? 0) > 0)
+    .reduce((sum, s) => sum + s.balance_due, 0)
 
-  // Show manual debts first, then sale-derived ones, limit to 8 for the widget
-  const overdueDebts = [...manualDebts, ...saleDerivedDebts].slice(0, 8)
+  const debtRecordBalance = debtList
+    .filter(d => d.direction === 'receivable' && d.status !== 'settled')
+    .reduce((s, d) => s + d.amount_due, 0)
 
+  const outstandingDebtTotal = debtRecordBalance + unlinkedPartialBalance
+  const outstandingDebtCount = debtList.length +
+    partialSales.filter(s => !linkedSaleNumbers.has(s.sale_number) && (s.balance_due ?? 0) > 0).length
+
+  // ── Revenue chart ─────────────────────────────────────────────────────────
   const monthlyRevenue = aggregateMonthly(yearSalesQ.data?.data ?? [])
 
   function refetch() { results.forEach(r => r.refetch()) }
 
   return {
-    todaySalesTotal,
+    todaySalesTotal:      fromKobo(todaySalesTotal),
     todaySalesCount,
-    outstandingDebtTotal,
+    todayFullyPaid,
+    todayPartial,
+    todayRevenue:         fromKobo(todayRevenue),
+    outstandingDebtTotal: fromKobo(outstandingDebtTotal),
     outstandingDebtCount,
-    totalCustomers: (customersQ.data as any)?.total_count ?? customersQ.data?.data?.length ?? 0,
-    recentSales:    recentSalesQ.data?.data ?? [],
-    topCustomers:   customersQ.data?.data ?? [],
+    totalCustomers:       customersQ.data?.data?.length ?? 0,
+    recentSales:          recentSalesQ.data?.data ?? [],
+    overdueDebts:         debtList,
+    topCustomers:         customersQ.data?.data ?? [],
     monthlyRevenue,
-    overdueDebts,
     isLoading,
     isError,
     refetch,

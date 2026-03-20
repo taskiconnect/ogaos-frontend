@@ -4,6 +4,7 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { Almarai, Open_Sans, Roboto } from 'next/font/google'
 import { Providers } from '@/components/providers/Providers'
+import AuthProvider from '@/components/providers/AuthProvider'
 
 const almarai = Almarai({
   subsets: ['latin'],
@@ -36,11 +37,6 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    /*
-     * suppressHydrationWarning is REQUIRED here.
-     * next-themes adds the "dark" class to <html> on the client after SSR,
-     * which causes a React hydration mismatch warning without this prop.
-     */
     <html
       lang="en"
       suppressHydrationWarning
@@ -53,7 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased">
         <Providers>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </Providers>
         <Toaster
           position="bottom-right"

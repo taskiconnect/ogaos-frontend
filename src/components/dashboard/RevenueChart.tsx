@@ -1,133 +1,149 @@
 'use client'
 
+// src/components/dashboard/RevenueChart.tsx
 import { useState } from 'react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useQuery } from '@tanstack/react-query'
+import { listSales } from '@/lib/api/finance'
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
+} from 'recharts'
 import { cn } from '@/lib/utils'
 import { TrendingUp } from 'lucide-react'
-import type { MonthlyRevenue } from '@/lib/hooks/useDashboard'
+import type { Sale } from '@/lib/api/types'
 
-function fmt(naira: number) {
-  if (naira >= 1_000_000) return `₦${(naira/1_000_000).toFixed(1)}M`
-  if (naira >= 1_000)     return `₦${(naira/1_000).toFixed(0)}k`
-  return `₦${naira.toLocaleString('en-NG')}`
+type Period = '3m' | '6m' | '1y'
+const PERIODS: { key: Period; label: string; months: number }[] = [
+  { key: '3m', label: '3M', months: 3  },
+  { key: '6m', label: '6M', months: 6  },
+  { key: '1y', label: '1Y', months: 12 },
+]
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+function buildChartData(sales: Sale[], months: number) {
+  const now    = new Date()
+  const result = []
+  for (let i = months - 1; i >= 0; i--) {
+    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    result.push({ month: MONTH_NAMES[d.getMonth()], key, revenue: 0, expenses: 0 })
+  }
+  for (const s of sales) {
+    const d   = new Date(s.created_at)
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    const bucket = result.find(r => r.key === key)
+    if (bucket) bucket.revenue += Math.round(s.amount_paid / 100)
+  }
+  return result
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
+function fmt(n: number) {
+  if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `₦${(n / 1_000).toFixed(0)}k`
+  return `₦${n.toLocaleString('en-NG')}`
+}
+
+export default function RevenueChart() {
+  const [period, setPeriod] = useState<Period>('6m')
+  const months = PERIODS.find(p => p.key === period)!.months
+
+  const { data, isLoading } = useQuery({
+    queryKey:  ['sales', 'chart', period],
+    queryFn:   () => listSales({ date_from: `${new Date().getFullYear()}-01-01`, limit: 500 }),
+    staleTime: 1000 * 60 * 10,
+  })
+
+  const chartData    = buildChartData(data?.data ?? [], months)
+  const totalRevenue = chartData.reduce((s, d) => s + d.revenue, 0)
+
   return (
-    <div className="bg-[#0f0f14] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-sm">
-      <p className="font-semibold text-white mb-2">{label}</p>
-      <div className="space-y-1">
-        <p className="text-blue-400 text-xs">Revenue: <span className="font-bold">{fmt(payload[0]?.value ?? 0)}</span></p>
-        {(payload[1]?.value ?? 0) > 0 && (
-          <p className="text-red-400 text-xs">Expenses: <span className="font-bold">{fmt(payload[1]?.value ?? 0)}</span></p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-const PERIODS = [
-  { key: '3m',  label: '3M', slice: 9 },
-  { key: '6m',  label: '6M', slice: 6 },
-  { key: '12m', label: '1Y', slice: 0 },
-] as const
-
-interface Props {
-  data:      MonthlyRevenue[]
-  isLoading: boolean
-}
-
-export default function RevenueChart({ data, isLoading }: Props) {
-  const [period, setPeriod] = useState<'3m' | '6m' | '12m'>('12m')
-  const slice     = PERIODS.find(p => p.key === period)!.slice
-  const chartData = (data ?? []).slice(slice)
-
-  const totalRevenue  = chartData.reduce((s, d) => s + d.revenue,  0)
-  const totalExpenses = chartData.reduce((s, d) => s + d.expenses, 0)
-
-  return (
-    <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl p-6 h-full">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+    <div className="rounded-2xl border border-white/8 bg-white/2 p-5 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-white text-sm">Revenue vs Expenses</h3>
-          </div>
-          {isLoading ? (
-            <div className="h-7 w-32 rounded-lg bg-white/5 animate-pulse mt-1" />
-          ) : (
-            <>
-              <p className="text-2xl font-bold text-white">{fmt(totalRevenue)}</p>
-              {totalExpenses > 0 && (
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Expenses: <span className="text-red-400">{fmt(totalExpenses)}</span>
-                </p>
-              )}
-            </>
+          <h3 className="font-semibold text-white text-sm">Revenue vs Expenses</h3>
+          {!isLoading && (
+            <p className="text-xs text-gray-500 mt-0.5">{fmt(totalRevenue)} collected</p>
           )}
         </div>
-
-        {/* Period toggle */}
-        <div className="flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/8">
+        <div className="flex gap-1">
           {PERIODS.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={cn('px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                period === p.key ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-300')}>
+              className={cn(
+                'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all',
+                period === p.key
+                  ? 'bg-primary text-white'
+                  : 'text-gray-500 hover:text-white hover:bg-white/8',
+              )}>
               {p.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Loading skeleton */}
-      {isLoading && <div className="h-[200px] rounded-xl bg-white/5 animate-pulse" />}
-
-      {/* Empty state */}
-      {!isLoading && totalRevenue === 0 && (
-        <div className="h-[200px] flex flex-col items-center justify-center text-center">
-          <p className="text-sm font-medium text-white mb-1">No sales data yet</p>
-          <p className="text-xs text-gray-500">Revenue will appear here once you record sales</p>
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      ) : totalRevenue === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+          <TrendingUp className="w-8 h-8 text-gray-700 mb-2" />
+          <p className="text-sm text-gray-500">No sales data yet</p>
+          <p className="text-xs text-gray-600 mt-0.5">Revenue will appear here once you record sales</p>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-44">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+              <defs>
+                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#3f9af5" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3f9af5" stopOpacity={0}   />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: '#6b7280', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fill: '#6b7280', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v: number) => fmt(v)}
+                width={55}
+              />
+              <Tooltip
+                contentStyle={{
+                  background:   '#0f0f14',
+                  border:       '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  fontSize:     12,
+                }}
+                labelStyle={{ color: '#fff', fontWeight: 600 }}
+                formatter={(v: number | string | undefined) => [fmt(Number(v ?? 0)), 'Revenue']}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#3f9af5"
+                strokeWidth={2}
+                fill="url(#revGrad)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       )}
 
-      {/* Chart */}
-      {!isLoading && totalRevenue > 0 && (
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={chartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
-            <defs>
-              <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#3f9af5" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#3f9af5" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gradExpenses" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.18} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false}
-              tickFormatter={v => v >= 1e6 ? `₦${(v/1e6).toFixed(0)}M` : v >= 1000 ? `₦${(v/1000).toFixed(0)}k` : `₦${v}`} />
-            <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="revenue"  stroke="#3f9af5" strokeWidth={2} fill="url(#gradRevenue)"  dot={false} />
-            <Area type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} fill="url(#gradExpenses)" dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      )}
-
-      {/* Legend */}
-      {!isLoading && (
-        <div className="flex items-center gap-5 mt-4">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span className="w-4 h-0.5 bg-blue-400 rounded inline-block" /> Revenue
-          </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span className="w-4 h-0.5 bg-red-400 rounded inline-block" /> Expenses
-          </div>
-        </div>
-      )}
+      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5 text-xs text-gray-500">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3f9af5]" /> Revenue
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-400" /> Expenses
+        </span>
+      </div>
     </div>
   )
 }
