@@ -273,7 +273,7 @@ export default function RegisterForm() {
       return registerUser(payload)
     },
     onSuccess: () => {
-      router.push('/auth/verify-email')
+      router.push('/auth/signupsuccess')
     },
     onError: (err: any) => {
       const message =

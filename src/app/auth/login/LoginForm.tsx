@@ -161,7 +161,7 @@ export default function LoginForm() {
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <Label htmlFor="password" className={labelClass}>Password</Label>
-            <Link href="/forgot-password" className="text-xs text-primary hover:text-primary/80 transition-colors">
+            <Link href="/auth/forgot-password" className="text-xs text-primary hover:text-primary/80 transition-colors">
               Forgot password?
             </Link>
           </div>
