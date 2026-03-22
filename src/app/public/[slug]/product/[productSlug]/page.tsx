@@ -1,11 +1,13 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Download, ShoppingBag, Star,
-  CheckCircle2, Loader2, AlertCircle, Play,
+  CheckCircle2, Loader2, AlertCircle,
   Shield, Clock, FileText,
 } from 'lucide-react'
 
@@ -90,7 +92,7 @@ function Skeleton() {
 
 interface PurchaseFormProps {
   product: PublicProduct
-  onSuccess: () => void
+  onSuccess: (email: string) => void
 }
 
 function PurchaseForm({ product, onSuccess }: PurchaseFormProps) {
@@ -149,7 +151,7 @@ function PurchaseForm({ product, onSuccess }: PurchaseFormProps) {
       callback: () => {
         // Payment confirmed by Paystack — backend webhook will handle fulfillment
         setLoading(false)
-        onSuccess()
+        onSuccess(email.trim())
       },
       onClose: () => {
         setLoading(false)
@@ -240,11 +242,12 @@ export default function ProductPage() {
   const slug        = params?.slug        as string
   const productSlug = params?.productSlug as string
 
-  const [product,   setProduct]   = useState<PublicProduct | null>(null)
-  const [loading,   setLoading]   = useState(true)
-  const [notFound,  setNotFound]  = useState(false)
-  const [purchased, setPurchased] = useState(false)
+  const [product,    setProduct]    = useState<PublicProduct | null>(null)
+  const [loading,    setLoading]    = useState(true)
+  const [notFound,   setNotFound]   = useState(false)
+  const [purchased,  setPurchased]  = useState(false)
   const [buyerEmail, setBuyerEmail] = useState('')
+  const [activeImg,  setActiveImg]  = useState(0)
 
   useEffect(() => {
     if (!productSlug) return
@@ -275,7 +278,6 @@ export default function ProductPage() {
   const embedUrl  = youtubeEmbed(product.promo_video_url)
   const gallery   = (() => { try { return JSON.parse(product.gallery_image_urls ?? '[]') } catch { return [] } })() as string[]
   const allImages = [product.cover_image_url, ...gallery].filter(Boolean) as string[]
-  const [activeImg, setActiveImg] = useState(0)
   const sizeStr   = fmtSize(product.file_size)
 
   return (
@@ -374,7 +376,7 @@ export default function ProductPage() {
         ) : (
           <PurchaseForm
             product={product}
-            onSuccess={() => setPurchased(true)}
+            onSuccess={(email) => { setBuyerEmail(email); setPurchased(true) }}
           />
         )}
 

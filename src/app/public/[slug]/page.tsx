@@ -1,12 +1,14 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  MapPin, Globe, Phone, Mail, ShoppingBag, Star, Download,
+  MapPin, Globe, ShoppingBag, Star, Download,
   Package, ExternalLink, ChevronRight, AlertCircle, Play, X,
-  CheckCircle2, Clock, Building2, Tag, ArrowRight,
+  CheckCircle2, Building2, Tag,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
