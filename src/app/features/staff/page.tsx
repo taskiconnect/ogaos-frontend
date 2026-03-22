@@ -1,4 +1,6 @@
-﻿export const dynamic = 'force-dynamic'
+'use client'
+
+export const dynamic = 'force-dynamic'
 
 import { FeaturePageClient } from '@/components/landing/features/FeaturePageClient'
 
