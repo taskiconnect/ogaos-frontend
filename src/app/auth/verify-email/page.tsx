@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { Suspense } from 'react'
 import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'

@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 // app/page.tsx
 import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Hero } from '@/components/landing/Hero'

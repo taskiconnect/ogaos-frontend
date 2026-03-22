@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 // app/auth/signup/page.tsx
 import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'

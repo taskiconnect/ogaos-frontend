@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { FeaturePageClient } from '@/components/landing/features/FeaturePageClient'
 
 export default function DirectoryPage() {

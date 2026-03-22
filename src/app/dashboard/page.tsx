@@ -1,4 +1,6 @@
-'use client'
+﻿'use client'
+
+export const dynamic = 'force-dynamic'
 
 // src/app/dashboard/page.tsx
 import Sidebar           from '@/components/dashboard/Sidebar'
