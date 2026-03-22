@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import {
   Mail, Lock, User, Building2, Phone, MapPin,
   ArrowRight, Tag, Map, Globe, ChevronDown,
-  Search, Check, BarChart3,
+  Search, Check,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -269,17 +269,22 @@ export default function RegisterForm() {
 
   const mutation = useMutation({
     mutationFn: async (values: SignUpFormInput) => {
+      // Strip confirmPassword — backend doesn't want it
       const { confirmPassword, ...payload } = values
       return registerUser(payload)
     },
-    onSuccess: () => {
-      router.push('/auth/signupsuccess')
+    onSuccess: (_, variables) => {
+      // registerUser now throws on any failure, so this only runs on true success.
+      // Pass the email as a query param so the verify page can offer a resend button.
+      router.push(`/auth/signupsuccess?email=${encodeURIComponent(variables.email)}`)
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
+      // Pull the message from our enriched error or fall back gracefully
+      const anyErr = err as { response?: { data?: { message?: string; error?: string } }; message?: string }
       const message =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
+        anyErr?.response?.data?.message ||
+        anyErr?.response?.data?.error ||
+        anyErr?.message ||
         'Registration failed. Please check your details.'
       toast.error(message)
     },

@@ -1,8 +1,6 @@
+﻿// app/auth/signupsuccess/page.tsx
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-// app/auth/signupsuccess/page.tsx
 import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
 import VerifyEmailCard from './VerifyEmailCard'

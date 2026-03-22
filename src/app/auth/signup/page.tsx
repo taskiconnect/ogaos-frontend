@@ -1,11 +1,11 @@
+// app/auth/signup/page.tsx
 'use client'
 
 export const dynamic = 'force-dynamic'
 
-// app/auth/signup/page.tsx
 import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
-import AnimatedSignupWrapper from './AnimatedSignupWrapper'  
+import AnimatedSignupWrapper from './AnimatedSignupWrapper'
 
 export default function SignUpPage() {
   return (

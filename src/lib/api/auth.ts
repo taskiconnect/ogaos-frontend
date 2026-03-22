@@ -15,21 +15,47 @@ import type {
 
 // ─── Auth endpoints (via Next.js proxy — cookie must land on this domain) ────
 
-export const registerUser = (data: RegisterRequest) =>
-  fetch('/api/auth/register', {
+export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {
+  const res = await fetch('/api/auth/register', {
     method:      'POST',
     credentials: 'include',
     headers:     { 'Content-Type': 'application/json' },
     body:        JSON.stringify(data),
-  }).then(r => r.json()) as Promise<AuthResponse>
+  })
 
-export const loginUser = (data: LoginRequest) =>
-  fetch('/api/auth/login', {
+  const json = await res.json()
+
+  // fetch() does NOT throw on 4xx/5xx — we must check manually.
+  // Also guard against a backend that returns HTTP 200 with success: false.
+  if (!res.ok || json?.success === false) {
+    const message = json?.message || json?.error || 'Registration failed'
+    const err = new Error(message) as Error & { response: { data: typeof json } }
+    err.response = { data: json }
+    throw err
+  }
+
+  return json as AuthResponse
+}
+
+export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
+  const res = await fetch('/api/auth/login', {
     method:      'POST',
     credentials: 'include',   // ← ensures Set-Cookie lands on this domain
     headers:     { 'Content-Type': 'application/json' },
     body:        JSON.stringify(data),
-  }).then(r => r.json()) as Promise<AuthResponse>
+  })
+
+  const json = await res.json()
+
+  if (!res.ok || json?.success === false) {
+    const message = json?.message || json?.error || 'Login failed'
+    const err = new Error(message) as Error & { response: { data: typeof json } }
+    err.response = { data: json }
+    throw err
+  }
+
+  return json as AuthResponse
+}
 
 export const logoutUser = () =>
   fetch('/api/auth/logout', {
@@ -37,13 +63,25 @@ export const logoutUser = () =>
     credentials: 'include',
   }).then(() => undefined)
 
-export const resendVerification = (data: { email: string }) =>
-  fetch('/api/auth/resend-verification', {
+export const resendVerification = async (data: { email: string }): Promise<AuthResponse> => {
+  const res = await fetch('/api/auth/resend-verification', {
     method:      'POST',
     credentials: 'include',
     headers:     { 'Content-Type': 'application/json' },
     body:        JSON.stringify(data),
-  }).then(r => r.json()) as Promise<AuthResponse>
+  })
+
+  const json = await res.json()
+
+  if (!res.ok || json?.success === false) {
+    const message = json?.message || json?.error || 'Failed to resend verification email'
+    const err = new Error(message) as Error & { response: { data: typeof json } }
+    err.response = { data: json }
+    throw err
+  }
+
+  return json as AuthResponse
+}
 
 // ─── Remaining endpoints (no cookie needed — use axios client normally) ───────
 

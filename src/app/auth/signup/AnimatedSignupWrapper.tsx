@@ -2,7 +2,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import RegisterForm from './RegisterForm'   // your existing form component
+import RegisterForm from './RegisterForm'
 
 export default function AnimatedSignupWrapper() {
   return (
