@@ -1,7 +1,3 @@
-'use client'
-
-export const dynamic = 'force-dynamic'
-
 // app/auth/forgot-password/page.tsx
 'use client'
 

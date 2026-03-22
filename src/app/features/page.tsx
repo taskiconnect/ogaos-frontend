@@ -1,10 +1,5 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-// src/app/features/page.tsx
-'use client'
-
 import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
 import { Button } from '@/components/ui/button'
