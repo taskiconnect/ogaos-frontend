@@ -9,14 +9,20 @@
 //    directly to the Go backend.
 //  - HttpOnly refresh_token cookies are forwarded and returned intact so the
 //    browser never touches the raw token value.
+//
+// Env var resolution order:
+//  1. API_URL          — server-only, preferred (never exposed to browser)
+//  2. NEXT_PUBLIC_API_URL — fallback if API_URL is not set (already in Vercel)
+//  3. http://localhost:8080/api/v1 — local development fallback
 
 import { NextRequest, NextResponse } from 'next/server'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
-// Server-only — never expose this in client code.
-// Set API_URL (not NEXT_PUBLIC_API_URL) in your production environment.
-const BACKEND = process.env.API_URL ?? 'http://localhost:8080/api/v1'
+const BACKEND =
+  process.env.API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'http://localhost:8080/api/v1'
 
 export async function proxyRequest(
   req: NextRequest,
