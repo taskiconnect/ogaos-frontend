@@ -44,6 +44,7 @@ export interface DashboardData {
   todaySalesCount:      number
   todayFullyPaid:       number    // count
   todayPartial:         number    // count
+  todayOutstanding:     number    // naira — outstanding balance from today's partial/unpaid sales
   todayRevenue:         number    // naira — amount actually collected today
   outstandingDebtTotal: number    // naira — ALL unpaid balances inc. walk-in sales
   outstandingDebtCount: number
@@ -118,7 +119,12 @@ export function useDashboard(): DashboardData {
   const todayRevenue    = todaySalesList.reduce((s, x) => s + x.amount_paid, 0)
   const todaySalesCount = todaySalesList.length
   const todayFullyPaid  = todaySalesList.filter(s => s.status === 'completed').length
-  const todayPartial    = todaySalesList.filter(s => s.status === 'partial').length
+  const todayPartial    = todaySalesList.filter(s => s.status === 'partial' || s.status === 'pending').length
+  
+  // Calculate outstanding balance from today's partial/unpaid sales
+  const todayOutstanding = todaySalesList
+    .filter(s => s.status === 'partial' || s.status === 'pending')
+    .reduce((sum, s) => sum + (s.balance_due ?? 0), 0)
 
   // ── Outstanding debt KPI ──────────────────────────────────────────────────
   // Combine: manual debt records + partial sales that have no debt record
@@ -155,6 +161,7 @@ export function useDashboard(): DashboardData {
     todaySalesCount,
     todayFullyPaid,
     todayPartial,
+    todayOutstanding:     fromKobo(todayOutstanding), // Convert from kobo to naira
     todayRevenue:         fromKobo(todayRevenue),
     outstandingDebtTotal: fromKobo(outstandingDebtTotal),
     outstandingDebtCount,
