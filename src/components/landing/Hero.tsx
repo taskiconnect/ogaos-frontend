@@ -6,15 +6,15 @@ import { DashboardShowcase } from '@/components/landing/DashboardShowcase'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
-  ShieldCheck,
-  RefreshCcw,
-  Sparkles,
   Wallet,
   Users,
   MessageCircle,
   TrendingUp,
+  Search,
+  MapPin,
+  X,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 /* ─── animation variants ─────────────────────────────────────── */
 const container = {
@@ -64,6 +64,100 @@ function FloatCard({
   )
 }
 
+/* ─── store search bar ────────────────────────────────────────── */
+const SUGGESTED_TAGS = ['Electronics', 'Fashion', 'Food & Drinks', 'Pharmacy', 'Groceries', 'Beauty']
+
+function StoreSearchBar() {
+  const [query, setQuery] = useState('')
+  const [focused, setFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleSearch = () => {
+    if (!query.trim()) return
+    // Navigate to store directory with query — wire up to your router as needed
+    window.location.href = `/stores?q=${encodeURIComponent(query.trim())}`
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch()
+    if (e.key === 'Escape') {
+      setQuery('')
+      inputRef.current?.blur()
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 w-full max-w-lg">
+      {/* Label */}
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+        Find stores near you
+      </p>
+
+      {/* Search input */}
+      <div
+        className={`relative flex items-center rounded-2xl border bg-background/80 backdrop-blur-sm transition-all duration-200 shadow-sm ${
+          focused
+            ? 'border-primary/60 shadow-md shadow-primary/10 ring-2 ring-primary/15'
+            : 'border-border/60 hover:border-border'
+        }`}
+      >
+        {/* Location pin */}
+        <div className="flex items-center pl-4 pr-2 shrink-0">
+          <MapPin className="w-4 h-4 text-primary/70" />
+        </div>
+
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search by type, name, or keyword…"
+          className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none min-w-0"
+        />
+
+        {/* Clear */}
+        {query && (
+          <button
+            onClick={() => { setQuery(''); inputRef.current?.focus() }}
+            className="p-1.5 mr-1 rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-secondary/60 transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {/* Search button */}
+        <button
+          onClick={handleSearch}
+          className="m-1.5 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Search</span>
+        </button>
+      </div>
+
+      {/* Suggested tags */}
+      <div className="flex flex-wrap gap-2">
+        {SUGGESTED_TAGS.map((tag) => (
+          <button
+            key={tag}
+            onClick={() => {
+              setQuery(tag)
+              window.location.href = `/stores?q=${encodeURIComponent(tag)}`
+            }}
+            className="rounded-full border border-border/50 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-primary/8 hover:text-primary transition-all"
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ─── hero ────────────────────────────────────────────────────── */
 export function Hero() {
   const [navH, setNavH] = useState(80)
@@ -90,10 +184,10 @@ export function Hero() {
 
         <div
           className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
-          style={{ paddingTop: `${navH + 48}px`, paddingBottom: '0' }}
+          style={{ paddingTop: `${navH + 24}px`, paddingBottom: '0' }}
         >
           {/* ════════════ TWO-COLUMN HERO ════════════ */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-20 items-center min-h-[calc(100vh-120px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-6 xl:gap-20 items-center min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-120px)]">
 
             {/* ── LEFT: Copy ── */}
             <motion.div
@@ -152,6 +246,18 @@ export function Hero() {
                 platform built for Nigerian SMEs.
               </motion.p>
 
+              {/* ── Store Search Bar ── */}
+              <motion.div variants={item} className="mb-8">
+                <StoreSearchBar />
+              </motion.div>
+
+              {/* Divider */}
+              <motion.div variants={item} className="flex items-center gap-3 mb-8">
+                <div className="h-px flex-1 bg-border/50" />
+                <span className="text-xs text-muted-foreground/60 font-medium">or sign up to manage your own store</span>
+                <div className="h-px flex-1 bg-border/50" />
+              </motion.div>
+
               {/* Feature pills */}
               <motion.div variants={item} className="flex flex-wrap gap-2.5 mb-10">
                 {[
@@ -192,19 +298,7 @@ export function Hero() {
                 </Button>
               </motion.div>
 
-              {/* Trust row */}
-              <motion.div variants={item} className="flex flex-wrap gap-5 text-sm text-muted-foreground">
-                {[
-                  { icon: ShieldCheck, text: 'No credit card required' },
-                  { icon: RefreshCcw, text: 'Cancel anytime' },
-                  { icon: Sparkles, text: '14-day free trial' },
-                ].map(({ icon: Icon, text }, i) => (
-                  <span key={i} className="flex items-center gap-1.5">
-                    <Icon className="w-4 h-4 text-primary/70" />
-                    {text}
-                  </span>
-                ))}
-              </motion.div>
+
 
             </motion.div>
 
@@ -213,7 +307,7 @@ export function Hero() {
               variants={slideIn}
               initial="hidden"
               animate="visible"
-              className="relative flex items-end justify-center lg:justify-end"
+              className="relative flex items-end justify-center lg:justify-end -mb-2 lg:mb-0"
             >
               <div className="relative w-full">
 
@@ -229,12 +323,15 @@ export function Hero() {
 
                 {/* ── Hero image ── */}
                 <img
-                  src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/herooga?updatedAt=1773584899994"
+                  src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/Layer%2002.png"
                   alt="Business owner using OgaOS dashboard"
-                  className="w-full h-auto object-contain object-bottom relative z-0"
+                  className="w-full h-auto object-contain object-bottom relative z-0 block"
                   style={{
-                    maxHeight: '680px',
-                    marginBottom: '-140px',
+                    maxHeight: '900px',
+                    width: '115%',
+                    marginLeft: '-7.5%',
+                    marginBottom: 'clamp(-200px, -18vw, -160px)',
+                    marginTop: '-40px',
                     filter: 'drop-shadow(0 32px 64px hsl(var(--primary)/0.12))',
                   }}
                 />
@@ -245,7 +342,7 @@ export function Hero() {
                   label="Today's Revenue"
                   value="₦142,800"
                   color="bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400"
-                  className="hidden sm:flex -left-8 top-16 lg:-left-12"
+                  className="hidden sm:flex -left-8 top-36 lg:-left-12"
                 />
 
                 <FloatCard
@@ -273,7 +370,7 @@ export function Hero() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mt-4 pb-0 z-20"
+            className="relative mt-0 lg:mt-4 pb-0 z-20"
           >
             {/* Glow */}
             <div className="pointer-events-none absolute -inset-x-16 -top-12 h-40 bg-linear-to-t from-primary/12 via-primary/6 to-transparent blur-3xl opacity-70 rounded-full" aria-hidden />

@@ -25,6 +25,7 @@ const itemSchema = z.object({
   discount:     z.coerce.number().min(0).default(0),                // naira
 })
 
+// FIXED: Removed discount_amount from schema, made amount_paid required
 const formSchema = z.object({
   customer_id:        z.string().optional(),
   walk_in_first_name: z.string().optional(),
@@ -33,8 +34,18 @@ const formSchema = z.object({
   walk_in_email:      z.string().optional(),
   staff_name:         z.string().optional(),
   payment_method:     z.string().min(1, 'Required'),
-  amount_paid:        z.coerce.number().min(0).default(0),    // naira
-  discount_amount:    z.coerce.number().min(0).default(0),    // naira
+  amount_paid: z.preprocess(
+    (val) => {
+      if (val === '' || val === undefined || val === null) return undefined
+      const num = Number(val)
+      return isNaN(num) ? undefined : num
+    },
+    z.number()
+      .min(0, 'Amount paid cannot be negative')
+      .refine(val => val !== undefined, {
+        message: 'Amount paid is required'
+      })
+  ),
   notes:              z.string().optional(),
   send_receipt_email: z.boolean().default(false),
   items:              z.array(itemSchema).min(1, 'Add at least one item'),
@@ -158,15 +169,13 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const products  = productsData?.data  ?? []
 
   const {
-    register, control, handleSubmit, watch, setValue, reset,
-    formState: { errors },
+    register, control, handleSubmit, watch, setValue, reset, formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(formSchema) as any, // Type assertion to bypass inference issues
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       items: [{ product_name: '', unit_price: 0, quantity: 1, discount: 0 }],
       payment_method: 'cash',
       amount_paid: 0,
-      discount_amount: 0,
       send_receipt_email: false,
     },
   })
@@ -174,14 +183,17 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   const watchItems         = watch('items')
   const watchAmountPaid    = watch('amount_paid') ?? 0
-  const watchDiscountAmt   = watch('discount_amount') ?? 0
   const watchSendEmail     = watch('send_receipt_email')
 
-  // Live totals in naira
+  // FIXED: Auto-sum discount from items, removed manual discount field
   const subtotal = watchItems.reduce((s, i) =>
-    s + (Number(i.unit_price) * Number(i.quantity)) - Number(i.discount ?? 0), 0)
-  const total    = Math.max(0, subtotal - Number(watchDiscountAmt))
-  const balance  = Math.max(0, total - Number(watchAmountPaid))
+    s + (Number(i.unit_price) * Number(i.quantity)), 0)
+  
+  const totalDiscount = watchItems.reduce((s, i) =>
+    s + Number(i.discount ?? 0), 0)
+  
+  const total = Math.max(0, subtotal - totalDiscount)
+  const balance = Math.max(0, total - Number(watchAmountPaid))
 
   function doReset() {
     reset()
@@ -202,6 +214,11 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           }
         : undefined
 
+      // FIXED: Calculate total discount from items (no manual discount field)
+      const totalDiscountKobo = Math.round(
+        vals.items.reduce((sum, item) => sum + (Number(item.discount) * 100), 0)
+      )
+
       return createSale({
         customer_id:        vals.customer_id || undefined,
         walk_in_customer:   walkIn,
@@ -209,7 +226,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
         payment_method:     vals.payment_method,
         // Convert naira → kobo for API
         amount_paid:        Math.round(Number(vals.amount_paid) * 100),
-        discount_amount:    Math.round(Number(vals.discount_amount ?? 0) * 100),
+        discount_amount:    totalDiscountKobo, // Auto-summed from items
         notes:              vals.notes?.trim() || undefined,
         send_receipt_email: vals.send_receipt_email,
         items: vals.items.map(i => ({
@@ -527,22 +544,24 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           </div>
         </div>
 
-        {/* ── Footer: totals + submit ── */}
+        {/* ── Footer: totals + submit (FIXED: removed manual discount field) ── */}
         <div className="px-6 pb-6 pt-4 border-t border-dash-border bg-dash-bg rounded-b-3xl shrink-0 space-y-4">
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
-                Overall Discount (₦)
-              </label>
-              <input type="number" step="0.01" min="0" {...register('discount_amount')} className={smallCls} />
-            </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
-                Amount Paid Now (₦)
-              </label>
-              <input type="number" step="0.01" min="0" {...register('amount_paid')} className={smallCls} />
-            </div>
+          {/* FIXED: Only amount paid field now, discount is auto-summed */}
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+              Amount Paid Now (₦) <span className="text-red-500">*</span>
+            </label>
+            <input 
+              type="number" 
+              step="0.01" 
+              min="0" 
+              {...register('amount_paid')} 
+              className={smallCls}
+            />
+            {errors.amount_paid && (
+              <p className="text-xs text-red-500 mt-1">{errors.amount_paid.message}</p>
+            )}
           </div>
 
           {/* Balance warning */}
@@ -585,6 +604,11 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
               <p className="text-2xl font-bold text-foreground tracking-tight">
                 ₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
               </p>
+              {totalDiscount > 0 && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                  Discount: ₦{totalDiscount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                </p>
+              )}
               {balance > 0 && Number(watchAmountPaid) > 0 && (
                 <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
                   Paid: ₦{Number(watchAmountPaid).toLocaleString('en-NG', { minimumFractionDigits: 2 })}

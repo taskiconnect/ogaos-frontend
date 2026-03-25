@@ -77,20 +77,24 @@ function dateRange(v: string): { date_from?: string; date_to?: string } {
   return {}
 }
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
+// ─── Stat card (FIXED: added truncation and responsive text sizing) ────────────────────────────────────────────────────────────────
 
 function StatCard({ icon: Icon, label, value, sub, color }: {
   icon: React.ElementType; label: string; value: string; sub?: string; color: string
 }) {
   return (
-    <div className="bg-dash-surface border border-dash-border rounded-2xl p-5 flex items-center gap-4">
+    <div className="bg-dash-surface border border-dash-border rounded-2xl p-5 flex items-center gap-4 min-w-0">
       <div className={cn('w-11 h-11 rounded-xl border flex items-center justify-center shrink-0', color)}>
         <Icon className="w-5 h-5" />
       </div>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold text-foreground tracking-tight leading-none">{value}</p>
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">{label}</p>
-        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+      <div className="min-w-0 flex-1">
+        <p className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-none truncate">
+          {value}
+        </p>
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+          {label}
+        </p>
+        {sub && <p className="text-xs text-muted-foreground mt-0.5 truncate">{sub}</p>}
       </div>
     </div>
   )
