@@ -32,7 +32,8 @@ const formSchema = z.object({
   walk_in_email: z.string().optional(),
   staff_name: z.string().optional(),
   payment_method: z.string().min(1, 'Required'),
-  amount_paid: z.coerce.number().min(0.01, 'Amount paid is required'),
+  // ✅ 0 is valid — means nothing collected yet, full balance recorded as debt
+  amount_paid: z.coerce.number().min(0, 'Cannot be negative'),
   discount_amount: z.coerce.number().min(0).default(0),
   notes: z.string().optional(),
   send_receipt_email: z.boolean().default(false),
@@ -139,7 +140,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     queryKey: ['customers-picker'],
     queryFn: () => listCustomers({ limit: 500 }),
     enabled: open,
-    staleTime: 30_000,
+    staleTime: 0,
   })
 
   const { data: productsData } = useQuery({
@@ -161,7 +162,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     reset,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(formSchema) as any,   // ← Fixed: type assertion to bypass TS issue
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       items: [{ product_name: '', unit_price: 0, quantity: 1, discount: 0 }],
       payment_method: 'cash',
@@ -177,13 +178,11 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const watchAmountPaid = watch('amount_paid') ?? 0
   const watchSendEmail = watch('send_receipt_email')
 
-  // Auto-calculate overall discount from individual item discounts
   useEffect(() => {
     const totalDiscount = watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
     setValue('discount_amount', totalDiscount)
   }, [watchItems, setValue])
 
-  // Live totals
   const subtotal = watchItems.reduce((s, i) => s + Number(i.unit_price) * Number(i.quantity), 0)
   const totalDiscount = watchItems.reduce((s, i) => s + Number(i.discount ?? 0), 0)
   const total = Math.max(0, subtotal - totalDiscount)
@@ -229,6 +228,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
       toast.success('Sale recorded!')
       qc.invalidateQueries({ queryKey: ['sales'] })
       qc.invalidateQueries({ queryKey: ['customers-picker'] })
+      qc.invalidateQueries({ queryKey: ['customers'] })
       doReset()
       onOpenChange(false)
       onSuccess?.()
@@ -268,7 +268,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-          {/* Customer Section */}
+          {/* Customer */}
           <div className="space-y-3">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Customer</label>
 
@@ -498,7 +498,8 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
-                Amount Paid Now (₦) <span className="text-red-500">*</span>
+                Amount Paid Now (₦)
+                <span className="ml-1 text-gray-500 font-normal normal-case tracking-normal">— 0 if unpaid</span>
               </label>
               <input type="number" step="0.01" min="0" {...register('amount_paid')} className={smallCls} />
               {errors.amount_paid && <p className="text-xs text-red-500 mt-1">{errors.amount_paid.message}</p>}
@@ -512,7 +513,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                 <span className="font-semibold">
                   ₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })} balance
                 </span>{' '}
-                will be added to customer debt.
+                will be recorded as outstanding debt.
               </p>
             </div>
           )}
