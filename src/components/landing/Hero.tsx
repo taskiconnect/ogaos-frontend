@@ -74,7 +74,6 @@ function StoreSearchBar() {
 
   const handleSearch = () => {
     if (!query.trim()) return
-    // Navigate to store directory with query — wire up to your router as needed
     window.location.href = `/stores?q=${encodeURIComponent(query.trim())}`
   }
 
@@ -88,12 +87,10 @@ function StoreSearchBar() {
 
   return (
     <div className="flex flex-col gap-3 w-full max-w-lg">
-      {/* Label */}
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
         Find stores near you
       </p>
 
-      {/* Search input */}
       <div
         className={`relative flex items-center rounded-2xl border bg-background/80 backdrop-blur-sm transition-all duration-200 shadow-sm ${
           focused
@@ -101,7 +98,6 @@ function StoreSearchBar() {
             : 'border-border/60 hover:border-border'
         }`}
       >
-        {/* Location pin */}
         <div className="flex items-center pl-4 pr-2 shrink-0">
           <MapPin className="w-4 h-4 text-primary/70" />
         </div>
@@ -118,7 +114,6 @@ function StoreSearchBar() {
           className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none min-w-0"
         />
 
-        {/* Clear */}
         {query && (
           <button
             onClick={() => { setQuery(''); inputRef.current?.focus() }}
@@ -129,7 +124,6 @@ function StoreSearchBar() {
           </button>
         )}
 
-        {/* Search button */}
         <button
           onClick={handleSearch}
           className="m-1.5 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
@@ -139,7 +133,6 @@ function StoreSearchBar() {
         </button>
       </div>
 
-      {/* Suggested tags */}
       <div className="flex flex-wrap gap-2">
         {SUGGESTED_TAGS.map((tag) => (
           <button
@@ -158,7 +151,7 @@ function StoreSearchBar() {
   )
 }
 
-/* ─── hero ────────────────────────────────────────────────────── */
+/* ─── Hero ────────────────────────────────────────────────────── */
 export function Hero() {
   const [navH, setNavH] = useState(80)
 
@@ -176,7 +169,7 @@ export function Hero() {
   return (
     <BackgroundGrid>
       <section className="relative overflow-hidden">
-        {/* ── ambient glow ── */}
+        {/* Ambient glow */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
           <div className="absolute left-0 top-0 w-[55vw] h-[70vh] rounded-full bg-primary/6 blur-[130px] opacity-70" />
           <div className="absolute right-0 bottom-0 w-[40vw] h-[60vh] rounded-full bg-emerald-500/5 blur-[120px] opacity-50" />
@@ -186,10 +179,10 @@ export function Hero() {
           className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
           style={{ paddingTop: `${navH + 24}px`, paddingBottom: '0' }}
         >
-          {/* ════════════ TWO-COLUMN HERO ════════════ */}
+          {/* TWO-COLUMN HERO */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-6 xl:gap-20 items-center min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-120px)]">
 
-            {/* ── LEFT: Copy ── */}
+            {/* LEFT: Copy */}
             <motion.div
               variants={container}
               initial="hidden"
@@ -218,7 +211,6 @@ export function Hero() {
                   <span className="relative z-10 bg-linear-to-r from-primary via-primary/85 to-emerald-500 bg-clip-text text-transparent">
                     proper Oga
                   </span>
-                  {/* underline squiggle */}
                   <svg
                     className="absolute -bottom-2 left-0 w-full"
                     viewBox="0 0 200 8"
@@ -237,7 +229,7 @@ export function Hero() {
                 </span>
               </motion.h1>
 
-              {/* Sub */}
+              {/* Subheading */}
               <motion.p
                 variants={item}
                 className="text-lg sm:text-xl text-muted-foreground/90 leading-relaxed max-w-lg mb-8"
@@ -246,7 +238,7 @@ export function Hero() {
                 platform built for Nigerian SMEs.
               </motion.p>
 
-              {/* ── Store Search Bar ── */}
+              {/* Store Search Bar */}
               <motion.div variants={item} className="mb-8">
                 <StoreSearchBar />
               </motion.div>
@@ -297,31 +289,26 @@ export function Hero() {
                   </a>
                 </Button>
               </motion.div>
-
-
-
             </motion.div>
 
-            {/* ── RIGHT: Image + floating cards ── */}
+            {/* RIGHT: Image + Floating Cards - HIDDEN ON MOBILE */}
             <motion.div
               variants={slideIn}
               initial="hidden"
               animate="visible"
-              className="relative flex items-end justify-center lg:justify-end -mb-2 lg:mb-0"
+              className="relative flex items-end justify-center lg:justify-end -mb-2 lg:mb-0 hidden lg:block"   // ← Key change here
             >
               <div className="relative w-full">
-
                 {/* Glow behind image */}
                 <div
                   className="pointer-events-none absolute -inset-8 -z-10 rounded-3xl"
                   style={{
-                    background:
-                      'radial-gradient(ellipse at 60% 40%, hsl(var(--primary)/0.18) 0%, transparent 70%)',
+                    background: 'radial-gradient(ellipse at 60% 40%, hsl(var(--primary)/0.18) 0%, transparent 70%)',
                   }}
                   aria-hidden
                 />
 
-                {/* ── Hero image ── */}
+                {/* Hero Image */}
                 <img
                   src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/Layer%2002.png"
                   alt="Business owner using OgaOS dashboard"
@@ -336,7 +323,7 @@ export function Hero() {
                   }}
                 />
 
-                {/* ── Floating stat cards ── */}
+                {/* Floating stat cards */}
                 <FloatCard
                   icon={TrendingUp}
                   label="Today's Revenue"
@@ -364,7 +351,7 @@ export function Hero() {
             </motion.div>
           </div>
 
-          {/* ════════════ DASHBOARD SHOWCASE ════════════ */}
+          {/* DASHBOARD SHOWCASE - Now moves up on mobile */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -372,7 +359,6 @@ export function Hero() {
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             className="relative mt-0 lg:mt-4 pb-0 z-20"
           >
-            {/* Glow */}
             <div className="pointer-events-none absolute -inset-x-16 -top-12 h-40 bg-linear-to-t from-primary/12 via-primary/6 to-transparent blur-3xl opacity-70 rounded-full" aria-hidden />
 
             <div
@@ -385,17 +371,16 @@ export function Hero() {
                 transition={{ duration: 4, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
                 style={{ transformOrigin: 'top center', transformStyle: 'preserve-3d' }}
               >
-                {/* Top border glow */}
                 <motion.div
                   animate={{ opacity: [0.3, 0.6, 0.3] }}
                   transition={{ duration: 3, repeat: Infinity }}
                   className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent z-10"
                   aria-hidden
                 />
-                {/* Edge fades */}
+
                 <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-linear-to-r from-background via-background/50 to-transparent z-10" aria-hidden />
                 <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-linear-to-l from-background via-background/50 to-transparent z-10" aria-hidden />
-                {/* Fade out layers */}
+
                 <div
                   className="pointer-events-none absolute inset-x-0 bottom-0 z-20"
                   style={{ height: '60%', background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, hsl(var(--background)/0.4) 50%, hsl(var(--background)/0.8) 70%, hsl(var(--background)) 90%)' }}
@@ -411,6 +396,7 @@ export function Hero() {
                   style={{ height: '15%', background: 'hsl(var(--background))', opacity: 0.95 }}
                   aria-hidden
                 />
+
                 <div style={{ maxHeight: '340px', overflow: 'hidden' }}>
                   <DashboardShowcase />
                 </div>
