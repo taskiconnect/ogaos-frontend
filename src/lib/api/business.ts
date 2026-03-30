@@ -1,4 +1,3 @@
-// src/lib/api/business.ts
 import api from './client'
 import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
 import type {
@@ -8,116 +7,273 @@ import type {
   Product, CreateProductRequest, UpdateProductRequest, AdjustStockRequest, ProductListParams,
 } from './types'
 
-// ─── Business ─────────────────────────────────────────────────────────────────
+function handleApiError(error: any): never {
+  const status = error?.response?.status
+  const data = error?.response?.data
 
-export const getBusiness = () =>
-  api.get<ApiSuccess<Business>>('/business/me').then((r) => r.data.data)
+  if (status === 402 && data?.upgrade_required) {
+    throw {
+      type: 'subscription',
+      status,
+      ...data,
+    }
+  }
 
-export const updateBusiness = (data: UpdateBusinessRequest) =>
-  api.patch<ApiSuccess<Business>>('/business/me', data).then((r) => r.data.data)
-
-export const uploadBusinessLogo = (file: File) => {
-  const form = new FormData()
-  form.append('logo', file)
-  return api
-    .post<ApiSuccess<{ logo_url: string }>>('/business/me/logo', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    .then((r) => r.data.data)
+  throw {
+    type: 'api',
+    status,
+    message: data?.message || 'Something went wrong',
+  }
 }
 
-export const setBusinessVisibility = (isPublic: boolean) =>
-  api.patch<ApiMessage>('/business/me/visibility', { is_public: isPublic }).then(() => undefined)
+// ─── Business ─────────────────────────────────────────────────────────────────
+
+export const getBusiness = async () => {
+  try {
+    const res = await api.get<ApiSuccess<Business>>('/business/me')
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const updateBusiness = async (data: UpdateBusinessRequest) => {
+  try {
+    const res = await api.patch<ApiSuccess<Business>>('/business/me', data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const uploadBusinessLogo = async (file: File) => {
+  try {
+    const form = new FormData()
+    form.append('logo', file)
+
+    const res = await api.post<ApiSuccess<{ logo_url: string }>>('/business/me/logo', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const setBusinessVisibility = async (isPublic: boolean) => {
+  try {
+    await api.patch<ApiMessage>('/business/me/visibility', { is_public: isPublic })
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
 // ─── Storefront gallery ───────────────────────────────────────────────────────
 
-// Upload one gallery image (max 3). Multipart POST.
-export const addBusinessGalleryImage = (file: File) => {
-  const form = new FormData()
-  form.append('image', file)
-  return api
-    .post<ApiSuccess<Business>>('/business/me/gallery', form, {
+export const addBusinessGalleryImage = async (file: File) => {
+  try {
+    const form = new FormData()
+    form.append('image', file)
+
+    const res = await api.post<ApiSuccess<Business>>('/business/me/gallery', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    .then((r) => r.data.data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
 }
 
-// Remove gallery image at zero-based index.
-export const removeBusinessGalleryImage = (index: number) =>
-  api.delete<ApiMessage>(`/business/me/gallery/${index}`).then(() => undefined)
+export const removeBusinessGalleryImage = async (index: number) => {
+  try {
+    await api.delete<ApiMessage>(`/business/me/gallery/${index}`)
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-// Set or clear the storefront promo video URL (link only, no upload).
-// Pass empty string to clear.
-export const setStorefrontVideo = (videoUrl: string) =>
-  api
-    .patch<ApiSuccess<Business>>('/business/me/storefront-video', { video_url: videoUrl })
-    .then((r) => r.data.data)
+export const setStorefrontVideo = async (videoUrl: string) => {
+  try {
+    const res = await api.patch<ApiSuccess<Business>>('/business/me/storefront-video', {
+      video_url: videoUrl,
+    })
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
 // ─── Stores ───────────────────────────────────────────────────────────────────
 
-export const createStore = (data: CreateStoreRequest) =>
-  api.post<ApiSuccess<Store>>('/stores', data).then((r) => r.data.data)
+export const createStore = async (data: CreateStoreRequest) => {
+  try {
+    const res = await api.post<ApiSuccess<Store>>('/stores', data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const listStores = () =>
-  api.get<ApiSuccess<Store[]>>('/stores').then((r) => r.data.data)
+export const listStores = async () => {
+  try {
+    const res = await api.get<ApiSuccess<Store[]>>('/stores')
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const getStore = (id: string) =>
-  api.get<ApiSuccess<Store>>(`/stores/${id}`).then((r) => r.data.data)
+export const getStore = async (id: string) => {
+  try {
+    const res = await api.get<ApiSuccess<Store>>(`/stores/${id}`)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const updateStore = (id: string, data: UpdateStoreRequest) =>
-  api.patch<ApiSuccess<Store>>(`/stores/${id}`, data).then((r) => r.data.data)
+export const updateStore = async (id: string, data: UpdateStoreRequest) => {
+  try {
+    const res = await api.patch<ApiSuccess<Store>>(`/stores/${id}`, data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const setDefaultStore = (id: string) =>
-  api.patch<ApiMessage>(`/stores/${id}/default`).then(() => undefined)
+export const setDefaultStore = async (id: string) => {
+  try {
+    await api.patch<ApiMessage>(`/stores/${id}/default`)
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const deleteStore = (id: string) =>
-  api.delete<ApiMessage>(`/stores/${id}`).then(() => undefined)
+export const deleteStore = async (id: string) => {
+  try {
+    await api.delete<ApiMessage>(`/stores/${id}`)
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
 // ─── Customers ────────────────────────────────────────────────────────────────
 
-export const createCustomer = (data: CreateCustomerRequest) =>
-  api.post<ApiSuccess<Customer>>('/customers', data).then((r) => r.data.data)
+export const createCustomer = async (data: CreateCustomerRequest) => {
+  try {
+    const res = await api.post<ApiSuccess<Customer>>('/customers', data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const listCustomers = (params?: CustomerListParams) =>
-  api.get<ApiCursorList<Customer>>('/customers', { params }).then((r) => r.data)
+export const listCustomers = async (params?: CustomerListParams) => {
+  try {
+    const res = await api.get<ApiCursorList<Customer>>('/customers', { params })
+    return res.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const getCustomer = (id: string) =>
-  api.get<ApiSuccess<Customer>>(`/customers/${id}`).then((r) => r.data.data)
+export const getCustomer = async (id: string) => {
+  try {
+    const res = await api.get<ApiSuccess<Customer>>(`/customers/${id}`)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const updateCustomer = (id: string, data: UpdateCustomerRequest) =>
-  api.patch<ApiSuccess<Customer>>(`/customers/${id}`, data).then((r) => r.data.data)
+export const updateCustomer = async (id: string, data: UpdateCustomerRequest) => {
+  try {
+    const res = await api.patch<ApiSuccess<Customer>>(`/customers/${id}`, data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const deleteCustomer = (id: string) =>
-  api.delete<ApiMessage>(`/customers/${id}`).then(() => undefined)
+export const deleteCustomer = async (id: string) => {
+  try {
+    await api.delete<ApiMessage>(`/customers/${id}`)
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
-export const createProduct = (data: CreateProductRequest) =>
-  api.post<ApiSuccess<Product>>('/products', data).then((r) => r.data.data)
+export const createProduct = async (data: CreateProductRequest, idempotencyKey?: string) => {
+  try {
+    const res = await api.post<ApiSuccess<Product>>('/products', data, {
+      headers: idempotencyKey
+        ? { 'X-Idempotency-Key': idempotencyKey }
+        : undefined,
+    })
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const listProducts = (params?: ProductListParams) =>
-  api.get<ApiCursorList<Product>>('/products', { params }).then((r) => r.data)
+export const listProducts = async (params?: ProductListParams) => {
+  try {
+    const res = await api.get<ApiCursorList<Product>>('/products', { params })
+    return res.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const getProduct = (id: string) =>
-  api.get<ApiSuccess<Product>>(`/products/${id}`).then((r) => r.data.data)
+export const getProduct = async (id: string) => {
+  try {
+    const res = await api.get<ApiSuccess<Product>>(`/products/${id}`)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const updateProduct = (id: string, data: UpdateProductRequest) =>
-  api.patch<ApiSuccess<Product>>(`/products/${id}`, data).then((r) => r.data.data)
+export const updateProduct = async (id: string, data: UpdateProductRequest) => {
+  try {
+    const res = await api.patch<ApiSuccess<Product>>(`/products/${id}`, data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const deleteProduct = (id: string) =>
-  api.delete<ApiMessage>(`/products/${id}`).then(() => undefined)
+export const deleteProduct = async (id: string) => {
+  try {
+    await api.delete<ApiMessage>(`/products/${id}`)
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const adjustStock = (id: string, data: AdjustStockRequest) =>
-  api.post<ApiSuccess<Product>>(`/products/${id}/stock`, data).then((r) => r.data.data)
+export const adjustStock = async (id: string, data: AdjustStockRequest) => {
+  try {
+    const res = await api.post<ApiSuccess<Product>>(`/products/${id}/stock`, data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
 
-export const uploadProductImage = (id: string, file: File) => {
-  const form = new FormData()
-  form.append('image', file)
-  return api
-    .post<ApiSuccess<{ image_url: string }>>(`/products/${id}/image`, form, {
+export const uploadProductImage = async (id: string, file: File) => {
+  try {
+    const form = new FormData()
+    form.append('image', file)
+
+    const res = await api.post<ApiSuccess<{ image_url: string }>>(`/products/${id}/image`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    .then((r) => r.data.data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
 }
 
 // ─── Staff ────────────────────────────────────────────────────────────────────
@@ -133,5 +289,11 @@ export interface StaffMember {
   joined_at: string
 }
 
-export const listStaff = () =>
-  api.get<{ success: boolean; data: StaffMember[] }>('/staff').then(r => r.data.data)
+export const listStaff = async () => {
+  try {
+    const res = await api.get<{ success: boolean; data: StaffMember[] }>('/staff')
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}

@@ -5,17 +5,17 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { createSale } from '@/lib/api/finance'
 import { listCustomers, listProducts } from '@/lib/api/business'
 import {
   X, Plus, Trash2, ShoppingCart, Search,
   UserPlus, Phone, Mail,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, isUpgradeRequiredError, getSubscriptionToastMessage } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { Customer } from '@/lib/api/types'
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
 const itemSchema = z.object({
   product_id: z.string().optional(),
   product_name: z.string().min(1, 'Item name required'),
@@ -32,7 +32,6 @@ const formSchema = z.object({
   walk_in_email: z.string().optional(),
   staff_name: z.string().optional(),
   payment_method: z.string().min(1, 'Required'),
-  // ✅ 0 is valid — means nothing collected yet, full balance recorded as debt
   amount_paid: z.coerce.number().min(0, 'Cannot be negative'),
   discount_amount: z.coerce.number().min(0).default(0),
   notes: z.string().optional(),
@@ -50,8 +49,11 @@ interface Props {
   onSuccess?: () => void
 }
 
-// ─── Customer Picker ─────────────────────────────────────────────────────────
-function CustomerPicker({ customers, onSelect, onAddNew }: {
+function CustomerPicker({
+  customers,
+  onSelect,
+  onAddNew,
+}: {
   customers: Customer[]
   onSelect: (c: Customer) => void
   onAddNew: (prefill: string) => void
@@ -129,12 +131,22 @@ function CustomerPicker({ customers, onSelect, onAddNew }: {
   )
 }
 
-// ─── Main Modal ──────────────────────────────────────────────────────────────
 export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props) {
   const qc = useQueryClient()
+  const router = useRouter()
+
   const [customerMode, setCustomerMode] = useState<'none' | 'existing' | 'new'>('none')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [productSearch, setProductSearch] = useState<string[]>([])
+  const [idempotencyKey, setIdempotencyKey] = useState('')
+
+  useEffect(() => {
+    if (open) {
+      setIdempotencyKey(globalThis.crypto?.randomUUID?.() ?? `sale_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+    } else {
+      setIdempotencyKey('')
+    }
+  }, [open])
 
   const { data: customersData } = useQuery({
     queryKey: ['customers-picker'],
@@ -189,10 +201,24 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const balance = Math.max(0, total - Number(watchAmountPaid))
 
   const doReset = () => {
-    reset()
+    reset({
+      items: [{ product_name: '', unit_price: 0, quantity: 1, discount: 0 }],
+      payment_method: 'cash',
+      amount_paid: 0,
+      discount_amount: 0,
+      notes: '',
+      send_receipt_email: false,
+      customer_id: '',
+      staff_name: '',
+      walk_in_first_name: '',
+      walk_in_last_name: '',
+      walk_in_phone: '',
+      walk_in_email: '',
+    })
     setCustomerMode('none')
     setSelectedCustomer(null)
     setProductSearch([])
+    setIdempotencyKey(globalThis.crypto?.randomUUID?.() ?? `sale_${Date.now()}_${Math.random().toString(36).slice(2)}`)
   }
 
   const mutation = useMutation({
@@ -206,34 +232,48 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           }
         : undefined
 
-      return createSale({
-        customer_id: vals.customer_id || undefined,
-        walk_in_customer: walkIn,
-        staff_name: vals.staff_name?.trim() || undefined,
-        payment_method: vals.payment_method,
-        amount_paid: Math.round(Number(vals.amount_paid) * 100),
-        discount_amount: Math.round(Number(vals.discount_amount) * 100),
-        notes: vals.notes?.trim() || undefined,
-        send_receipt_email: vals.send_receipt_email,
-        items: vals.items.map((i) => ({
-          product_id: i.product_id || undefined,
-          product_name: i.product_name.trim(),
-          unit_price: Math.round(Number(i.unit_price) * 100),
-          quantity: Number(i.quantity),
-          discount: Math.round(Number(i.discount ?? 0) * 100),
-        })),
-      })
+      return createSale(
+        {
+          customer_id: vals.customer_id || undefined,
+          walk_in_customer: walkIn,
+          staff_name: vals.staff_name?.trim() || undefined,
+          payment_method: vals.payment_method,
+          amount_paid: Math.round(Number(vals.amount_paid) * 100),
+          discount_amount: Math.round(Number(vals.discount_amount) * 100),
+          notes: vals.notes?.trim() || undefined,
+          send_receipt_email: vals.send_receipt_email,
+          items: vals.items.map((i) => ({
+            product_id: i.product_id || undefined,
+            product_name: i.product_name.trim(),
+            unit_price: Math.round(Number(i.unit_price) * 100),
+            quantity: Number(i.quantity),
+            discount: Math.round(Number(i.discount ?? 0) * 100),
+          })),
+        },
+        idempotencyKey,
+      )
     },
     onSuccess: () => {
       toast.success('Sale recorded!')
       qc.invalidateQueries({ queryKey: ['sales'] })
+      qc.invalidateQueries({ queryKey: ['sales-summary'] })
       qc.invalidateQueries({ queryKey: ['customers-picker'] })
       qc.invalidateQueries({ queryKey: ['customers'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
       doReset()
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? 'Failed to record sale'),
+    onError: (e: any) => {
+      if (isUpgradeRequiredError(e)) {
+        toast.error(getSubscriptionToastMessage(e))
+        onOpenChange(false)
+        router.push('/subscription')
+        return
+      }
+
+      toast.error(e?.message ?? e?.response?.data?.message ?? 'Failed to record sale')
+    },
   })
 
   if (!open) return null
@@ -246,8 +286,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { doReset(); onOpenChange(false) }} />
 
       <div className="relative w-full sm:max-w-2xl bg-dash-surface border border-dash-border rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-dash-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
@@ -266,9 +304,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           </button>
         </div>
 
-        {/* Body */}
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-          {/* Customer */}
           <div className="space-y-3">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Customer</label>
 
@@ -357,7 +393,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             )}
           </div>
 
-          {/* Staff & Payment */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Served By</label>
@@ -373,7 +408,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             </div>
           </div>
 
-          {/* Items */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Items</label>
@@ -472,7 +506,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             </div>
           </div>
 
-          {/* Notes */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes (optional)</label>
             <textarea
@@ -484,7 +517,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           </div>
         </div>
 
-        {/* Footer */}
         <div className="px-6 pb-6 pt-4 border-t border-dash-border bg-dash-bg rounded-b-3xl shrink-0 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>

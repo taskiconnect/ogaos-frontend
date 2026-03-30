@@ -1,0 +1,32 @@
+// src/app/admin/auth/login/page.tsx
+import AdminLoginForm from './AdminLoginForm'
+
+export default function AdminLoginPage() {
+  return (
+    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+      {/* Grid background — matches user login */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(0,43,157,0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0,43,157,0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '64px 64px',
+        }}
+      />
+
+      {/* Radial glow — matches user login */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-5">
+        <AdminLoginForm />
+      </div>
+    </div>
+  )
+}
