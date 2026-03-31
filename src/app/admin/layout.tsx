@@ -8,7 +8,7 @@ import { useAdminMe } from '@/lib/hooks/useAdminMe'
 const ADMIN_AUTH_PATHS = [
   '/admin/auth/login',
   '/admin/auth/verify-otp',
-  '/admin/auth/setup-password',
+  '/admin/setup-password',
 ]
 
 export default function AdminLayout({
