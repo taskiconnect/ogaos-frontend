@@ -3,14 +3,14 @@
 export const dynamic = 'force-dynamic'
 
 // src/app/dashboard/page.tsx
-import Sidebar           from '@/components/dashboard/Sidebar'
-import DashboardHeader   from '@/components/dashboard/DashboardHeader'
-import RevenueChart      from '@/components/dashboard/RevenueChart'
-import OutstandingDebts  from '@/components/dashboard/OutstandingDebts'
+import Sidebar from '@/components/dashboard/Sidebar'
+import DashboardHeader from '@/components/dashboard/DashboardHeader'
+import RevenueChart from '@/components/dashboard/RevenueChart'
+import OutstandingDebts from '@/components/dashboard/OutstandingDebts'
 import RecentTransactions from '@/components/dashboard/RecentTransactions'
-import { useAuthStore }  from '@/stores/authStore'
-import { useDashboard }  from '@/lib/hooks/useDashboard'
-import { DollarSign, AlertTriangle, TrendingUp, Users, Loader2 } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
+import { useDashboard } from '@/lib/hooks/useDashboard'
+import { DollarSign, AlertTriangle, TrendingUp, Users } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -18,40 +18,51 @@ import { cn } from '@/lib/utils'
 
 function getTimeBasedGreeting(): string {
   const hour = new Date().getHours()
-  
+
   if (hour < 12) {
-    return "Good morning"
+    return 'Good morning'
   } else if (hour < 17) {
-    return "Good afternoon"
+    return 'Good afternoon'
   } else {
-    return "Good evening"
+    return 'Good evening'
   }
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
 function KPICard({
-  title, value, sub, icon: Icon, color, loading, href,
+  title,
+  value,
+  sub,
+  icon: Icon,
+  color,
+  loading,
+  href,
 }: {
-  title:   string
-  value:   string
-  sub?:    string
-  icon:    React.ElementType
-  color:   string
+  title: string
+  value: string
+  sub?: string
+  icon: React.ElementType
+  color: string
   loading: boolean
-  href?:   string
+  href?: string
 }) {
   const inner = (
-    <div className={cn(
-      'rounded-2xl border border-white/8 bg-white/2 p-4 sm:p-5 flex flex-col gap-3',
-      href && 'hover:bg-white/4 transition-colors cursor-pointer'
-    )}>
+    <div
+      className={cn(
+        'rounded-2xl border border-white/8 bg-white/2 p-4 sm:p-5 flex flex-col gap-3',
+        href && 'hover:bg-white/4 transition-colors cursor-pointer'
+      )}
+    >
       <div className="flex items-center justify-between">
-        <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
+        <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+          {title}
+        </p>
         <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center border', color)}>
           <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       </div>
+
       {loading ? (
         <div className="space-y-2">
           <div className="h-6 sm:h-8 w-20 sm:w-28 bg-white/5 rounded-lg animate-pulse" />
@@ -65,6 +76,7 @@ function KPICard({
       )}
     </div>
   )
+
   if (href) return <Link href={href}>{inner}</Link>
   return inner
 }
@@ -81,22 +93,28 @@ function SalesMini({ label, value, sub }: { label: string; value: string; sub?: 
   )
 }
 
+// ─── Money formatting ─────────────────────────────────────────────────────────
+
+function formatMoney(value: number, options?: { decimals?: number }) {
+  const decimals = options?.decimals ?? 0
+
+  // Only shorten billions and above
+  if (value >= 1_000_000_000) {
+    return `₦${(value / 1_000_000_000).toFixed(1)}B`
+  }
+
+  return `₦${value.toLocaleString('en-NG', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const dash     = useDashboard()
+  const dash = useDashboard()
   const firstName = user?.first_name || 'Oga'
-
-  function fmt(n: number) {
-    if (n >= 1_000_000) return `₦${(n/1_000_000).toFixed(1)}M`
-    if (n >= 1_000)     return `₦${(n/1_000).toFixed(0)}k`
-    return `₦${n.toLocaleString('en-NG')}`
-  }
-
-  function fmtOutstanding(n: number) {
-    return `₦${n.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
-  }
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -106,25 +124,25 @@ export default function DashboardPage() {
         <DashboardHeader />
 
         <main className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 pb-20">
-
-          {/* Greeting */}
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
               {getTimeBasedGreeting()}, Oga {firstName} 👋
             </h1>
             <p className="text-gray-400 mt-1 text-xs sm:text-sm">
-              Here's what's happening with your business today ·{' '}
+              Here&apos;s what&apos;s happening with your business today ·{' '}
               {new Date().toLocaleDateString('en-NG', {
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
               })}
             </p>
           </div>
 
-          {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <KPICard
               title="TODAY'S SALES"
-              value={fmt(dash.todaySalesTotal)}
+              value={formatMoney(dash.todaySalesTotal, { decimals: 2 })}
               sub={`${dash.todaySalesCount} transaction${dash.todaySalesCount !== 1 ? 's' : ''}`}
               icon={DollarSign}
               color="bg-primary/10 border-primary/20 text-primary"
@@ -133,7 +151,7 @@ export default function DashboardPage() {
             />
             <KPICard
               title="CUSTOMERS OWE YOU"
-              value={fmt(dash.outstandingDebtTotal)}
+              value={formatMoney(dash.outstandingDebtTotal, { decimals: 2 })}
               sub={dash.outstandingDebtTotal === 0 ? 'All paid up' : `${dash.outstandingDebtCount} unpaid`}
               icon={AlertTriangle}
               color="bg-yellow-500/10 border-yellow-500/20 text-yellow-400"
@@ -151,7 +169,7 @@ export default function DashboardPage() {
             />
             <KPICard
               title="REVENUE COLLECTED"
-              value={fmt(dash.todayRevenue)}
+              value={formatMoney(dash.todayRevenue, { decimals: 2 })}
               sub="today (amount paid)"
               icon={TrendingUp}
               color="bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
@@ -159,11 +177,10 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Sales breakdown mini row - Today's stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             <SalesMini
               label="Today's Revenue"
-              value={`₦${(dash.todayRevenue).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
+              value={formatMoney(dash.todayRevenue, { decimals: 2 })}
             />
             <SalesMini
               label="Today's Transactions"
@@ -176,30 +193,26 @@ export default function DashboardPage() {
             <SalesMini
               label="Today's Partial / Unpaid"
               value={String(dash.todayPartial)}
-              sub={dash.todayPartial > 0 && dash.todayOutstanding > 0 
-                ? `${fmtOutstanding(dash.todayOutstanding)} outstanding` 
-                : undefined}
+              sub={
+                dash.todayPartial > 0 && dash.todayOutstanding > 0
+                  ? `${formatMoney(dash.todayOutstanding, { decimals: 2 })} outstanding`
+                  : undefined
+              }
             />
           </div>
 
-          {/* Revenue chart + Outstanding Debts */}
           <div className="grid grid-cols-1 lg:grid-cols-7 gap-5">
             <div className="lg:col-span-4 min-h-80">
               <RevenueChart />
             </div>
             <div className="lg:col-span-3">
-              <OutstandingDebts
-                debts={dash.overdueDebts}
-                isLoading={dash.isLoading}
-              />
+              <OutstandingDebts debts={dash.overdueDebts} isLoading={dash.isLoading} />
             </div>
           </div>
 
-          {/* Recent Transactions */}
           <div>
             <RecentTransactions />
           </div>
-
         </main>
       </div>
     </div>

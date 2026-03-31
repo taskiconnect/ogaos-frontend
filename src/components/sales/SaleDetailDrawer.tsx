@@ -243,9 +243,20 @@ export default function SaleDetailDrawer({ saleId, onClose, onPrintReceipt }: Pr
               </div>
 
               {sale.notes && (
-                <div className="bg-dash-bg rounded-2xl p-4">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
-                  <p className="text-sm text-foreground">{sale.notes}</p>
+                <div className={cn(
+                  'rounded-2xl p-4',
+                  sale.status === 'cancelled'
+                    ? 'bg-red-500/10 border border-red-500/20'
+                    : 'bg-dash-bg'
+                )}>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">
+                    {sale.status === 'cancelled' ? 'Cancellation Reason' : 'Notes'}
+                  </p>
+                  <p className={cn('text-sm', sale.status === 'cancelled' ? 'text-red-400' : 'text-foreground')}>
+                    {sale.status === 'cancelled'
+                      ? sale.notes.replace(/^Cancelled by staff \(user [^)]+\):\s*/i, '')
+                      : sale.notes}
+                  </p>
                 </div>
               )}
 

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { cn, isUpgradeRequiredError, getSubscriptionToastMessage } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { Customer } from '@/lib/api/types'
+import type { Customer, WalkInCustomer, CreateSaleRequest } from '@/lib/api/types'
 
 const itemSchema = z.object({
   product_id: z.string().optional(),
@@ -32,14 +32,27 @@ const formSchema = z.object({
   walk_in_email: z.string().optional(),
   staff_name: z.string().optional(),
   payment_method: z.string().min(1, 'Required'),
-  amount_paid: z.coerce.number().min(0, 'Cannot be negative'),
+  amount_paid: z
+    .string()
+    .trim()
+    .min(1, 'Amount paid is required')
+    .refine((val) => !Number.isNaN(Number(val)), { message: 'Amount paid must be a valid number' })
+    .refine((val) => Number(val) >= 0, { message: 'Cannot be negative' }),
   discount_amount: z.coerce.number().min(0).default(0),
   notes: z.string().optional(),
   send_receipt_email: z.boolean().default(false),
   items: z.array(itemSchema).min(1, 'Add at least one item'),
+}).superRefine((data, ctx) => {
+  const subtotal = data.items.reduce((sum, item) => sum + Number(item.unit_price) * Number(item.quantity), 0)
+  const totalDiscount = data.items.reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
+  const total = Math.max(0, subtotal - totalDiscount)
+  const amountPaid = Number(data.amount_paid)
+  if (amountPaid > total) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amount_paid'], message: 'Amount paid cannot be more than total due' })
+  }
 })
 
-type FormValues = z.infer<typeof formSchema>
+type FormValues = z.input<typeof formSchema>
 
 const PAYMENT_METHODS = ['cash', 'transfer', 'pos', 'card', 'cheque', 'credit']
 
@@ -49,11 +62,7 @@ interface Props {
   onSuccess?: () => void
 }
 
-function CustomerPicker({
-  customers,
-  onSelect,
-  onAddNew,
-}: {
+function CustomerPicker({ customers, onSelect, onAddNew }: {
   customers: Customer[]
   onSelect: (c: Customer) => void
   onAddNew: (prefill: string) => void
@@ -172,39 +181,65 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     watch,
     setValue,
     reset,
+    trigger,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       items: [{ product_name: '', unit_price: 0, quantity: 1, discount: 0 }],
       payment_method: 'cash',
-      amount_paid: 0,
+      amount_paid: '',
       discount_amount: 0,
       send_receipt_email: false,
     },
+    mode: 'onChange',
   })
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
   const watchItems = watch('items')
-  const watchAmountPaid = watch('amount_paid') ?? 0
-  const watchSendEmail = watch('send_receipt_email')
+  const watchAmountPaidRaw = watch('amount_paid')
+  const watchWalkInEmail = watch('walk_in_email')
 
   useEffect(() => {
     const totalDiscount = watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
-    setValue('discount_amount', totalDiscount)
+    setValue('discount_amount', totalDiscount, { shouldValidate: false })
   }, [watchItems, setValue])
 
-  const subtotal = watchItems.reduce((s, i) => s + Number(i.unit_price) * Number(i.quantity), 0)
-  const totalDiscount = watchItems.reduce((s, i) => s + Number(i.discount ?? 0), 0)
+  const subtotal = watchItems.reduce((sum, item) => sum + Number(item.unit_price) * Number(item.quantity), 0)
+  const totalDiscount = watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
   const total = Math.max(0, subtotal - totalDiscount)
-  const balance = Math.max(0, total - Number(watchAmountPaid))
+  const balance = Math.max(0, total - (watchAmountPaidRaw === '' ? 0 : Number(watchAmountPaidRaw)))
+
+  useEffect(() => {
+    if (watchAmountPaidRaw === '') {
+      void trigger('amount_paid')
+      return
+    }
+    if (Number(watchAmountPaidRaw) > total) {
+      setValue('amount_paid', total.toString(), { shouldValidate: true, shouldDirty: true })
+    } else {
+      void trigger('amount_paid')
+    }
+  }, [watchAmountPaidRaw, total, setValue, trigger])
+
+  // Derived for UI only (toggle visibility / disabled state)
+  const existingCustomerHasEmail = customerMode === 'existing' && !!selectedCustomer?.email?.trim()
+  const walkInHasEmail = customerMode === 'new' && (watchWalkInEmail?.trim() ?? '') !== ''
+  const canSendEmail = existingCustomerHasEmail || walkInHasEmail
+  const hasAnyCustomer = customerMode === 'existing' || customerMode === 'new'
+
+  useEffect(() => {
+    if (watch('send_receipt_email') && !canSendEmail) {
+      setValue('send_receipt_email', false)
+    }
+  }, [canSendEmail, setValue])
 
   const doReset = () => {
     reset({
       items: [{ product_name: '', unit_price: 0, quantity: 1, discount: 0 }],
       payment_method: 'cash',
-      amount_paid: 0,
+      amount_paid: '',
       discount_amount: 0,
       notes: '',
       send_receipt_email: false,
@@ -223,35 +258,61 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
   const mutation = useMutation({
     mutationFn: (vals: FormValues) => {
-      const walkIn = customerMode === 'new' && vals.walk_in_first_name && vals.walk_in_phone
-        ? {
-            first_name: vals.walk_in_first_name.trim(),
-            last_name: (vals.walk_in_last_name ?? '').trim(),
-            phone: vals.walk_in_phone.trim(),
-            email: vals.walk_in_email?.trim() || undefined,
-          }
-        : undefined
+      // ── Step 1: Build walk-in customer object from live form values ──
+      // We do NOT rely on customerMode state here — state can be stale at
+      // mutation time. Instead we derive everything directly from `vals`.
+      const firstName = vals.walk_in_first_name?.trim() ?? ''
+      const phone = vals.walk_in_phone?.trim() ?? ''
 
-      return createSale(
-        {
-          customer_id: vals.customer_id || undefined,
-          walk_in_customer: walkIn,
-          staff_name: vals.staff_name?.trim() || undefined,
-          payment_method: vals.payment_method,
-          amount_paid: Math.round(Number(vals.amount_paid) * 100),
-          discount_amount: Math.round(Number(vals.discount_amount) * 100),
-          notes: vals.notes?.trim() || undefined,
-          send_receipt_email: vals.send_receipt_email,
-          items: vals.items.map((i) => ({
-            product_id: i.product_id || undefined,
-            product_name: i.product_name.trim(),
-            unit_price: Math.round(Number(i.unit_price) * 100),
-            quantity: Number(i.quantity),
-            discount: Math.round(Number(i.discount ?? 0) * 100),
-          })),
-        },
-        idempotencyKey,
-      )
+      const walkInCustomer: WalkInCustomer | null =
+        !vals.customer_id?.trim() && firstName && phone
+          ? {
+              first_name: firstName,
+              last_name: vals.walk_in_last_name?.trim() ?? '',
+              phone,
+              email: vals.walk_in_email?.trim() || undefined,
+            }
+          : null
+
+      // ── Step 2: Derive send-email flag from vals (fixes stale closure bug) ──
+      // Previously `canSendEmail` was captured from the render-time closure and
+      // could be false even when the user had toggled the switch on and filled
+      // in an email address. We recalculate it here from the submitted values.
+      const emailForReceipt = vals.customer_id?.trim()
+        ? selectedCustomer?.email?.trim()   // existing customer email
+        : vals.walk_in_email?.trim()        // walk-in customer email
+      const sendEmail = vals.send_receipt_email && !!emailForReceipt
+
+      // ── Step 3: Validate walk-in fields before hitting the network ──
+      if (walkInCustomer) {
+        if (!walkInCustomer.first_name) throw new Error('Walk-in customer first name is required')
+        if (!walkInCustomer.phone) throw new Error('Walk-in customer phone number is required')
+      }
+
+      // ── Step 4: Assemble typed payload ──
+      const payload: CreateSaleRequest = {
+        staff_name: vals.staff_name?.trim() || undefined,
+        payment_method: vals.payment_method,
+        amount_paid: Math.round(Number(vals.amount_paid) * 100),
+        discount_amount: Math.round(Number(vals.discount_amount) * 100),
+        notes: vals.notes?.trim() || undefined,
+        send_receipt_email: sendEmail,
+        items: vals.items.map((i) => ({
+          product_id: i.product_id || undefined,
+          product_name: i.product_name.trim(),
+          unit_price: Math.round(Number(i.unit_price) * 100),
+          quantity: Number(i.quantity),
+          discount: Math.round(Number(i.discount ?? 0) * 100),
+        })),
+        // Attach exactly one of customer_id or walk_in_customer — never both
+        ...(vals.customer_id?.trim()
+          ? { customer_id: vals.customer_id.trim() }
+          : walkInCustomer
+            ? { walk_in_customer: walkInCustomer }
+            : {}),
+      }
+
+      return createSale(payload, idempotencyKey)
     },
     onSuccess: () => {
       toast.success('Sale recorded!')
@@ -271,7 +332,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
         router.push('/subscription')
         return
       }
-
       toast.error(e?.message ?? e?.response?.data?.message ?? 'Failed to record sale')
     },
   })
@@ -286,6 +346,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { doReset(); onOpenChange(false) }} />
 
       <div className="relative w-full sm:max-w-2xl bg-dash-surface border border-dash-border rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-dash-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
@@ -296,15 +357,13 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
               <p className="text-xs text-muted-foreground">All amounts in Naira (₦)</p>
             </div>
           </div>
-          <button
-            onClick={() => { doReset(); onOpenChange(false) }}
-            className="p-2 rounded-xl hover:bg-dash-hover text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <button onClick={() => { doReset(); onOpenChange(false) }} className="p-2 rounded-xl hover:bg-dash-hover text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          {/* Customer section */}
           <div className="space-y-3">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Customer</label>
 
@@ -331,14 +390,17 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                   {selectedCustomer.first_name[0]}{selectedCustomer.last_name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">
-                    {selectedCustomer.first_name} {selectedCustomer.last_name}
-                  </p>
+                  <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
                   <p className="text-xs text-muted-foreground">{selectedCustomer.phone_number}</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setCustomerMode('none'); setSelectedCustomer(null); setValue('customer_id', '') }}
+                  onClick={() => {
+                    setCustomerMode('none')
+                    setSelectedCustomer(null)
+                    setValue('customer_id', '')
+                    setValue('send_receipt_email', false)
+                  }}
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
                 >
                   Change
@@ -357,7 +419,8 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                     type="button"
                     onClick={() => {
                       setCustomerMode('none')
-                      ;(['walk_in_first_name', 'walk_in_last_name', 'walk_in_phone', 'walk_in_email'] as const).forEach(f => setValue(f, ''))
+                      ;(['walk_in_first_name', 'walk_in_last_name', 'walk_in_phone', 'walk_in_email'] as const).forEach((f) => setValue(f, ''))
+                      setValue('send_receipt_email', false)
                     }}
                     className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
                   >
@@ -385,7 +448,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                 </div>
                 <div>
                   <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Mail className="w-3 h-3" /> Email (optional)
+                    <Mail className="w-3 h-3" /> Email (optional — needed to send receipt)
                   </label>
                   <input {...register('walk_in_email')} type="email" placeholder="ada@email.com" className={smallCls} />
                 </div>
@@ -393,6 +456,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             )}
           </div>
 
+          {/* Served By + Payment Method */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Served By</label>
@@ -408,6 +472,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             </div>
           </div>
 
+          {/* Items */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Items</label>
@@ -419,15 +484,11 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                 <Plus className="w-3.5 h-3.5" /> Add item
               </button>
             </div>
-
             <div className="space-y-3">
               {fields.map((field, i) => {
                 const srch = productSearch[i] ?? ''
                 const filteredProds = products.filter((p) => p.name.toLowerCase().includes(srch.toLowerCase())).slice(0, 6)
-                const lineTotal = Math.max(
-                  0,
-                  Number(watchItems[i]?.unit_price) * Number(watchItems[i]?.quantity) - Number(watchItems[i]?.discount ?? 0)
-                )
+                const lineTotal = Math.max(0, Number(watchItems[i]?.unit_price) * Number(watchItems[i]?.quantity) - Number(watchItems[i]?.discount ?? 0))
 
                 return (
                   <div key={field.id} className="bg-dash-bg rounded-2xl border border-dash-border p-4 space-y-3">
@@ -485,17 +546,10 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        Line total:{' '}
-                        <span className="font-semibold text-foreground">
-                          ₦{lineTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
-                        </span>
+                        Line total: <span className="font-semibold text-foreground">₦{lineTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
                       </span>
                       {fields.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => remove(i)}
-                          className="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                        >
+                        <button type="button" onClick={() => remove(i)} className="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -506,77 +560,61 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             </div>
           </div>
 
+          {/* Notes */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes (optional)</label>
-            <textarea
-              {...register('notes')}
-              rows={2}
-              placeholder="Any notes for this sale…"
-              className="w-full rounded-xl bg-dash-bg border border-dash-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-            />
+            <textarea {...register('notes')} rows={2} placeholder="Any notes for this sale…" className="w-full rounded-xl bg-dash-bg border border-dash-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
           </div>
         </div>
 
+        {/* Footer */}
         <div className="px-6 pb-6 pt-4 border-t border-dash-border bg-dash-bg rounded-b-3xl shrink-0 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Total Item Discounts (₦)</label>
               <input
                 type="number"
-                value={watchItems.reduce((s, i) => s + Number(i.discount ?? 0), 0).toFixed(2)}
+                value={watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0).toFixed(2)}
                 readOnly
                 className="w-full h-9 rounded-lg bg-dash-surface border border-dash-border px-2.5 text-sm text-foreground cursor-not-allowed"
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
-                Amount Paid Now (₦)
-                <span className="ml-1 text-gray-500 font-normal normal-case tracking-normal">— 0 if unpaid</span>
-              </label>
-              <input type="number" step="0.01" min="0" {...register('amount_paid')} className={smallCls} />
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Amount Paid Now (₦)</label>
+              <input type="number" step="0.01" min="0" max={total} placeholder="0.00" {...register('amount_paid')} className={smallCls} />
               {errors.amount_paid && <p className="text-xs text-red-500 mt-1">{errors.amount_paid.message}</p>}
             </div>
           </div>
 
-          {balance > 0 && (
+          {balance > 0 && !errors.amount_paid && (
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
               <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 shrink-0 mt-1.5" />
               <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                <span className="font-semibold">
-                  ₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })} balance
-                </span>{' '}
-                will be recorded as outstanding debt.
+                <span className="font-semibold">₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span> balance will be recorded as outstanding debt.
               </p>
             </div>
           )}
 
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <button
-              type="button"
-              onClick={() => setValue('send_receipt_email', !watchSendEmail)}
-              className={cn(
-                'w-9 h-5 rounded-full transition-colors relative shrink-0',
-                watchSendEmail ? 'bg-primary' : 'bg-dash-border'
-              )}
-            >
-              <div
-                className={cn(
-                  'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform',
-                  watchSendEmail ? 'translate-x-4' : 'translate-x-0.5'
-                )}
-              />
-            </button>
-            <span className="text-xs font-medium text-muted-foreground">
-              Email receipt to customer after saving
-            </span>
-          </label>
+          {hasAnyCustomer && (
+            <div className="space-y-1">
+              <label className={cn('flex items-center gap-3 select-none', canSendEmail ? 'cursor-pointer' : 'cursor-not-allowed opacity-50')}>
+                <button
+                  type="button"
+                  disabled={!canSendEmail}
+                  onClick={() => canSendEmail && setValue('send_receipt_email', !watch('send_receipt_email'))}
+                  className={cn('w-9 h-5 rounded-full transition-colors relative shrink-0', watch('send_receipt_email') && canSendEmail ? 'bg-primary' : 'bg-dash-border')}
+                >
+                  <div className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', watch('send_receipt_email') && canSendEmail ? 'translate-x-4' : 'translate-x-0.5')} />
+                </button>
+                <span className="text-xs font-medium text-muted-foreground">Email receipt to customer after saving</span>
+              </label>
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-1">
             <div>
               <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Total Due</p>
-              <p className="text-2xl font-bold text-foreground tracking-tight">
-                ₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
-              </p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
             </div>
             <button
               type="button"
