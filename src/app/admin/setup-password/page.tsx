@@ -44,8 +44,18 @@ export default function AdminSetupPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
+
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Guard against Next.js SSR/hydration: useSearchParams() returns null on the
+  // first render before the client has hydrated, which would trigger the "no
+  // token" redirect even when a valid token is present in the URL.
+  // We wait until the component has mounted on the client before validating.
+  const [hasMounted, setHasMounted] = useState(false)
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   const form = useForm<SetupPasswordFormInput>({
     resolver: zodResolver(setupPasswordSchema),
@@ -53,11 +63,12 @@ export default function AdminSetupPasswordPage() {
   })
 
   useEffect(() => {
+    if (!hasMounted) return // Skip until client is fully hydrated
     if (!token) {
       toast.error('Invalid or missing setup token')
       router.push('/admin/auth/login')
     }
-  }, [token, router])
+  }, [hasMounted, token, router])
 
   const mutation = useMutation({
     mutationFn: adminSetupPassword,
@@ -163,7 +174,7 @@ export default function AdminSetupPasswordPage() {
 
               <Button
                 type="submit"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || !hasMounted || !token}
                 className="w-full h-11 font-semibold rounded-lg text-white transition-all hover:opacity-90 active:scale-[0.99]"
                 style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%)' }}
               >
