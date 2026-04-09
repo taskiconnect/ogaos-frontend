@@ -345,6 +345,7 @@ export interface Product {
   description: string | null
   type: 'product' | 'service' | string
   sku: string | null
+  barcode: string | null
   price: number
   cost_price: number | null
   image_url: string | null
@@ -362,6 +363,7 @@ export interface CreateProductRequest {
   description?: string
   type: 'product' | 'service'
   sku?: string
+  barcode?: string
   price: number
   cost_price?: number
   track_inventory?: boolean
@@ -373,6 +375,7 @@ export interface UpdateProductRequest {
   name?: string
   description?: string
   sku?: string
+  barcode?: string
   price?: number
   cost_price?: number
   track_inventory?: boolean
@@ -381,7 +384,7 @@ export interface UpdateProductRequest {
 }
 
 export interface AdjustStockRequest {
-  adjustment: number
+  quantity: number
   reason?: string
 }
 
@@ -536,7 +539,9 @@ export interface CreateInvoiceItemRequest {
 export interface CreateInvoiceRequest {
   customer_id?: string
   store_id?: string
-  issue_date: string
+  /** YYYY-MM-DD — optional, defaults to today on the server */
+  issue_date?: string
+  /** YYYY-MM-DD */
   due_date: string
   items: CreateInvoiceItemRequest[]
   discount_amount?: number
@@ -843,4 +848,17 @@ export interface ReviewApplicationRequest {
 export interface ApplicationListParams extends CursorParams {
   job_id?: string
   status?: string
+}
+
+// ─── Business Keywords ────────────────────────────────────────────────────────
+
+export interface SetBusinessKeywordsRequest {
+  keywords: string[]
+}
+
+export interface BusinessKeywordsResponse {
+  success: boolean
+  data: {
+    keywords: string[]
+  }
 }

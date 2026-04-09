@@ -1,12 +1,9 @@
 // src/lib/api/auth.ts
 //
-// IMPORTANT: loginUser, registerUser, logoutUser, and refreshToken MUST go
-// through the Next.js API proxy routes (/api/auth/...) — NOT directly to
-// the backend. This is because the backend sets an httpOnly "refresh_token"
-// cookie, and cookies are domain-scoped. If the call goes directly to
-// ogaos-backend-1.onrender.com, the cookie gets set on Render's domain and
-// the browser on ogaos.taskiconnect.com never sees it. Going through /api/*
-// (same origin) ensures the cookie is set on the frontend domain.
+// IMPORTANT: loginUser, registerUser, logoutUser, refreshToken, resendVerification,
+// and verifyEmail MUST go through the Next.js API proxy routes (/api/auth/...) — NOT
+// directly to the backend. This keeps auth cookies and auth flows on the frontend domain.
+
 import api from './client'
 import type {
   RegisterRequest,
@@ -24,7 +21,6 @@ import type {
   AdminResendOTPRequest,
   AdminSetupPasswordRequest,
   AdminSetupPasswordResponse,
-  AdminProfileResponse,
   AdminMeResponse,
 } from './types'
 
@@ -32,16 +28,14 @@ import type {
 
 export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {
   const res = await fetch('/api/auth/register', {
-    method:      'POST',
+    method: 'POST',
     credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
   })
 
   const json = await res.json()
 
-  // fetch() does NOT throw on 4xx/5xx — we must check manually.
-  // Also guard against a backend that returns HTTP 200 with success: false.
   if (!res.ok || json?.success === false) {
     const message = json?.message || json?.error || 'Registration failed'
     const err = new Error(message) as Error & { response: { data: typeof json } }
@@ -54,10 +48,10 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
 
 export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
   const res = await fetch('/api/auth/login', {
-    method:      'POST',
-    credentials: 'include',   // ← ensures Set-Cookie lands on this domain
-    headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify(data),
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
   })
 
   const json = await res.json()
@@ -74,16 +68,16 @@ export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
 
 export const logoutUser = () =>
   fetch('/api/auth/logout', {
-    method:      'POST',
+    method: 'POST',
     credentials: 'include',
   }).then(() => undefined)
 
 export const resendVerification = async (data: { email: string }): Promise<AuthResponse> => {
   const res = await fetch('/api/auth/resend-verification', {
-    method:      'POST',
+    method: 'POST',
     credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
   })
 
   const json = await res.json()
@@ -98,21 +92,42 @@ export const resendVerification = async (data: { email: string }): Promise<AuthR
   return json as AuthResponse
 }
 
-// ─── Remaining endpoints (no cookie needed — use axios client normally) ───────
+export const verifyEmail = async (
+  token: string
+): Promise<{ success: boolean; message: string }> => {
+  const res = await fetch('/api/auth/verify', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  })
 
-export const verifyEmail = (token: string) =>
-  api
-    .get<{ success: boolean; message: string }>('/auth/verify', { params: { token } })
-    .then((r) => r.data)
+  const json = await res.json()
+
+  if (!res.ok || json?.success === false) {
+    const message = json?.message || json?.error || 'Verification failed'
+    const err = new Error(message) as Error & { response: { data: typeof json } }
+    err.response = { data: json }
+    throw err
+  }
+
+  return json as { success: boolean; message: string }
+}
+
+// ─── Protected user endpoints (axios client with bearer token) ───────────────
 
 export const getMe = () =>
   api.get<{ success: boolean; data: MeResponse }>('/auth/me').then((r) => r.data.data)
 
 export const createStaff = (data: InviteStaffRequest) =>
-  api.post<{ success: boolean; message: string }>('/auth/staff', data).then((r) => r.data)
+  api.post<{ success: boolean; message: string }>('/staff', data).then((r) => r.data)
 
 export const deactivateStaff = (staffId: string) =>
-  api.delete<{ success: boolean; message: string }>(`/auth/staff/${staffId}`).then((r) => r.data)
+  api.delete<{ success: boolean; message: string }>(`/staff/${staffId}`).then((r) => r.data)
+
+// Optional helper if you need it in the UI
+export const listStaff = () =>
+  api.get<{ success: boolean; data: unknown[] }>('/staff').then((r) => r.data.data)
 
 // ─── Location helpers ─────────────────────────────────────────────────────────
 
@@ -126,7 +141,6 @@ export const getNigeriaLGAs = (state: string) =>
 // PLATFORM ADMIN AUTHENTICATION
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Admin login - step 1 (email + password)
 export const adminLogin = async (data: AdminLoginRequest): Promise<AdminLoginResponse> => {
   const res = await fetch('/api/admin/auth/login', {
     method: 'POST',
@@ -147,8 +161,9 @@ export const adminLogin = async (data: AdminLoginRequest): Promise<AdminLoginRes
   return json as AdminLoginResponse
 }
 
-// Admin OTP verification - step 2
-export const adminVerifyOTP = async (data: AdminOTPVerifyRequest): Promise<AdminOTPVerifyResponse> => {
+export const adminVerifyOTP = async (
+  data: AdminOTPVerifyRequest
+): Promise<AdminOTPVerifyResponse> => {
   const res = await fetch('/api/admin/auth/verify-otp', {
     method: 'POST',
     credentials: 'include',
@@ -168,8 +183,9 @@ export const adminVerifyOTP = async (data: AdminOTPVerifyRequest): Promise<Admin
   return json as AdminOTPVerifyResponse
 }
 
-// Resend admin OTP
-export const adminResendOTP = async (data: AdminResendOTPRequest): Promise<{ success: boolean; message: string }> => {
+export const adminResendOTP = async (
+  data: AdminResendOTPRequest
+): Promise<{ success: boolean; message: string }> => {
   const res = await fetch('/api/admin/auth/resend-otp', {
     method: 'POST',
     credentials: 'include',
@@ -189,8 +205,9 @@ export const adminResendOTP = async (data: AdminResendOTPRequest): Promise<{ suc
   return json
 }
 
-// Admin password setup (first-time setup)
-export const adminSetupPassword = async (data: AdminSetupPasswordRequest): Promise<AdminSetupPasswordResponse> => {
+export const adminSetupPassword = async (
+  data: AdminSetupPasswordRequest
+): Promise<AdminSetupPasswordResponse> => {
   const res = await fetch('/api/admin/auth/setup-password', {
     method: 'POST',
     credentials: 'include',
@@ -210,7 +227,6 @@ export const adminSetupPassword = async (data: AdminSetupPasswordRequest): Promi
   return json
 }
 
-// Get admin profile (requires MFA)
 export const getAdminMe = async (): Promise<AdminMeResponse> => {
   const res = await fetch('/api/admin/me', {
     method: 'GET',
@@ -232,7 +248,6 @@ export const getAdminMe = async (): Promise<AdminMeResponse> => {
   return json.data as AdminMeResponse
 }
 
-// Admin logout
 export const adminLogout = () =>
   fetch('/api/admin/auth/logout', {
     method: 'POST',

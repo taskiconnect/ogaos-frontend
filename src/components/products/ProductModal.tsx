@@ -1,18 +1,33 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { createProduct, updateProduct } from '@/lib/api/business'
-import { X, Loader2 } from 'lucide-react'
+import imageCompression from 'browser-image-compression'
+import { createProduct, updateProduct, uploadProductImage } from '@/lib/api/business'
+import { X, Loader2, ImagePlus, ScanLine } from 'lucide-react'
 import { cn, isUpgradeRequiredError, getSubscriptionToastMessage } from '@/lib/utils'
 import type { Product, CreateProductRequest, UpdateProductRequest } from '@/lib/api/types'
+import BarcodeScannerModal from '@/components/products/BarcodeScannerModal'
 
 interface Props {
   open: boolean
   onOpenChange: (v: boolean) => void
   onSuccess: () => void
   editing?: Product | null
+}
+
+interface CompressionInfo {
+  originalSize: number
+  compressedSize: number
+  savingsBytes: number
+  savingsPercent: number
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
 export default function ProductModal({ open, onOpenChange, onSuccess, editing }: Props) {
@@ -22,6 +37,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
   const [description, setDescription] = useState('')
   const [type, setType] = useState<'product' | 'service'>('product')
   const [sku, setSku] = useState('')
+  const [barcode, setBarcode] = useState('')
   const [price, setPrice] = useState('')
   const [costPrice, setCostPrice] = useState('')
   const [trackInv, setTrackInv] = useState(true)
@@ -31,9 +47,19 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
   const [error, setError] = useState('')
   const [idempotencyKey, setIdempotencyKey] = useState('')
 
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [scannerOpen, setScannerOpen] = useState(false)
+
+  const [isCompressingImage, setIsCompressingImage] = useState(false)
+  const [compressionProgress, setCompressionProgress] = useState(0)
+  const [compressionInfo, setCompressionInfo] = useState<CompressionInfo | null>(null)
+
   useEffect(() => {
     if (open && !editing) {
-      setIdempotencyKey(globalThis.crypto?.randomUUID?.() ?? `product_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+      setIdempotencyKey(
+        globalThis.crypto?.randomUUID?.() ??
+          `product_${Date.now()}_${Math.random().toString(36).slice(2)}`
+      )
     }
   }, [open, editing])
 
@@ -43,6 +69,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       setDescription(editing.description ?? '')
       setType(editing.type as 'product' | 'service')
       setSku(editing.sku ?? '')
+      setBarcode(editing.barcode ?? '')
       setPrice(String(editing.price / 100))
       setCostPrice(editing.cost_price ? String(editing.cost_price / 100) : '')
       setTrackInv(editing.track_inventory)
@@ -54,6 +81,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       setDescription('')
       setType('product')
       setSku('')
+      setBarcode('')
       setPrice('')
       setCostPrice('')
       setTrackInv(true)
@@ -61,45 +89,183 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       setLowThreshold('5')
       setIsActive(true)
     }
+
+    setSelectedImage(null)
+    setCompressionInfo(null)
+    setCompressionProgress(0)
+    setIsCompressingImage(false)
     setError('')
+    setScannerOpen(false)
   }, [editing, open])
 
+  const previewUrl = useMemo(() => {
+    if (selectedImage) return URL.createObjectURL(selectedImage)
+    return editing?.image_url ?? null
+  }, [selectedImage, editing?.image_url])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  async function compressImage(file: File): Promise<File> {
+    const outputType = file.type || 'image/jpeg'
+
+    const compressedBlob = await imageCompression(file, {
+      maxSizeMB: 0.1,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+      fileType: outputType,
+      initialQuality: 0.7,
+      onProgress: (progress: number) => {
+        setCompressionProgress(progress)
+      },
+    })
+
+    const finalName = file.name.includes('.')
+      ? file.name
+      : `${file.name}.${outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'}`
+
+    return new File([compressedBlob], finalName, {
+      type: compressedBlob.type || outputType || 'image/jpeg',
+      lastModified: Date.now(),
+    })
+  }
+
   const createMut = useMutation({
-    mutationFn: (d: CreateProductRequest) => createProduct(d, idempotencyKey),
+    mutationFn: async (d: CreateProductRequest) => {
+      const product = await createProduct(d, idempotencyKey)
+      if (selectedImage) {
+        await uploadProductImage(product.id, selectedImage)
+      }
+      return product
+    },
     onSuccess: () => {
       onSuccess()
       onOpenChange(false)
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       if (isUpgradeRequiredError(e)) {
         setError(getSubscriptionToastMessage(e))
         onOpenChange(false)
         router.push('/subscription')
         return
       }
-      setError(e?.message ?? e?.response?.data?.message ?? 'Failed to save')
+
+      if (typeof e === 'object' && e !== null) {
+        const errObj = e as {
+          message?: string
+          response?: { data?: { message?: string } }
+        }
+        setError(errObj.message ?? errObj.response?.data?.message ?? 'Failed to save')
+        return
+      }
+
+      setError('Failed to save')
     },
   })
 
   const updateMut = useMutation({
-    mutationFn: (d: UpdateProductRequest) => updateProduct(editing!.id, d),
+    mutationFn: async (d: UpdateProductRequest) => {
+      const product = await updateProduct(editing!.id, d)
+      if (selectedImage) {
+        await uploadProductImage(editing!.id, selectedImage)
+      }
+      return product
+    },
     onSuccess: () => {
       onSuccess()
       onOpenChange(false)
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       if (isUpgradeRequiredError(e)) {
         setError(getSubscriptionToastMessage(e))
         onOpenChange(false)
         router.push('/subscription')
         return
       }
-      setError(e?.message ?? e?.response?.data?.message ?? 'Failed to update')
+
+      if (typeof e === 'object' && e !== null) {
+        const errObj = e as {
+          message?: string
+          response?: { data?: { message?: string } }
+        }
+        setError(errObj.message ?? errObj.response?.data?.message ?? 'Failed to update')
+        return
+      }
+
+      setError('Failed to update')
     },
   })
 
+  async function handleImageChange(file?: File | null) {
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file')
+      return
+    }
+
+    const maxRawSizeBytes = 5 * 1024 * 1024
+    if (file.size > maxRawSizeBytes) {
+      setError('Image must be 5MB or less before compression')
+      return
+    }
+
+    try {
+      setError('')
+      setIsCompressingImage(true)
+      setCompressionProgress(0)
+      setCompressionInfo(null)
+
+      const compressedFile = await compressImage(file)
+
+      const maxFinalSizeBytes = 200 * 1024
+      if (compressedFile.size > maxFinalSizeBytes) {
+        setError('Compressed image is still too large. Please choose a smaller image.')
+        setSelectedImage(null)
+        setCompressionInfo(null)
+        return
+      }
+
+      const savingsBytes = Math.max(file.size - compressedFile.size, 0)
+      const savingsPercent = file.size > 0 ? (savingsBytes / file.size) * 100 : 0
+
+      setSelectedImage(compressedFile)
+      setCompressionInfo({
+        originalSize: file.size,
+        compressedSize: compressedFile.size,
+        savingsBytes,
+        savingsPercent,
+      })
+    } catch (err: unknown) {
+      console.error('Image compression failed:', err)
+      const message = err instanceof Error ? err.message : 'Failed to compress image'
+      setError(`Image compression failed: ${message}`)
+      setSelectedImage(null)
+      setCompressionInfo(null)
+    } finally {
+      setIsCompressingImage(false)
+      setCompressionProgress(0)
+    }
+  }
+
+  function handleDetectedBarcode(value: string) {
+    setBarcode(value)
+    setError('')
+    setScannerOpen(false)
+  }
+
   function handleSubmit() {
     setError('')
+
+    if (isCompressingImage) {
+      setError('Please wait for image compression to finish')
+      return
+    }
 
     if (!name.trim()) {
       setError('Name is required')
@@ -116,10 +282,11 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
         name: name.trim(),
         description: description.trim() || undefined,
         sku: sku.trim() || undefined,
+        barcode: barcode.trim() || undefined,
         price: Math.round(parseFloat(price) * 100),
         cost_price: costPrice ? Math.round(parseFloat(costPrice) * 100) : undefined,
         track_inventory: type === 'service' ? false : trackInv,
-        low_stock_threshold: type === 'service' ? undefined : (parseInt(lowThreshold) || 5),
+        low_stock_threshold: type === 'service' ? undefined : parseInt(lowThreshold) || 5,
         is_active: isActive,
       })
       return
@@ -130,195 +297,399 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       description: description.trim() || undefined,
       type,
       sku: sku.trim() || undefined,
+      barcode: barcode.trim() || undefined,
       price: Math.round(parseFloat(price) * 100),
       cost_price: costPrice ? Math.round(parseFloat(costPrice) * 100) : undefined,
       track_inventory: type === 'service' ? false : trackInv,
-      stock_quantity: type === 'service' ? undefined : (trackInv ? parseInt(stockQty) || 0 : 0),
-      low_stock_threshold: type === 'service' ? undefined : (parseInt(lowThreshold) || 5),
+      stock_quantity: type === 'service' ? undefined : trackInv ? parseInt(stockQty) || 0 : 0,
+      low_stock_threshold: type === 'service' ? undefined : parseInt(lowThreshold) || 5,
     })
   }
 
   const isPending = createMut.isPending || updateMut.isPending
+  const isBusy = isPending || isCompressingImage
+
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
-      <div className="relative w-full sm:max-w-lg max-h-[95vh] overflow-y-auto bg-[#0f0f14] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl">
-        <div className="sticky top-0 bg-[#0f0f14] flex items-center justify-between px-6 py-4 border-b border-white/10 z-10">
-          <h2 className="text-lg font-bold">{editing ? 'Edit Product' : 'New Product'}</h2>
-          <button onClick={() => onOpenChange(false)} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center">
-            <X className="w-4 h-4 text-gray-400" />
-          </button>
-        </div>
+    <>
+      <div className="fixed inset-0 z-[1100] isolate flex items-end justify-center p-0 sm:items-center sm:p-4">
+        <div
+          className={cn(
+            'absolute inset-0 bg-black/70 backdrop-blur-[2px] transition-opacity',
+            scannerOpen && 'pointer-events-none opacity-20'
+          )}
+          onClick={() => {
+            if (!scannerOpen) onOpenChange(false)
+          }}
+        />
 
-        <div className="p-6 space-y-4">
-          {!editing && (
+        <div
+          className={cn(
+            'relative w-full max-h-[95vh] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0f0f14] shadow-2xl sm:max-w-lg sm:rounded-3xl',
+            scannerOpen && 'pointer-events-none select-none'
+          )}
+          aria-hidden={scannerOpen}
+        >
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#0f0f14] px-6 py-4">
+            <h2 className="text-lg font-bold text-white">{editing ? 'Edit Product' : 'New Product'}</h2>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 hover:bg-white/10"
+              disabled={scannerOpen}
+            >
+              <X className="h-4 w-4 text-gray-400" />
+            </button>
+          </div>
+
+          <div className="space-y-4 p-6">
+            {!editing && (
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  Type
+                </label>
+                <div className="flex gap-2">
+                  {(['product', 'service'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => {
+                        setType(t)
+                        if (t === 'service') {
+                          setTrackInv(false)
+                          setStockQty('0')
+                        }
+                      }}
+                      className={cn(
+                        'flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-all',
+                        type === t
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20'
+                      )}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Type</label>
-              <div className="flex gap-2">
-                {(['product', 'service'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      setType(t)
-                      if (t === 'service') {
-                        setTrackInv(false)
-                        setStockQty('0')
-                      }
-                    }}
-                    className={cn(
-                      'flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border transition-all',
-                      type === t
-                        ? 'bg-primary border-primary text-white'
-                        : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Product Image
+              </label>
+
+              <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                    {previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={previewUrl}
+                        alt="Product preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <ImagePlus className="h-8 w-8 text-gray-500" />
                     )}
-                  >
-                    {t}
-                  </button>
-                ))}
+                  </div>
+
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-white">Upload product image</p>
+                      <p className="text-xs text-gray-500">
+                        JPG, PNG, or WEBP. Max 5MB before compression. Images are compressed
+                        to about 50–100KB.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <label
+                        className={cn(
+                          'inline-flex cursor-pointer items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-white transition',
+                          isCompressingImage
+                            ? 'cursor-not-allowed border-white/10 bg-white/5 opacity-60'
+                            : 'border-white/10 bg-white/10 hover:bg-white/15'
+                        )}
+                      >
+                        {isCompressingImage ? 'Compressing...' : 'Choose Image'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isCompressingImage}
+                          onChange={(e) => {
+                            void handleImageChange(e.target.files?.[0] ?? null)
+                            e.currentTarget.value = ''
+                          }}
+                        />
+                      </label>
+
+                      {selectedImage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedImage(null)
+                            setCompressionInfo(null)
+                            setError('')
+                          }}
+                          className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-500/15"
+                        >
+                          Remove Selection
+                        </button>
+                      )}
+                    </div>
+
+                    {isCompressingImage && (
+                      <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3">
+                        <div className="mb-2 flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+                          <p className="text-sm text-cyan-200">Compressing image...</p>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-cyan-400 transition-all"
+                            style={{ width: `${compressionProgress}%` }}
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-cyan-100">{compressionProgress}%</p>
+                      </div>
+                    )}
+
+                    {selectedImage && (
+                      <p className="text-xs text-emerald-400">
+                        Selected: {selectedImage.name}
+                      </p>
+                    )}
+
+                    {compressionInfo && (
+                      <div className="space-y-1 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200">
+                        <p>Original size: {formatFileSize(compressionInfo.originalSize)}</p>
+                        <p>Compressed size: {formatFileSize(compressionInfo.compressedSize)}</p>
+                        <p>
+                          Saved: {formatFileSize(compressionInfo.savingsBytes)} (
+                          {compressionInfo.savingsPercent.toFixed(1)}%)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Name *</label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Product name"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Brief description..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none resize-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Selling Price (₦) *</label>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Name *
+              </label>
               <input
-                type="number"
-                min="0"
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-                placeholder="0.00"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Product name"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-white/25 focus:outline-none"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cost Price (₦)</label>
-              <input
-                type="number"
-                min="0"
-                value={costPrice}
-                onChange={e => setCostPrice(e.target.value)}
-                placeholder="0.00"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                placeholder="Brief description..."
+                className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">SKU (optional)</label>
-            <input
-              value={sku}
-              onChange={e => setSku(e.target.value)}
-              placeholder="e.g. PROD-001"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
-            />
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  Selling Price (₦) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  Cost Price (₦)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
+                />
+              </div>
+            </div>
 
-          {type === 'product' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between bg-white/2 border border-white/5 rounded-xl px-4 py-3">
-                <div>
-                  <p className="text-sm text-white font-medium">Track inventory</p>
-                  <p className="text-xs text-gray-500">Monitor stock levels and get alerts</p>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  SKU (optional)
+                </label>
+                <input
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value)}
+                  placeholder="e.g. PROD-001"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Barcode (optional)
+              </label>
+
+              <div className="flex gap-2">
+                <input
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  placeholder="e.g. 1234567890"
+                  className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
+                />
+
                 <button
                   type="button"
-                  onClick={() => setTrackInv(v => !v)}
-                  className={cn(
-                    'w-10 h-6 rounded-full border transition-all relative shrink-0',
-                    trackInv ? 'bg-primary border-primary' : 'bg-white/5 border-white/20'
-                  )}
+                  onClick={() => {
+                    setError('')
+                    setScannerOpen(true)
+                  }}
+                  className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 transition hover:bg-cyan-500/15"
+                  title="Scan barcode"
                 >
-                  <div className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all', trackInv ? 'left-4' : 'left-0.5')} />
+                  <ScanLine className="h-5 w-5" />
                 </button>
               </div>
 
-              {trackInv && (
-                <div className="grid grid-cols-2 gap-3">
+              <p className="mt-2 text-[11px] text-gray-500">
+                You can type manually, use a hardware scanner, or tap scan to use the camera.
+              </p>
+            </div>
+
+            {type === 'product' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                      {editing ? 'Current Stock' : 'Opening Stock'}
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={stockQty}
-                      onChange={e => setStockQty(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
-                    />
+                    <p className="text-sm font-medium text-white">Track inventory</p>
+                    <p className="text-xs text-gray-500">Monitor stock levels and get alerts</p>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Low Stock Alert</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={lowThreshold}
-                      onChange={e => setLowThreshold(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                  <button
+                    type="button"
+                    onClick={() => setTrackInv((v) => !v)}
+                    className={cn(
+                      'relative h-6 w-10 shrink-0 rounded-full border transition-all',
+                      trackInv ? 'border-primary bg-primary' : 'border-white/20 bg-white/5'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
+                        trackInv ? 'left-4' : 'left-0.5'
+                      )}
                     />
-                  </div>
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
 
-          {editing && (
-            <div className="flex items-center justify-between bg-white/2 border border-white/5 rounded-xl px-4 py-3">
-              <p className="text-sm text-white font-medium">Active</p>
-              <button
-                type="button"
-                onClick={() => setIsActive(v => !v)}
-                className={cn(
-                  'w-10 h-6 rounded-full border transition-all relative shrink-0',
-                  isActive ? 'bg-primary border-primary' : 'bg-white/5 border-white/20'
+                {trackInv && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        {editing ? 'Current Stock' : 'Opening Stock'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={stockQty}
+                        onChange={(e) => setStockQty(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        Low Stock Alert
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={lowThreshold}
+                        onChange={(e) => setLowThreshold(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 )}
-              >
-                <div className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all', isActive ? 'left-4' : 'left-0.5')} />
-              </button>
-            </div>
-          )}
+              </div>
+            )}
 
-          {error && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-              {error}
-            </p>
-          )}
+            {editing && (
+              <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+                <p className="text-sm font-medium text-white">Active</p>
+                <button
+                  type="button"
+                  onClick={() => setIsActive((v) => !v)}
+                  className={cn(
+                    'relative h-6 w-10 shrink-0 rounded-full border transition-all',
+                    isActive ? 'border-primary bg-primary' : 'border-white/20 bg-white/5'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
+                      isActive ? 'left-4' : 'left-0.5'
+                    )}
+                  />
+                </button>
+              </div>
+            )}
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isPending}
-            className="w-full py-3.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
-          >
-            {isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : editing ? 'Save Changes' : 'Add Product'}
-          </button>
+            {error && (
+              <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isBusy}
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : isCompressingImage ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Compressing Image...
+                </>
+              ) : editing ? (
+                'Save Changes'
+              ) : (
+                'Add Product'
+              )}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDetected={handleDetectedBarcode}
+      />
+    </>
   )
 }

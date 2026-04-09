@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createInvoice } from '@/lib/api/finance'
 import { listCustomers } from '@/lib/api/business'
@@ -18,12 +18,28 @@ const PAYMENT_TERMS = ['Net 7', 'Net 15', 'Net 30', 'Net 60', 'Due on receipt']
 
 function today() {
   const d = new Date(), p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 function addDays(n: number) {
   const d = new Date(); d.setDate(d.getDate() + n)
   const p = (x: number) => String(x).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/** Mirror the backend CalculateVAT logic so the preview matches what's stored. */
+function calcVAT(subTotal: number, vatRate: number, vatInclusive: boolean): number {
+  if (vatRate === 0) return 0
+  if (vatInclusive) {
+    const base = subTotal / (1 + vatRate / 100)
+    return subTotal - base
+  }
+  return subTotal * (vatRate / 100)
+}
+
+/** Mirror the backend CalculateWHT logic. */
+function calcWHT(subTotal: number, whtRate: number): number {
+  if (whtRate === 0) return 0
+  return subTotal * (whtRate / 100)
 }
 
 export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Props) {
@@ -35,10 +51,14 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
   const [notes, setNotes]               = useState('')
   const [vatRate, setVatRate]           = useState(0)
   const [vatInclusive, setVatInclusive] = useState(false)
+  const [whtRate, setWhtRate]           = useState(0)
   const [items, setItems]               = useState<{ description: string; qty: string; unitPrice: string; discount: string }[]>([
     { description: '', qty: '1', unitPrice: '', discount: '0' }
   ])
   const [error, setError] = useState('')
+
+  // FIX: ref used to detect blur-outside for customer dropdown
+  const custBoxRef = useRef<HTMLDivElement>(null)
 
   const { data: custData } = useQuery({
     queryKey: ['customers-search', custSearch],
@@ -56,6 +76,7 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
   function reset() {
     setCustomerId(''); setCustSearch(''); setIssueDate(today()); setDueDate(addDays(30))
     setPaymentTerms('Net 30'); setNotes(''); setVatRate(0); setVatInclusive(false)
+    setWhtRate(0)
     setItems([{ description: '', qty: '1', unitPrice: '', discount: '0' }]); setError('')
   }
 
@@ -65,16 +86,21 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
     setItems(p => p.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
   }
 
-  // Calculate totals (in naira for display, kobo for submission)
+  // ── Totals (mirror backend logic exactly) ───────────────────────────────────
   const lineItems = items.map(it => ({
-    qty: parseFloat(it.qty) || 0,
+    qty:   parseFloat(it.qty)       || 0,
     price: parseFloat(it.unitPrice) || 0,
-    disc: parseFloat(it.discount) || 0,
-    line: ((parseFloat(it.unitPrice) || 0) * (parseFloat(it.qty) || 0)) - (parseFloat(it.discount) || 0),
+    disc:  parseFloat(it.discount)  || 0,
+    line:  ((parseFloat(it.unitPrice) || 0) * (parseFloat(it.qty) || 0)) - (parseFloat(it.discount) || 0),
   }))
   const subTotal = lineItems.reduce((s, l) => s + l.line, 0)
-  const vatAmt   = subTotal * (vatRate / 100)
-  const total    = subTotal + vatAmt
+  const vatAmt   = calcVAT(subTotal, vatRate, vatInclusive)
+  const whtAmt   = calcWHT(subTotal, whtRate)
+  // FIX: exclusive VAT is added; inclusive VAT is already inside subTotal.
+  // WHT is always deducted.
+  const total = vatInclusive
+    ? subTotal - whtAmt
+    : subTotal + vatAmt - whtAmt
 
   function handleSubmit() {
     setError('')
@@ -83,18 +109,21 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
     if (validItems.length === 0) { setError('Add at least one item with a price'); return }
 
     const req: CreateInvoiceRequest = {
-      customer_id: customerId || undefined,
-      issue_date: issueDate,
-      due_date: dueDate,
-      payment_terms: paymentTerms || undefined,
-      notes: notes || undefined,
-      vat_rate: vatRate,
-      vat_inclusive: vatInclusive,
+      customer_id:    customerId || undefined,
+      store_id:       undefined,
+      // FIX: issue_date is sent as YYYY-MM-DD — backend DateOnly handles it.
+      issue_date:     issueDate,
+      due_date:       dueDate,
+      payment_terms:  paymentTerms || undefined,
+      notes:          notes || undefined,
+      vat_rate:       vatRate,
+      vat_inclusive:  vatInclusive,
+      wht_rate:       whtRate,         // FIX: was never sent before
       items: validItems.map(it => ({
         description: it.description,
-        unit_price: Math.round(parseFloat(it.unitPrice) * 100),
-        quantity: parseFloat(it.qty) || 1,
-        discount: Math.round(parseFloat(it.discount) * 100),
+        unit_price:  Math.round(parseFloat(it.unitPrice) * 100),
+        quantity:    parseFloat(it.qty) || 1,
+        discount:    Math.round(parseFloat(it.discount) * 100),
       } as CreateInvoiceItemRequest)),
     }
     mut.mutate(req)
@@ -117,17 +146,29 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
 
         <div className="p-6 space-y-6">
 
-          {/* Customer */}
-          <div>
+          {/* Customer — FIX: onBlur closes dropdown when focus leaves the box */}
+          <div ref={custBoxRef} onBlur={e => {
+            if (!custBoxRef.current?.contains(e.relatedTarget as Node)) {
+              // blur left the whole customer box — hide dropdown but keep selection
+              if (!customerId) setCustSearch('')
+            }
+          }}>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Customer (optional)</label>
-            <input value={custSearch} onChange={e => { setCustSearch(e.target.value); setCustomerId('') }}
+            <input
+              value={custSearch}
+              onChange={e => { setCustSearch(e.target.value); setCustomerId('') }}
               placeholder="Search customer name..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25" />
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25"
+            />
             {customers.length > 0 && !customerId && (
               <div className="mt-1 bg-[#1a1a24] border border-white/10 rounded-xl overflow-hidden">
                 {customers.map((c: any) => (
-                  <button key={c.id} onClick={() => { setCustomerId(c.id); setCustSearch(`${c.first_name} ${c.last_name}`) }}
-                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                  <button
+                    key={c.id}
+                    onMouseDown={e => e.preventDefault()} // prevent input blur before click registers
+                    onClick={() => { setCustomerId(c.id); setCustSearch(`${c.first_name} ${c.last_name}`) }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                  >
                     {c.first_name} {c.last_name}
                     {c.phone_number && <span className="text-gray-500 ml-2 text-xs">{c.phone_number}</span>}
                   </button>
@@ -208,34 +249,53 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
             </div>
           </div>
 
-          {/* VAT */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">VAT Rate (%)</label>
-              <input type="number" min="0" max="100" value={vatRate} onChange={e => setVatRate(parseFloat(e.target.value)||0)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
+          {/* VAT + WHT — FIX: WHT field added; VAT total display mirrors backend */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">VAT Rate (%)</label>
+                <input type="number" min="0" max="100" value={vatRate}
+                  onChange={e => setVatRate(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setVatInclusive(v => !v)}
+                  className={cn('w-10 h-6 rounded-full border transition-all relative', vatInclusive ? 'bg-primary border-primary' : 'bg-white/5 border-white/20')}>
+                  <div className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all', vatInclusive ? 'left-4' : 'left-0.5')} />
+                </button>
+                <span className="text-xs text-gray-400">VAT inclusive</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 mt-5">
-              <button onClick={() => setVatInclusive(v => !v)}
-                className={cn('w-10 h-6 rounded-full border transition-all relative', vatInclusive ? 'bg-primary border-primary' : 'bg-white/5 border-white/20')}>
-                <div className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all', vatInclusive ? 'left-4' : 'left-0.5')} />
-              </button>
-              <span className="text-xs text-gray-400">VAT inclusive</span>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">WHT Rate (%)</label>
+              <input type="number" min="0" max="100" value={whtRate}
+                onChange={e => setWhtRate(parseFloat(e.target.value) || 0)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
+              <p className="text-[10px] text-gray-500 mt-1">Withholding tax deducted from total</p>
             </div>
           </div>
 
           {/* Totals */}
           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-400">
-              <span>Subtotal</span><span>₦{subTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+              <span>Subtotal</span>
+              <span>₦{subTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
             </div>
             {vatRate > 0 && (
               <div className="flex justify-between text-gray-400">
-                <span>VAT ({vatRate}%)</span><span>₦{vatAmt.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                <span>VAT ({vatRate}%{vatInclusive ? ', inclusive' : ''})</span>
+                <span>{vatInclusive ? '−' : '+'}₦{vatAmt.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+              </div>
+            )}
+            {whtRate > 0 && (
+              <div className="flex justify-between text-gray-400">
+                <span>WHT ({whtRate}%)</span>
+                <span>−₦{whtAmt.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
               </div>
             )}
             <div className="flex justify-between text-white font-bold text-base pt-2 border-t border-white/10">
-              <span>Total</span><span>₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+              <span>Total</span>
+              <span>₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
 

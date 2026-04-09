@@ -29,7 +29,7 @@ export default function ProductDrawer({ product: p, onClose, onSuccess }: Props)
 
   const adjMut = useMutation({
     mutationFn: () => adjustStock(p.id, {
-      adjustment: adjType === 'add' ? parseInt(adjAmount) : -parseInt(adjAmount),
+      quantity: adjType === 'add' ? parseInt(adjAmount) : -parseInt(adjAmount),
       reason: adjReason || undefined,
     }),
     onSuccess: () => { onSuccess(); setShowAdj(false); setAdjAmount(''); setAdjReason('') },
@@ -176,6 +176,13 @@ export default function ProductDrawer({ product: p, onClose, onSuccess }: Props)
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">SKU</span>
                 <span className="font-mono text-gray-300">{p.sku}</span>
+              </div>
+            )}
+
+            {p.barcode && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Barcode</span>
+                <span className="font-mono text-gray-300">{p.barcode}</span>
               </div>
             )}
 

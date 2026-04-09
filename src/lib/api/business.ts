@@ -276,6 +276,17 @@ export const uploadProductImage = async (id: string, file: File) => {
   }
 }
 
+export const scanProductByBarcode = async (barcode: string) => {
+  try {
+    const res = await api.get<ApiSuccess<Product>>('/products/scan', {
+      params: { barcode },
+    })
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
 // ─── Staff ────────────────────────────────────────────────────────────────────
 
 export interface StaffMember {
