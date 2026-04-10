@@ -13,9 +13,10 @@ import {
   Shield,
   Truck,
   RefreshCw,
+  BriefcaseBusiness,
 } from 'lucide-react'
-import type { PublicBusiness, CartItem } from '@/components/public/public-profile-shared'
-import { fmt } from '@/components/public/public-profile-shared'
+import type { PublicBusiness, CartItem } from '@/types/public'
+import { formatCurrency } from '@/types/public'
 
 interface Props {
   items: CartItem[]
@@ -25,26 +26,26 @@ interface Props {
 }
 
 export function CartDrawer({ items, onUpdate, onClose, biz }: Props) {
-  const total = items.reduce((s, i) => s + i.price * i.qty, 0)
-  const count = items.reduce((s, i) => s + i.qty, 0)
+  const total = items.reduce((sum, item) => sum + item.price * item.qty, 0)
+  const count = items.reduce((sum, item) => sum + item.qty, 0)
 
   function handleWhatsAppOrder() {
     const lines = items
-      .map((i) => `• ${i.name} ×${i.qty} — ${fmt(i.price * i.qty)}`)
+      .map((item) => `• ${item.name} ×${item.qty} — ${formatCurrency(item.price * item.qty)}`)
       .join('\n')
 
-    const msg = `Hi ${biz.name}! I'd like to order:\n\n${lines}\n\nTotal: ${fmt(total)}`
-    const phone = biz.phone_number?.replace(/\D/g, '').replace(/^0/, '234')
+    const msg = `Hi ${biz.name}! I'd like to order:\n\n${lines}\n\nTotal: ${formatCurrency(total)}`
+    const phone = ''
     const url = phone
       ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
       : `https://wa.me/?text=${encodeURIComponent(msg)}`
 
-    window.open(url, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex" onClick={onClose} style={{ animation: 'none' }}>
+      <div className="fixed inset-0 z-50 flex" onClick={onClose}>
         <div className="flex-1 bg-black/60 backdrop-blur-sm" />
 
         <div
@@ -100,6 +101,8 @@ export function CartDrawer({ items, onUpdate, onClose, biz }: Props) {
                       <div className="flex h-full w-full items-center justify-center">
                         {item.type === 'digital' ? (
                           <Download className="h-5 w-5 text-gray-600" />
+                        ) : item.type === 'service' ? (
+                          <BriefcaseBusiness className="h-5 w-5 text-gray-600" />
                         ) : (
                           <Package className="h-5 w-5 text-gray-600" />
                         )}
@@ -110,7 +113,9 @@ export function CartDrawer({ items, onUpdate, onClose, biz }: Props) {
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-1 text-sm font-semibold text-white">{item.name}</p>
                     <p className="text-xs capitalize text-gray-500">{item.type}</p>
-                    <p className="mt-0.5 text-sm font-bold text-brand-blue">{fmt(item.price)}</p>
+                    <p className="mt-0.5 text-sm font-bold text-brand-blue">
+                      {formatCurrency(item.price)}
+                    </p>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -137,7 +142,7 @@ export function CartDrawer({ items, onUpdate, onClose, biz }: Props) {
             <div className="space-y-3 border-t border-white/8 p-5">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-400">Subtotal</span>
-                <span className="text-lg font-bold text-white">{fmt(total)}</span>
+                <span className="text-lg font-bold text-white">{formatCurrency(total)}</span>
               </div>
 
               <div className="grid grid-cols-1 gap-2">

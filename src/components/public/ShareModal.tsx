@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { X, Copy, CheckCircle2, MessageCircle, Twitter } from 'lucide-react'
-import type { PublicBusiness } from '@/components/public/public-profile-shared'
+import { X, Copy, CheckCircle2, MessageCircle } from 'lucide-react'
+import type { PublicBusiness } from '@/types/public'
 
 interface Props {
   biz: PublicBusiness
@@ -32,7 +32,7 @@ export function ShareModal({ biz, onClose }: Props) {
   function copy() {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      window.setTimeout(() => setCopied(false), 2000)
     })
   }
 
@@ -76,7 +76,7 @@ export function ShareModal({ biz, onClose }: Props) {
             <span className="shrink-0 text-xs text-gray-500">{copied ? 'Copied!' : 'Copy'}</span>
           </button>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <a
               href={`https://wa.me/?text=${encodeURIComponent(`Check out ${biz.name} on OgaOS: ${url}`)}`}
               target="_blank"
@@ -85,16 +85,6 @@ export function ShareModal({ biz, onClose }: Props) {
             >
               <MessageCircle className="h-4 w-4" />
               WhatsApp
-            </a>
-
-            <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out ${biz.name} on OgaOS`)}&url=${encodeURIComponent(url)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-            >
-              <Twitter className="h-4 w-4" />
-              Share
             </a>
           </div>
         </div>

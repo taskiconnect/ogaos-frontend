@@ -1,31 +1,33 @@
-import { ShoppingBag, Download, Eye, Calendar } from 'lucide-react'
-import type {
-  PublicBusiness,
-  DigitalProduct,
-  PhysicalProduct,
-} from '@/components/public/public-profile-shared'
-import { yearSince } from '@/components/public/public-profile-shared'
+import { ShoppingBag, BriefcaseBusiness, Download, Eye } from 'lucide-react'
+import type { PublicBusiness, PublicStats } from '@/types/public'
 
 interface Props {
-  biz: PublicBusiness
-  digital: DigitalProduct[]
-  physical: PhysicalProduct[]
+  business: PublicBusiness
+  stats: PublicStats
 }
 
-export function StatsBar({ biz, digital, physical }: Props) {
-  const stats = [
+export function StatsBar({ business, stats }: Props) {
+  const items = [
     {
       icon: ShoppingBag,
-      label: 'Total Products',
-      value: (digital.length + physical.length).toString(),
+      label: 'Products',
+      value: String(stats.total_products),
       color: 'text-[#5b76ff]',
       bg: 'bg-brand-blue/10',
       border: 'border-brand-blue/20',
     },
     {
+      icon: BriefcaseBusiness,
+      label: 'Services',
+      value: String(stats.total_services),
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-400/10',
+      border: 'border-emerald-400/20',
+    },
+    {
       icon: Download,
       label: 'Digital Items',
-      value: digital.length.toString(),
+      value: String(stats.total_digital_products),
       color: 'text-amber-400',
       bg: 'bg-amber-400/10',
       border: 'border-amber-400/20',
@@ -34,26 +36,18 @@ export function StatsBar({ biz, digital, physical }: Props) {
       icon: Eye,
       label: 'Profile Views',
       value:
-        biz.profile_views > 999
-          ? `${(biz.profile_views / 1000).toFixed(1)}k`
-          : biz.profile_views.toString(),
+        business.profile_views > 999
+          ? `${(business.profile_views / 1000).toFixed(1)}k`
+          : String(business.profile_views),
       color: 'text-purple-400',
       bg: 'bg-purple-400/10',
       border: 'border-purple-400/20',
     },
-    {
-      icon: Calendar,
-      label: 'Member Since',
-      value: biz.created_at ? yearSince(biz.created_at).toString() : '—',
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-400/10',
-      border: 'border-emerald-400/20',
-    },
   ]
 
   return (
-    <div className="my-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {stats.map(({ icon: Icon, label, value, color, bg, border }) => (
+    <div id="overview" className="my-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {items.map(({ icon: Icon, label, value, color, bg, border }) => (
         <div
           key={label}
           className={`${bg} ${border} flex items-center gap-3 rounded-2xl border p-4`}

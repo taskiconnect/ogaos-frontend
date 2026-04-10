@@ -326,7 +326,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
 
         <div
           className={cn(
-            'relative w-full max-h-[95vh] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0f0f14] shadow-2xl sm:max-w-lg sm:rounded-3xl',
+            'relative max-h-[95vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0f0f14] shadow-2xl sm:max-w-lg sm:rounded-3xl',
             scannerOpen && 'pointer-events-none select-none'
           )}
           aria-hidden={scannerOpen}
@@ -397,10 +397,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                   <div className="flex-1 space-y-3">
                     <div>
                       <p className="text-sm font-medium text-white">Upload product image</p>
-                      <p className="text-xs text-gray-500">
-                        JPG, PNG, or WEBP. Max 5MB before compression. Images are compressed
-                        to about 50–100KB.
-                      </p>
+                      <p className="text-xs text-gray-500">JPG, PNG, or WEBP.</p>
                     </div>
 
                     <div className="flex flex-wrap gap-2">

@@ -2,31 +2,32 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import {
   Heart,
   Plus,
   CheckCircle2,
   Download,
   Package,
+  BriefcaseBusiness,
   Star,
 } from 'lucide-react'
-import type { CartItem } from '@/components/public/public-profile-shared'
-import { fmt, fmtSize } from '@/components/public/public-profile-shared'
+import type { CartItem } from '@/types/public'
+import { formatBytes, formatCurrency } from '@/types/public'
 
 interface Props {
   id: string
   name: string
   price: number
+  currency?: string
   image: string | null
   type: string
   description?: string | null
   salesCount?: number
   fileSize?: number | null
   slug?: string
-  bizSlug: string
   onAddToCart: (item: CartItem) => void
-  isDigital: boolean
+  itemKind: 'digital' | 'physical' | 'service'
+  inStock?: boolean
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -34,21 +35,22 @@ const TYPE_COLORS: Record<string, string> = {
   course: 'border-purple-500/20 bg-purple-500/15 text-purple-400',
   video: 'border-red-500/20 bg-red-500/15 text-red-400',
   service: 'border-emerald-500/20 bg-emerald-500/15 text-emerald-400',
+  product: 'border-amber-500/20 bg-amber-500/15 text-amber-400',
 }
 
 export function ProductCard({
   id,
   name,
   price,
+  currency = 'NGN',
   image,
   type,
   description,
   salesCount,
   fileSize,
-  slug: productSlug,
-  bizSlug,
   onAddToCart,
-  isDigital,
+  itemKind,
+  inStock = true,
 }: Props) {
   const [wishlisted, setWishlisted] = useState(false)
   const [added, setAdded] = useState(false)
@@ -63,15 +65,14 @@ export function ProductCard({
       price,
       qty: 1,
       image,
-      type: isDigital ? 'digital' : 'physical',
-      slug: productSlug,
+      type: itemKind,
     })
 
     setAdded(true)
-    setTimeout(() => setAdded(false), 1500)
+    window.setTimeout(() => setAdded(false), 1500)
   }
 
-  const card = (
+  return (
     <div className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/6 bg-[#0e0e1a] transition-all duration-300 hover:border-brand-blue/40 hover:shadow-[0_8px_32px_rgba(28,53,234,0.12)]">
       <div className="relative h-44 shrink-0 overflow-hidden bg-[#141420]">
         {image ? (
@@ -85,8 +86,10 @@ export function ProductCard({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            {isDigital ? (
+            {itemKind === 'digital' ? (
               <Download className="h-10 w-10 text-white/10" />
+            ) : itemKind === 'service' ? (
+              <BriefcaseBusiness className="h-10 w-10 text-white/10" />
             ) : (
               <Package className="h-10 w-10 text-white/10" />
             )}
@@ -99,7 +102,7 @@ export function ProductCard({
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            setWishlisted((w) => !w)
+            setWishlisted((prev) => !prev)
           }}
           className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 opacity-0 backdrop-blur transition-all hover:scale-110 group-hover:opacity-100"
         >
@@ -125,12 +128,12 @@ export function ProductCard({
           </span>
         )}
 
-        {fileSize && (
+        {fileSize ? (
           <span className="absolute bottom-2.5 right-2.5 flex items-center gap-0.5 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
             <Download className="h-2.5 w-2.5" />
-            {fmtSize(fileSize)}
+            {formatBytes(fileSize)}
           </span>
-        )}
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
@@ -138,17 +141,24 @@ export function ProductCard({
           {name}
         </p>
 
-        {description && <p className="line-clamp-1 text-xs text-gray-600">{description}</p>}
+        {description ? <p className="line-clamp-2 text-xs text-gray-400">{description}</p> : null}
+
+        {itemKind !== 'digital' && !inStock ? (
+          <span className="mt-1 inline-flex w-fit rounded-full border border-red-500/20 bg-red-500/10 px-2 py-1 text-[10px] font-bold uppercase text-red-400">
+            Out of stock
+          </span>
+        ) : null}
 
         <div className="mt-auto flex items-center justify-between pt-2">
-          <p className="text-lg font-black text-white">{fmt(price)}</p>
+          <p className="text-lg font-black text-white">{formatCurrency(price, currency)}</p>
 
           <button
             onClick={addToCart}
+            disabled={itemKind !== 'digital' && !inStock}
             className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
               added
                 ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-400'
-                : 'border-brand-blue/50 bg-brand-blue text-white hover:bg-[#1528d4]'
+                : 'border-brand-blue/50 bg-brand-blue text-white hover:bg-[#1528d4] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/10 disabled:text-white/40'
             }`}
           >
             {added ? (
@@ -167,10 +177,4 @@ export function ProductCard({
       </div>
     </div>
   )
-
-  if (isDigital && productSlug) {
-    return <Link href={`/public/${bizSlug}/product/${productSlug}`}>{card}</Link>
-  }
-
-  return card
 }

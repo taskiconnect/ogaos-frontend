@@ -1,6 +1,4 @@
 'use client'
-// src/app/public/[slug]/profile/components/Lightbox.tsx
-// ✅ CLIENT COMPONENT
 
 import { useState } from 'react'
 import Image from 'next/image'
@@ -17,22 +15,18 @@ export function Lightbox({ images, idx, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
       onClick={onClose}
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors z-10"
+        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
       >
-        <X className="w-5 h-5" />
+        <X className="h-5 w-5" />
       </button>
 
-      <div
-        className="max-w-4xl w-full"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Main image */}
-        <div className="relative w-full max-h-[75vh] aspect-video rounded-2xl overflow-hidden bg-black">
+      <div className="w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+        <div className="relative aspect-video w-full max-h-[75vh] overflow-hidden rounded-2xl bg-black">
           <Image
             src={images[active]}
             alt=""
@@ -43,16 +37,19 @@ export function Lightbox({ images, idx, onClose }: Props) {
           />
         </div>
 
-        {/* Thumbnail strip */}
         {images.length > 1 && (
-          <div className="flex justify-center gap-2 mt-4 flex-wrap">
-            {images.map((u, i) => (
-              <button key={u} onClick={() => setActive(i)} className="relative w-14 h-14 shrink-0">
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {images.map((url, i) => (
+              <button
+                key={`${url}-${i}`}
+                onClick={() => setActive(i)}
+                className="relative h-14 w-14 shrink-0"
+              >
                 <Image
-                  src={u}
+                  src={url}
                   alt=""
                   fill
-                  className={`object-cover rounded-xl border-2 transition-all ${
+                  className={`rounded-xl border-2 object-cover transition-all ${
                     i === active
                       ? 'border-[#1C35EA] opacity-100'
                       : 'border-white/10 opacity-40 hover:opacity-70'

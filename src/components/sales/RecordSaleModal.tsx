@@ -10,11 +10,12 @@ import { createSale } from '@/lib/api/finance'
 import { listCustomers, listProducts } from '@/lib/api/business'
 import {
   X, Plus, Trash2, ShoppingCart, Search,
-  UserPlus, Phone, Mail,
+  UserPlus, Phone, Mail, ScanBarcode,
 } from 'lucide-react'
 import { cn, isUpgradeRequiredError, getSubscriptionToastMessage } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { Customer, WalkInCustomer, CreateSaleRequest } from '@/lib/api/types'
+import BarcodeScannerModal from '@/components/products/BarcodeScannerModal'
 
 const itemSchema = z.object({
   product_id: z.string().optional(),
@@ -149,6 +150,11 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const [productSearch, setProductSearch] = useState<string[]>([])
   const [idempotencyKey, setIdempotencyKey] = useState('')
 
+  // ── Barcode scanner state ─────────────────────────────────────────────────
+  const [scannerOpen, setScannerOpen] = useState(false)
+  // Tracks which item row the scanner was opened for (-1 = add new row)
+  const pendingScanRowRef = useRef<number>(-1)
+
   useEffect(() => {
     if (open) {
       setIdempotencyKey(globalThis.crypto?.randomUUID?.() ?? `sale_${Date.now()}_${Math.random().toString(36).slice(2)}`)
@@ -235,6 +241,41 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     }
   }, [canSendEmail, setValue])
 
+  // ── Barcode detected handler ──────────────────────────────────────────────
+  const handleBarcodeDetected = (barcode: string) => {
+    const match = products.find((p) => p.barcode === barcode)
+
+    if (!match) {
+      toast.error(`No product found for barcode: ${barcode}`)
+      return
+    }
+
+    const targetRow = pendingScanRowRef.current
+
+    if (targetRow === -1 || targetRow >= fields.length) {
+      // Append a new row pre-filled with the scanned product
+      append({
+        product_id: match.id,
+        product_name: match.name,
+        unit_price: match.price / 100,
+        quantity: 1,
+        discount: 0,
+      })
+    } else {
+      // Fill the specific row that triggered the scan
+      setValue(`items.${targetRow}.product_id`, match.id)
+      setValue(`items.${targetRow}.product_name`, match.name)
+      setValue(`items.${targetRow}.unit_price`, match.price / 100)
+      // Clear the product search query for this row so dropdown closes
+      const arr = [...productSearch]
+      arr[targetRow] = ''
+      setProductSearch(arr)
+    }
+
+    toast.success(`Added: ${match.name}`)
+    pendingScanRowRef.current = -1
+  }
+
   const doReset = () => {
     reset({
       items: [{ product_name: '', unit_price: 0, quantity: 1, discount: 0 }],
@@ -259,8 +300,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const mutation = useMutation({
     mutationFn: (vals: FormValues) => {
       // ── Step 1: Build walk-in customer object from live form values ──
-      // We do NOT rely on customerMode state here — state can be stale at
-      // mutation time. Instead we derive everything directly from `vals`.
       const firstName = vals.walk_in_first_name?.trim() ?? ''
       const phone = vals.walk_in_phone?.trim() ?? ''
 
@@ -274,22 +313,19 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             }
           : null
 
-      // ── Step 2: Derive send-email flag from vals (fixes stale closure bug) ──
-      // Previously `canSendEmail` was captured from the render-time closure and
-      // could be false even when the user had toggled the switch on and filled
-      // in an email address. We recalculate it here from the submitted values.
+      // ── Step 2: Derive send-email flag ──
       const emailForReceipt = vals.customer_id?.trim()
-        ? selectedCustomer?.email?.trim()   // existing customer email
-        : vals.walk_in_email?.trim()        // walk-in customer email
+        ? selectedCustomer?.email?.trim()
+        : vals.walk_in_email?.trim()
       const sendEmail = vals.send_receipt_email && !!emailForReceipt
 
-      // ── Step 3: Validate walk-in fields before hitting the network ──
+      // ── Step 3: Validate walk-in fields ──
       if (walkInCustomer) {
         if (!walkInCustomer.first_name) throw new Error('Walk-in customer first name is required')
         if (!walkInCustomer.phone) throw new Error('Walk-in customer phone number is required')
       }
 
-      // ── Step 4: Assemble typed payload ──
+      // ── Step 4: Assemble payload ──
       const payload: CreateSaleRequest = {
         staff_name: vals.staff_name?.trim() || undefined,
         payment_method: vals.payment_method,
@@ -304,7 +340,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           quantity: Number(i.quantity),
           discount: Math.round(Number(i.discount ?? 0) * 100),
         })),
-        // Attach exactly one of customer_id or walk_in_customer — never both
         ...(vals.customer_id?.trim()
           ? { customer_id: vals.customer_id.trim() }
           : walkInCustomer
@@ -342,292 +377,343 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const smallCls = 'w-full h-9 rounded-lg bg-dash-surface border border-dash-border px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { doReset(); onOpenChange(false) }} />
+    <>
+      <div className="fixed inset-0 z-[1100] isolate flex items-end sm:items-center justify-center">
+        <div
+          className={cn(
+            'absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity',
+            scannerOpen && 'pointer-events-none opacity-20'
+          )}
+          onClick={() => { if (!scannerOpen) { doReset(); onOpenChange(false) } }}
+        />
 
-      <div className="relative w-full sm:max-w-2xl bg-dash-surface border border-dash-border rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-dash-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-emerald-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Record Sale</h2>
-              <p className="text-xs text-muted-foreground">All amounts in Naira (₦)</p>
-            </div>
-          </div>
-          <button onClick={() => { doReset(); onOpenChange(false) }} className="p-2 rounded-xl hover:bg-dash-hover text-muted-foreground hover:text-foreground transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-          {/* Customer section */}
-          <div className="space-y-3">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Customer</label>
-
-            {customerMode === 'none' && (
-              <CustomerPicker
-                customers={customers}
-                onSelect={(c) => {
-                  setSelectedCustomer(c)
-                  setValue('customer_id', c.id)
-                  setCustomerMode('existing')
-                }}
-                onAddNew={(name) => {
-                  setCustomerMode('new')
-                  const parts = name.trim().split(' ')
-                  if (parts[0]) setValue('walk_in_first_name', parts[0])
-                  if (parts[1]) setValue('walk_in_last_name', parts.slice(1).join(' '))
-                }}
-              />
-            )}
-
-            {customerMode === 'existing' && selectedCustomer && (
-              <div className="flex items-center gap-3 bg-dash-bg rounded-xl border border-emerald-500/30 px-3 py-2.5">
-                <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-xs font-bold text-primary uppercase">
-                  {selectedCustomer.first_name[0]}{selectedCustomer.last_name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
-                  <p className="text-xs text-muted-foreground">{selectedCustomer.phone_number}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomerMode('none')
-                    setSelectedCustomer(null)
-                    setValue('customer_id', '')
-                    setValue('send_receipt_email', false)
-                  }}
-                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                >
-                  Change
-                </button>
+        <div
+          className={cn(
+            'relative w-full sm:max-w-2xl bg-dash-surface border border-dash-border rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col',
+            scannerOpen && 'pointer-events-none select-none'
+          )}
+          aria-hidden={scannerOpen}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-5 border-b border-dash-border shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-emerald-500" />
               </div>
-            )}
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Record Sale</h2>
+                <p className="text-xs text-muted-foreground">All amounts in Naira (₦)</p>
+              </div>
+            </div>
+            <button onClick={() => { doReset(); onOpenChange(false) }} disabled={scannerOpen} className="p-2 rounded-xl hover:bg-dash-hover text-muted-foreground hover:text-foreground transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            {customerMode === 'new' && (
-              <div className="bg-dash-bg rounded-2xl border border-dash-border p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-emerald-500" />
-                    <span className="text-sm font-semibold text-foreground">New Customer</span>
+          <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+            {/* Customer section */}
+            <div className="space-y-3">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Customer</label>
+
+              {customerMode === 'none' && (
+                <CustomerPicker
+                  customers={customers}
+                  onSelect={(c) => {
+                    setSelectedCustomer(c)
+                    setValue('customer_id', c.id)
+                    setCustomerMode('existing')
+                  }}
+                  onAddNew={(name) => {
+                    setCustomerMode('new')
+                    const parts = name.trim().split(' ')
+                    if (parts[0]) setValue('walk_in_first_name', parts[0])
+                    if (parts[1]) setValue('walk_in_last_name', parts.slice(1).join(' '))
+                  }}
+                />
+              )}
+
+              {customerMode === 'existing' && selectedCustomer && (
+                <div className="flex items-center gap-3 bg-dash-bg rounded-xl border border-emerald-500/30 px-3 py-2.5">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-xs font-bold text-primary uppercase">
+                    {selectedCustomer.first_name[0]}{selectedCustomer.last_name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
+                    <p className="text-xs text-muted-foreground">{selectedCustomer.phone_number}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
                       setCustomerMode('none')
-                      ;(['walk_in_first_name', 'walk_in_last_name', 'walk_in_phone', 'walk_in_email'] as const).forEach((f) => setValue(f, ''))
+                      setSelectedCustomer(null)
+                      setValue('customer_id', '')
                       setValue('send_receipt_email', false)
                     }}
                     className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
                   >
-                    Cancel
+                    Change
                   </button>
                 </div>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 -mt-1">
-                  This customer will be saved so you can find them by name or phone next time.
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">First Name *</label>
-                    <input {...register('walk_in_first_name')} placeholder="Ada" className={smallCls} />
+              )}
+
+              {customerMode === 'new' && (
+                <div className="bg-dash-bg rounded-2xl border border-dash-border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm font-semibold text-foreground">New Customer</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerMode('none')
+                        ;(['walk_in_first_name', 'walk_in_last_name', 'walk_in_phone', 'walk_in_email'] as const).forEach((f) => setValue(f, ''))
+                        setValue('send_receipt_email', false)
+                      }}
+                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 -mt-1">
+                    This customer will be saved so you can find them by name or phone next time.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">First Name *</label>
+                      <input {...register('walk_in_first_name')} placeholder="Ada" className={smallCls} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Last Name</label>
+                      <input {...register('walk_in_last_name')} placeholder="Okonkwo" className={smallCls} />
+                    </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Last Name</label>
-                    <input {...register('walk_in_last_name')} placeholder="Okonkwo" className={smallCls} />
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Phone className="w-3 h-3" /> Phone *
+                    </label>
+                    <input {...register('walk_in_phone')} placeholder="08012345678" className={smallCls} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Mail className="w-3 h-3" /> Email (optional — needed to send receipt)
+                    </label>
+                    <input {...register('walk_in_email')} type="email" placeholder="ada@email.com" className={smallCls} />
                   </div>
                 </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Phone className="w-3 h-3" /> Phone *
-                  </label>
-                  <input {...register('walk_in_phone')} placeholder="08012345678" className={smallCls} />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Mail className="w-3 h-3" /> Email (optional — needed to send receipt)
-                  </label>
-                  <input {...register('walk_in_email')} type="email" placeholder="ada@email.com" className={smallCls} />
+              )}
+            </div>
+
+            {/* Served By + Payment Method */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Served By</label>
+                <input {...register('staff_name')} placeholder="Staff name" className={inputCls} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Payment Method</label>
+                <select {...register('payment_method')} className={inputCls}>
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Items */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Items</label>
+                <div className="flex items-center gap-2">
+                  {/* ── Scan barcode to add new item row ── */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      pendingScanRowRef.current = -1 // -1 = append a new row
+                      setScannerOpen(true)
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-colors"
+                  >
+                    <ScanBarcode className="w-3.5 h-3.5" /> Scan
+                  </button>
+                  <span className="text-muted-foreground/40 text-xs">·</span>
+                  <button
+                    type="button"
+                    onClick={() => append({ product_name: '', unit_price: 0, quantity: 1, discount: 0 })}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add item
+                  </button>
                 </div>
               </div>
+              <div className="space-y-3">
+                {fields.map((field, i) => {
+                  const srch = productSearch[i] ?? ''
+                  const filteredProds = products.filter((p) => p.name.toLowerCase().includes(srch.toLowerCase())).slice(0, 6)
+                  const lineTotal = Math.max(0, Number(watchItems[i]?.unit_price) * Number(watchItems[i]?.quantity) - Number(watchItems[i]?.discount ?? 0))
+
+                  return (
+                    <div key={field.id} className="bg-dash-bg rounded-2xl border border-dash-border p-4 space-y-3">
+                      {/* Product name + per-row scan button */}
+                      <div className="relative flex gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            {...register(`items.${i}.product_name`)}
+                            placeholder="Product / service name"
+                            onChange={(e) => {
+                              register(`items.${i}.product_name`).onChange(e)
+                              const arr = [...productSearch]
+                              arr[i] = e.target.value
+                              setProductSearch(arr)
+                              setValue(`items.${i}.product_id`, '')
+                            }}
+                            className="w-full h-10 rounded-xl bg-dash-surface border border-dash-border px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                          {srch.length > 0 && filteredProds.length > 0 && (
+                            <div className="absolute top-full mt-1 left-0 right-0 z-10 bg-dash-surface border border-dash-border rounded-xl shadow-xl overflow-hidden">
+                              {filteredProds.map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setValue(`items.${i}.product_name`, p.name)
+                                    setValue(`items.${i}.product_id`, p.id)
+                                    setValue(`items.${i}.unit_price`, p.price / 100)
+                                    const arr = [...productSearch]
+                                    arr[i] = ''
+                                    setProductSearch(arr)
+                                  }}
+                                  className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-dash-hover text-left text-sm transition-colors"
+                                >
+                                  <span className="text-foreground">{p.name}</span>
+                                  <span className="text-muted-foreground text-xs">₦{(p.price / 100).toLocaleString('en-NG')}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Per-row scan button — fills this specific item */}
+                        <button
+                          type="button"
+                          title="Scan barcode for this item"
+                          onClick={() => {
+                            pendingScanRowRef.current = i
+                            setScannerOpen(true)
+                          }}
+                          className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl border border-dash-border bg-dash-surface text-cyan-500 hover:bg-cyan-500/10 hover:border-cyan-500/40 transition-colors"
+                        >
+                          <ScanBarcode className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Price (₦)</label>
+                          <input type="number" step="0.01" min="0" {...register(`items.${i}.unit_price`)} className={smallCls} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Qty</label>
+                          <input type="number" min="1" {...register(`items.${i}.quantity`)} className={smallCls} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Disc. (₦)</label>
+                          <input type="number" step="0.01" min="0" {...register(`items.${i}.discount`)} className={smallCls} />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          Line total: <span className="font-semibold text-foreground">₦{lineTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                        </span>
+                        {fields.length > 1 && (
+                          <button type="button" onClick={() => remove(i)} className="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes (optional)</label>
+              <textarea {...register('notes')} rows={2} placeholder="Any notes for this sale…" className="w-full rounded-xl bg-dash-bg border border-dash-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 pb-6 pt-4 border-t border-dash-border bg-dash-bg rounded-b-3xl shrink-0 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Total Item Discounts (₦)</label>
+                <input
+                  type="number"
+                  value={watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0).toFixed(2)}
+                  readOnly
+                  className="w-full h-9 rounded-lg bg-dash-surface border border-dash-border px-2.5 text-sm text-foreground cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Amount Paid Now (₦)</label>
+                <input type="number" step="0.01" min="0" max={total} placeholder="0.00" {...register('amount_paid')} className={smallCls} />
+                {errors.amount_paid && <p className="text-xs text-red-500 mt-1">{errors.amount_paid.message}</p>}
+              </div>
+            </div>
+
+            {balance > 0 && !errors.amount_paid && (
+              <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 shrink-0 mt-1.5" />
+                <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                  <span className="font-semibold">₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span> balance will be recorded as outstanding debt.
+                </p>
+              </div>
             )}
-          </div>
 
-          {/* Served By + Payment Method */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Served By</label>
-              <input {...register('staff_name')} placeholder="Staff name" className={inputCls} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Payment Method</label>
-              <select {...register('payment_method')} className={inputCls}>
-                {PAYMENT_METHODS.map((m) => (
-                  <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+            {hasAnyCustomer && (
+              <div className="space-y-1">
+                <label className={cn('flex items-center gap-3 select-none', canSendEmail ? 'cursor-pointer' : 'cursor-not-allowed opacity-50')}>
+                  <button
+                    type="button"
+                    disabled={!canSendEmail}
+                    onClick={() => canSendEmail && setValue('send_receipt_email', !watch('send_receipt_email'))}
+                    className={cn('w-9 h-5 rounded-full transition-colors relative shrink-0', watch('send_receipt_email') && canSendEmail ? 'bg-primary' : 'bg-dash-border')}
+                  >
+                    <div className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', watch('send_receipt_email') && canSendEmail ? 'translate-x-4' : 'translate-x-0.5')} />
+                  </button>
+                  <span className="text-xs font-medium text-muted-foreground">Email receipt to customer after saving</span>
+                </label>
+              </div>
+            )}
 
-          {/* Items */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Items</label>
+            <div className="flex items-center justify-between pt-1">
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Total Due</p>
+                <p className="text-2xl font-bold text-foreground tracking-tight">₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+              </div>
               <button
                 type="button"
-                onClick={() => append({ product_name: '', unit_price: 0, quantity: 1, discount: 0 })}
-                className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                onClick={() => handleSubmit((d) => mutation.mutate(d))()}
+                disabled={mutation.isPending}
+                className="px-8 py-3 rounded-xl font-semibold text-white text-sm disabled:opacity-50 transition-all active:scale-95 shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
               >
-                <Plus className="w-3.5 h-3.5" /> Add item
+                {mutation.isPending ? 'Recording…' : 'Record Sale'}
               </button>
             </div>
-            <div className="space-y-3">
-              {fields.map((field, i) => {
-                const srch = productSearch[i] ?? ''
-                const filteredProds = products.filter((p) => p.name.toLowerCase().includes(srch.toLowerCase())).slice(0, 6)
-                const lineTotal = Math.max(0, Number(watchItems[i]?.unit_price) * Number(watchItems[i]?.quantity) - Number(watchItems[i]?.discount ?? 0))
-
-                return (
-                  <div key={field.id} className="bg-dash-bg rounded-2xl border border-dash-border p-4 space-y-3">
-                    <div className="relative">
-                      <input
-                        {...register(`items.${i}.product_name`)}
-                        placeholder="Product / service name"
-                        onChange={(e) => {
-                          register(`items.${i}.product_name`).onChange(e)
-                          const arr = [...productSearch]
-                          arr[i] = e.target.value
-                          setProductSearch(arr)
-                          setValue(`items.${i}.product_id`, '')
-                        }}
-                        className="w-full h-10 rounded-xl bg-dash-surface border border-dash-border px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                      {srch.length > 0 && filteredProds.length > 0 && (
-                        <div className="absolute top-full mt-1 left-0 right-0 z-10 bg-dash-surface border border-dash-border rounded-xl shadow-xl overflow-hidden">
-                          {filteredProds.map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => {
-                                setValue(`items.${i}.product_name`, p.name)
-                                setValue(`items.${i}.product_id`, p.id)
-                                setValue(`items.${i}.unit_price`, p.price / 100)
-                                const arr = [...productSearch]
-                                arr[i] = ''
-                                setProductSearch(arr)
-                              }}
-                              className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-dash-hover text-left text-sm transition-colors"
-                            >
-                              <span className="text-foreground">{p.name}</span>
-                              <span className="text-muted-foreground text-xs">₦{(p.price / 100).toLocaleString('en-NG')}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Price (₦)</label>
-                        <input type="number" step="0.01" min="0" {...register(`items.${i}.unit_price`)} className={smallCls} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Qty</label>
-                        <input type="number" min="1" {...register(`items.${i}.quantity`)} className={smallCls} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Disc. (₦)</label>
-                        <input type="number" step="0.01" min="0" {...register(`items.${i}.discount`)} className={smallCls} />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Line total: <span className="font-semibold text-foreground">₦{lineTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                      </span>
-                      {fields.length > 1 && (
-                        <button type="button" onClick={() => remove(i)} className="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes (optional)</label>
-            <textarea {...register('notes')} rows={2} placeholder="Any notes for this sale…" className="w-full rounded-xl bg-dash-bg border border-dash-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 pb-6 pt-4 border-t border-dash-border bg-dash-bg rounded-b-3xl shrink-0 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Total Item Discounts (₦)</label>
-              <input
-                type="number"
-                value={watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0).toFixed(2)}
-                readOnly
-                className="w-full h-9 rounded-lg bg-dash-surface border border-dash-border px-2.5 text-sm text-foreground cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Amount Paid Now (₦)</label>
-              <input type="number" step="0.01" min="0" max={total} placeholder="0.00" {...register('amount_paid')} className={smallCls} />
-              {errors.amount_paid && <p className="text-xs text-red-500 mt-1">{errors.amount_paid.message}</p>}
-            </div>
-          </div>
-
-          {balance > 0 && !errors.amount_paid && (
-            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 shrink-0 mt-1.5" />
-              <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                <span className="font-semibold">₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span> balance will be recorded as outstanding debt.
-              </p>
-            </div>
-          )}
-
-          {hasAnyCustomer && (
-            <div className="space-y-1">
-              <label className={cn('flex items-center gap-3 select-none', canSendEmail ? 'cursor-pointer' : 'cursor-not-allowed opacity-50')}>
-                <button
-                  type="button"
-                  disabled={!canSendEmail}
-                  onClick={() => canSendEmail && setValue('send_receipt_email', !watch('send_receipt_email'))}
-                  className={cn('w-9 h-5 rounded-full transition-colors relative shrink-0', watch('send_receipt_email') && canSendEmail ? 'bg-primary' : 'bg-dash-border')}
-                >
-                  <div className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', watch('send_receipt_email') && canSendEmail ? 'translate-x-4' : 'translate-x-0.5')} />
-                </button>
-                <span className="text-xs font-medium text-muted-foreground">Email receipt to customer after saving</span>
-              </label>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-1">
-            <div>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Total Due</p>
-              <p className="text-2xl font-bold text-foreground tracking-tight">₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleSubmit((d) => mutation.mutate(d))()}
-              disabled={mutation.isPending}
-              className="px-8 py-3 rounded-xl font-semibold text-white text-sm disabled:opacity-50 transition-all active:scale-95 shadow-lg"
-              style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
-            >
-              {mutation.isPending ? 'Recording…' : 'Record Sale'}
-            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Barcode scanner — rendered outside the modal stack via portal */}
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDetected={handleBarcodeDetected}
+      />
+    </>
   )
 }

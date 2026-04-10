@@ -1,93 +1,65 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import {
   ShoppingBag,
   Building2,
   Eye,
   Search,
-  Shield,
-  Truck,
-  RefreshCw,
   MapPin,
   Globe,
-  Phone,
   ExternalLink,
   MessageCircle,
   QrCode,
   Copy,
   Play,
-  Calendar,
   ShoppingCart,
-  Wifi,
+  Download,
+  Package,
+  BriefcaseBusiness,
 } from 'lucide-react'
 
 import type {
   PublicBusiness,
   DigitalProduct,
-  PhysicalProduct,
+  ProductPublic,
   CartItem,
-} from '@/components/public/public-profile-shared'
+} from '@/types/public'
 import {
-  fmt,
+  formatCurrency,
   fullAddress,
   mapsEmbed,
   mapsLink,
   waLink,
-} from '@/components/public/public-profile-shared'
+} from '@/types/public'
 
 import { ProductCard } from './ProductCard'
 import { CartDrawer } from './CartDrawer'
 import { ShareModal } from './ShareModal'
 import { Lightbox } from './Lightbox'
 
-interface NormalizedProduct {
-  isDigital: boolean
+type OfferingKind = 'all' | 'digital' | 'products' | 'services'
+
+interface NormalizedOffering {
   id: string
   name: string
+  description: string | null
   price: number
   image: string | null
   type: string
-  description?: string | null
+  itemKind: 'digital' | 'physical' | 'service'
+  currency?: string
   salesCount?: number
   fileSize?: number | null
-  slug?: string
-}
-
-function normalizeProducts(
-  digital: DigitalProduct[],
-  physical: PhysicalProduct[]
-): NormalizedProduct[] {
-  return [
-    ...digital.filter((p) => p.is_published).map((p) => ({
-      isDigital: true,
-      id: p.id,
-      name: p.title,
-      price: p.price,
-      image: p.cover_image_url,
-      type: p.type,
-      description: p.description,
-      salesCount: p.sales_count,
-      fileSize: p.file_size,
-      slug: p.slug,
-    })),
-    ...physical.filter((p) => p.is_active).map((p) => ({
-      isDigital: false,
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      image: p.image_url,
-      type: p.type ?? 'product',
-      description: p.description,
-    })),
-  ]
+  inStock?: boolean
 }
 
 interface Props {
   biz: PublicBusiness
   digital: DigitalProduct[]
-  physical: PhysicalProduct[]
+  physical: ProductPublic[]
+  services: ProductPublic[]
   keywords: string[]
   gallery: string[]
   accent: string
@@ -97,48 +69,60 @@ export function ProfileContent({
   biz,
   digital,
   physical,
+  services,
   keywords,
   gallery,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<'shop' | 'about' | 'gallery'>(
-    'shop'
-  )
-  const [productFilter, setProductFilter] = useState<
-    'all' | 'digital' | 'physical'
-  >('all')
+  const [activeTab, setActiveTab] = useState<'shop' | 'about' | 'gallery'>('shop')
+  const [filter, setFilter] = useState<OfferingKind>('all')
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [showCart, setShowCart] = useState(false)
   const [showShare, setShowShare] = useState(false)
-  const [lightbox, setLightbox] = useState<{
-    images: string[]
-    idx: number
-  } | null>(null)
+  const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
 
-  const allProducts = normalizeProducts(digital, physical)
-  const cartCount = cart.reduce((s, i) => s + i.qty, 0)
-  const fullAddr = fullAddress(biz)
-
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('ogaos:cart-count', { detail: cartCount })
-    )
-  }, [cartCount])
-
-  useEffect(() => {
-    const openShare = () => setShowShare(true)
-    const openCart = () => setShowCart(true)
-
-    window.addEventListener('ogaos:open-share', openShare)
-    window.addEventListener('ogaos:open-cart', openCart)
-
-    return () => {
-      window.removeEventListener('ogaos:open-share', openShare)
-      window.removeEventListener('ogaos:open-cart', openCart)
-    }
-  }, [])
+  const offerings = useMemo<NormalizedOffering[]>(
+    () => [
+      ...digital.map((item) => ({
+        id: item.id,
+        name: item.title,
+        description: item.description,
+        price: item.price,
+        image: item.cover_image_url,
+        type: item.type,
+        itemKind: 'digital' as const,
+        currency: item.currency,
+        salesCount: item.sales_count,
+        fileSize: item.file_size,
+        inStock: true,
+      })),
+      ...physical.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        image: item.image_url,
+        type: item.type || 'product',
+        itemKind: 'physical' as const,
+        currency: 'NGN',
+        inStock: item.in_stock,
+      })),
+      ...services.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        image: item.image_url,
+        type: item.type || 'service',
+        itemKind: 'service' as const,
+        currency: 'NGN',
+        inStock: true,
+      })),
+    ],
+    [digital, physical, services]
+  )
 
   useEffect(() => {
     if (!mapRef.current) return
@@ -157,150 +141,174 @@ export function ProfileContent({
     return () => observer.disconnect()
   }, [activeTab])
 
-  const updateCart = useCallback((id: string, qty: number) => {
-    setCart((prev) =>
-      qty <= 0
-        ? prev.filter((i) => i.id !== id)
-        : prev.map((i) => (i.id === id ? { ...i, qty } : i))
-    )
-  }, [])
-
-  const addToCart = useCallback((item: CartItem) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === item.id)
-      return existing
-        ? prev.map((i) =>
-            i.id === item.id ? { ...i, qty: i.qty + 1 } : i
-          )
-        : [...prev, item]
-    })
-  }, [])
-
-  const filteredProducts = allProducts.filter((p) => {
+  const filteredOfferings = offerings.filter((item) => {
     const matchesFilter =
-      productFilter === 'all' ||
-      (productFilter === 'digital' && p.isDigital) ||
-      (productFilter === 'physical' && !p.isDigital)
+      filter === 'all' ||
+      (filter === 'digital' && item.itemKind === 'digital') ||
+      (filter === 'products' && item.itemKind === 'physical') ||
+      (filter === 'services' && item.itemKind === 'service')
 
     const matchesSearch =
-      !search || p.name.toLowerCase().includes(search.toLowerCase())
+      !search ||
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      (item.description ?? '').toLowerCase().includes(search.toLowerCase())
 
     return matchesFilter && matchesSearch
   })
 
+  const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
+  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+  const address = fullAddress(biz)
+
+  function addToCart(item: CartItem) {
+    setCart((prev) => {
+      const existing = prev.find((entry) => entry.id === item.id)
+      if (existing) {
+        return prev.map((entry) =>
+          entry.id === item.id ? { ...entry, qty: entry.qty + 1 } : entry
+        )
+      }
+      return [...prev, item]
+    })
+  }
+
+  function updateCart(id: string, qty: number) {
+    setCart((prev) =>
+      qty <= 0
+        ? prev.filter((item) => item.id !== id)
+        : prev.map((item) => (item.id === id ? { ...item, qty } : item))
+    )
+  }
+
   return (
     <>
       <div className="mb-6 flex gap-1 rounded-2xl border border-dash-border bg-dash-raised p-1">
-        {[
-          {
-            key: 'shop' as const,
-            label: 'Shop',
-            icon: ShoppingBag,
-            count: allProducts.length,
-          },
-          { key: 'about' as const, label: 'About', icon: Building2 },
-          {
-            key: 'gallery' as const,
-            label: 'Gallery',
-            icon: Eye,
-            count: gallery.length,
-          },
-        ].map(({ key, label, icon: Icon, count }) => (
+        <button
+          onClick={() => setActiveTab('shop')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all ${
+            activeTab === 'shop'
+              ? 'bg-brand-blue text-white shadow-lg'
+              : 'text-muted-foreground hover:bg-dash-hover hover:text-foreground'
+          }`}
+        >
+          <ShoppingBag className="h-4 w-4" />
+          Shop
+        </button>
+
+        <button
+          onClick={() => setActiveTab('about')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all ${
+            activeTab === 'about'
+              ? 'bg-brand-blue text-white shadow-lg'
+              : 'text-muted-foreground hover:bg-dash-hover hover:text-foreground'
+          }`}
+        >
+          <Building2 className="h-4 w-4" />
+          About
+        </button>
+
+        {gallery.length > 0 && (
           <button
-            key={key}
-            onClick={() => setActiveTab(key)}
+            onClick={() => setActiveTab('gallery')}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all ${
-              activeTab === key
+              activeTab === 'gallery'
                 ? 'bg-brand-blue text-white shadow-lg'
                 : 'text-muted-foreground hover:bg-dash-hover hover:text-foreground'
             }`}
           >
-            <Icon className="h-4 w-4" />
-            {label}
-            {count !== undefined && count > 0 && (
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                  activeTab === key ? 'bg-white/20' : 'bg-white/8'
-                }`}
-              >
-                {count}
-              </span>
-            )}
+            <Eye className="h-4 w-4" />
+            Gallery
           </button>
-        ))}
+        )}
       </div>
 
       {activeTab === 'shop' && (
-        <div>
-          {allProducts.length > 0 && (
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search products…"
-                  className="w-full rounded-xl border border-dash-border bg-dash-surface py-2.5 pl-10 pr-4 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-brand-blue/50 focus:outline-none"
-                />
+        <div className="pb-20">
+          {offerings.length > 0 && (
+            <>
+              <section id="digital" className="sr-only" />
+              <section id="physical" className="sr-only" />
+              <section id="services" className="sr-only" />
+
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search offerings…"
+                    className="w-full rounded-xl border border-dash-border bg-dash-surface py-2.5 pl-10 pr-4 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-brand-blue/50 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'all', label: 'All' },
+                    { key: 'digital', label: 'Digital' },
+                    { key: 'products', label: 'Products' },
+                    { key: 'services', label: 'Services' },
+                  ]
+                    .filter((item) => {
+                      if (item.key === 'digital') return digital.length > 0
+                      if (item.key === 'products') return physical.length > 0
+                      if (item.key === 'services') return services.length > 0
+                      return true
+                    })
+                    .map((item) => (
+                      <button
+                        key={item.key}
+                        onClick={() => setFilter(item.key as OfferingKind)}
+                        className={`rounded-xl border px-4 py-2.5 text-xs font-bold transition-all ${
+                          filter === item.key
+                            ? 'border-brand-blue bg-brand-blue text-white'
+                            : 'border-dash-border bg-dash-surface text-muted-foreground hover:border-dash-border hover:text-foreground'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                {(['all', 'digital', 'physical'] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setProductFilter(f)}
-                    className={`rounded-xl border px-4 py-2.5 text-xs font-bold capitalize transition-all ${
-                      productFilter === f
-                        ? 'border-brand-blue bg-brand-blue text-white'
-                        : 'border-dash-border bg-dash-surface text-muted-foreground hover:border-dash-border hover:text-foreground'
-                    }`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {allProducts.length > 0 && (
-            <div className="mb-6 grid grid-cols-3 gap-2">
-              {[
-                {
-                  icon: Shield,
-                  text: 'Secure Checkout',
-                  color: 'text-brand-blue',
-                },
-                {
-                  icon: Truck,
-                  text: 'Fast Delivery',
-                  color: 'text-emerald-400',
-                },
-                {
-                  icon: RefreshCw,
-                  text: 'Easy Returns',
-                  color: 'text-amber-400',
-                },
-              ].map(({ icon: Icon, text, color }) => (
-                <div
-                  key={text}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-dash-border bg-dash-surface py-2.5"
-                >
-                  <Icon className={`h-3.5 w-3.5 ${color}`} />
+              <div className="mb-6 grid grid-cols-3 gap-2">
+                <div className="flex items-center justify-center gap-1.5 rounded-xl border border-dash-border bg-dash-surface py-2.5">
+                  <Download className="h-3.5 w-3.5 text-brand-blue" />
                   <span className="hidden text-[11px] font-semibold text-muted-foreground sm:inline">
-                    {text}
+                    Digital Access
                   </span>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center justify-center gap-1.5 rounded-xl border border-dash-border bg-dash-surface py-2.5">
+                  <Package className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="hidden text-[11px] font-semibold text-muted-foreground sm:inline">
+                    Products
+                  </span>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 rounded-xl border border-dash-border bg-dash-surface py-2.5">
+                  <BriefcaseBusiness className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="hidden text-[11px] font-semibold text-muted-foreground sm:inline">
+                    Services
+                  </span>
+                </div>
+              </div>
+            </>
           )}
 
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4 pb-20 sm:grid-cols-3 lg:grid-cols-4">
-              {filteredProducts.map((p) => (
+          {filteredOfferings.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {filteredOfferings.map((item) => (
                 <ProductCard
-                  key={p.id}
-                  {...p}
-                  bizSlug={biz.slug}
+                  key={`${item.itemKind}-${item.id}`}
+                  id={item.id}
+                  name={item.name}
+                  price={item.price}
+                  currency={item.currency}
+                  image={item.image}
+                  type={item.type}
+                  description={item.description}
+                  salesCount={item.salesCount}
+                  fileSize={item.fileSize}
+                  itemKind={item.itemKind}
+                  inStock={item.inStock}
                   onAddToCart={addToCart}
                 />
               ))}
@@ -312,12 +320,12 @@ export function ProfileContent({
               </div>
               <div>
                 <p className="mb-1 font-bold text-foreground">
-                  {search ? 'No products found' : 'No products yet'}
+                  {search ? 'No offerings found' : 'No offerings yet'}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {search
-                    ? 'Try a different search term'
-                    : "This business hasn't listed any products yet."}
+                    ? 'Try a different search term.'
+                    : "This business hasn't listed any public offerings yet."}
                 </p>
               </div>
             </div>
@@ -326,33 +334,31 @@ export function ProfileContent({
       )}
 
       {activeTab === 'about' && (
-        <div className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-12">
+        <div id="about" className="grid grid-cols-1 gap-6 pb-20 lg:grid-cols-12">
           <div className="space-y-5 lg:col-span-7">
             {biz.description && (
               <div className="rounded-2xl border border-dash-border bg-dash-surface p-6">
                 <h2 className="mb-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
                   About
                 </h2>
-                <p className="text-sm leading-relaxed text-foreground/80">
-                  {biz.description}
-                </p>
+                <p className="text-sm leading-relaxed text-foreground/80">{biz.description}</p>
               </div>
             )}
 
-            {biz.storefront_video_url &&
-              (() => {
-                const m = biz.storefront_video_url.match(
-                  /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&?/]+)/
-                )
-                const embedId = m?.[1]
+            {biz.storefront_video_url && (
+              <div>
+                <h2 className="mb-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+                  Featured Video
+                </h2>
 
-                return (
-                  <div>
-                    <h2 className="mb-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                      Featured Video
-                    </h2>
+                {(() => {
+                  const match = biz.storefront_video_url.match(
+                    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&?/]+)/
+                  )
+                  const embedId = match?.[1]
 
-                    {embedId ? (
+                  if (embedId) {
+                    return (
                       <div
                         className="relative overflow-hidden rounded-2xl border border-dash-border bg-black"
                         style={{ aspectRatio: '16/9' }}
@@ -365,30 +371,31 @@ export function ProfileContent({
                           className="h-full w-full"
                         />
                       </div>
-                    ) : (
-                      <a
-                        href={biz.storefront_video_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-4 rounded-2xl border border-dash-border bg-dash-surface p-4 transition-colors hover:bg-dash-hover"
-                      >
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/20">
-                          <Play className="ml-0.5 h-6 w-6 text-red-400" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">
-                            Watch our video
-                          </p>
-                          <p className="max-w-xs truncate text-xs text-muted-foreground">
-                            {biz.storefront_video_url}
-                          </p>
-                        </div>
-                        <ExternalLink className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-                      </a>
-                    )}
-                  </div>
-                )
-              })()}
+                    )
+                  }
+
+                  return (
+                    <a
+                      href={biz.storefront_video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-4 rounded-2xl border border-dash-border bg-dash-surface p-4 transition-colors hover:bg-dash-hover"
+                    >
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/20">
+                        <Play className="ml-0.5 h-6 w-6 text-red-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Watch our video</p>
+                        <p className="max-w-xs truncate text-xs text-muted-foreground">
+                          {biz.storefront_video_url}
+                        </p>
+                      </div>
+                      <ExternalLink className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+                    </a>
+                  )
+                })()}
+              </div>
+            )}
 
             {keywords.length > 0 && (
               <div className="rounded-2xl border border-dash-border bg-dash-surface p-5">
@@ -410,7 +417,7 @@ export function ProfileContent({
           </div>
 
           <aside className="space-y-5 lg:col-span-5">
-            {fullAddr && (
+            {address && (
               <div>
                 <h2 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" /> Location
@@ -457,7 +464,7 @@ export function ProfileContent({
                 Contact & Info
               </h2>
 
-              {fullAddr && (
+              {address && (
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-blue/20 bg-brand-blue/10">
                     <MapPin className="h-3.5 w-3.5 text-brand-blue" />
@@ -466,20 +473,14 @@ export function ProfileContent({
                     <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                       Address
                     </p>
-                    <p className="text-sm leading-snug text-foreground/80">
-                      {fullAddr}
-                    </p>
+                    <p className="text-sm leading-snug text-foreground/80">{address}</p>
                   </div>
                 </div>
               )}
 
               {biz.website_url && (
                 <a
-                  href={
-                    biz.website_url.startsWith('http')
-                      ? biz.website_url
-                      : `https://${biz.website_url}`
-                  }
+                  href={biz.website_url.startsWith('http') ? biz.website_url : `https://${biz.website_url}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-start gap-3"
@@ -498,85 +499,9 @@ export function ProfileContent({
                 </a>
               )}
 
-              {biz.phone_number && (
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10">
-                    <Phone className="h-3.5 w-3.5 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Phone
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`tel:${biz.phone_number}`}
-                        className="text-sm text-foreground/80 transition-colors hover:text-foreground"
-                      >
-                        {biz.phone_number}
-                      </a>
-                      <a
-                        href={waLink(biz.phone_number, biz.name)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-full border border-[#25D366]/30 bg-[#25D366]/15 px-2 py-0.5 text-[10px] font-bold text-[#25D366] transition-colors hover:bg-[#25D366]/25"
-                      >
-                        WhatsApp
-                      </a>
-                    </div>
-                  </div>
-                </div>
+              {!address && !biz.website_url && (
+                <p className="text-sm italic text-muted-foreground">No contact details available</p>
               )}
-
-              {!fullAddr && !biz.website_url && !biz.phone_number && (
-                <p className="text-sm italic text-muted-foreground">
-                  No contact details available
-                </p>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-dash-border bg-dash-surface p-5">
-              <h2 className="mb-4 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                Business Details
-              </h2>
-              <div className="divide-y divide-dash-border">
-                {[
-                  { icon: Building2, label: 'Category', value: biz.category },
-                  { icon: MapPin, label: 'State', value: biz.state ?? '—' },
-                  { icon: Globe, label: 'Country', value: biz.country ?? 'Nigeria' },
-                  {
-                    icon: Calendar,
-                    label: 'Joined',
-                    value: biz.created_at
-                      ? new Date(biz.created_at).toLocaleDateString('en-NG', {
-                          month: 'long',
-                          year: 'numeric',
-                        })
-                      : '—',
-                  },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between py-2.5"
-                  >
-                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Icon className="h-3.5 w-3.5" /> {label}
-                    </span>
-                    <span className="text-xs font-bold text-foreground">
-                      {value}
-                    </span>
-                  </div>
-                ))}
-
-                <div className="flex items-center justify-between py-2.5">
-                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Wifi className="h-3.5 w-3.5" /> Status
-                  </span>
-                  <span className="flex items-center gap-1 text-xs font-bold text-emerald-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Active
-                  </span>
-                </div>
-              </div>
             </div>
 
             <div className="rounded-2xl border border-dash-border bg-dash-surface p-5">
@@ -622,7 +547,7 @@ export function ProfileContent({
       )}
 
       {activeTab === 'gallery' && (
-        <div className="pb-20">
+        <div id="gallery" className="pb-20">
           {gallery.length > 0 ? (
             <div
               className={`grid gap-3 ${
@@ -635,7 +560,7 @@ export function ProfileContent({
             >
               {gallery.map((url, i) => (
                 <button
-                  key={url}
+                  key={`${url}-${i}`}
                   onClick={() => setLightbox({ images: gallery, idx: i })}
                   className="group relative cursor-zoom-in overflow-hidden rounded-2xl border border-dash-border bg-dash-surface"
                   style={{ aspectRatio: '4/3' }}
@@ -662,9 +587,7 @@ export function ProfileContent({
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-dash-border bg-dash-surface">
                 <Eye className="h-7 w-7 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">
-                No gallery images yet
-              </p>
+              <p className="text-sm text-muted-foreground">No gallery images yet</p>
             </div>
           )}
         </div>
@@ -679,7 +602,7 @@ export function ProfileContent({
               style={{ animation: 'bounceIn 0.4s cubic-bezier(0.16,1,0.3,1)' }}
             >
               <ShoppingCart className="h-4 w-4" />
-              View Cart · {fmt(cart.reduce((s, i) => s + i.price * i.qty, 0))}
+              View Cart · {formatCurrency(cartTotal)}
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-black text-brand-blue">
                 {cartCount}
               </span>
@@ -703,7 +626,9 @@ export function ProfileContent({
           onClose={() => setLightbox(null)}
         />
       )}
+
       {showShare && <ShareModal biz={biz} onClose={() => setShowShare(false)} />}
+
       {showCart && (
         <CartDrawer
           items={cart}

@@ -14,7 +14,8 @@ import {
   MapPin,
   X,
 } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { getMe, getNigeriaLGAs, getNigeriaStates } from '@/lib/api/auth'
 
 /* ─── animation variants ─────────────────────────────────────── */
 const container = {
@@ -27,57 +28,129 @@ const item = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] } },
 } as const
 
-const slideIn = {
-  hidden: { opacity: 0, x: 40 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.3 } },
-} as const
-
-/* ─── floating stat card ──────────────────────────────────────── */
-function FloatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-  className,
-}: {
-  icon: React.ElementType
-  label: string
-  value: string
-  color: string
-  className?: string
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.85, y: 12 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.8 }}
-      className={`absolute z-20 flex items-center gap-3 rounded-2xl border border-white/20 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md px-4 py-3 shadow-xl shadow-black/10 ${className}`}
-    >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon className="w-4.5 h-4.5" />
-      </div>
-      <div>
-        <p className="text-[11px] font-medium text-muted-foreground leading-none mb-0.5">{label}</p>
-        <p className="text-sm font-bold text-foreground">{value}</p>
-      </div>
-    </motion.div>
-  )
-}
-
 /* ─── store search bar ────────────────────────────────────────── */
 const SUGGESTED_TAGS = ['Electronics', 'Fashion', 'Food & Drinks', 'Pharmacy', 'Groceries', 'Beauty']
 
 function StoreSearchBar() {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
+  const [stateValue, setStateValue] = useState('')
+  const [lgaValue, setLgaValue] = useState('')
+  const [states, setStates] = useState<string[]>([])
+  const [lgas, setLgas] = useState<string[]>([])
+  const [isBootstrapping, setIsBootstrapping] = useState(true)
+  const [isLoadingLgas, setIsLoadingLgas] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const hasLocation = useMemo(() => Boolean(stateValue && lgaValue), [stateValue, lgaValue])
+
+  useEffect(() => {
+    let active = true
+
+    async function bootstrap() {
+      try {
+        setIsBootstrapping(true)
+        setError(null)
+
+        const allStates = await getNigeriaStates().catch(() => [])
+        if (!active) return
+
+        setStates(Array.isArray(allStates) ? allStates : [])
+
+        const me = await getMe().catch(() => null)
+        if (!active) return
+
+        const authState = me?.business?.state?.trim() || ''
+        const authLga = me?.business?.local_government?.trim() || ''
+
+        if (authState) {
+          setStateValue(authState)
+
+          const lgaList = await getNigeriaLGAs(authState).catch(() => [])
+          if (!active) return
+
+          const normalizedLgas = Array.isArray(lgaList) ? lgaList : []
+          setLgas(normalizedLgas)
+
+          if (authLga && normalizedLgas.includes(authLga)) {
+            setLgaValue(authLga)
+          }
+        }
+      } catch {
+        if (!active) return
+        setError('Unable to load location options right now.')
+      } finally {
+        if (active) setIsBootstrapping(false)
+      }
+    }
+
+    void bootstrap()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    async function loadLgas() {
+      if (!stateValue) {
+        setLgas([])
+        setLgaValue('')
+        return
+      }
+
+      try {
+        setIsLoadingLgas(true)
+        const nextLgas = await getNigeriaLGAs(stateValue).catch(() => [])
+        if (!active) return
+
+        const normalized = Array.isArray(nextLgas) ? nextLgas : []
+        setLgas(normalized)
+
+        setLgaValue((current) => (current && normalized.includes(current) ? current : ''))
+      } catch {
+        if (!active) return
+        setLgas([])
+        setLgaValue('')
+      } finally {
+        if (active) setIsLoadingLgas(false)
+      }
+    }
+
+    void loadLgas()
+
+    return () => {
+      active = false
+    }
+  }, [stateValue])
+
   const handleSearch = () => {
-    if (!query.trim()) return
-    window.location.href = `/stores?q=${encodeURIComponent(query.trim())}`
+    if (!stateValue.trim()) {
+      setError('Please select a state.')
+      return
+    }
+
+    if (!lgaValue.trim()) {
+      setError('Please select a local government area.')
+      return
+    }
+
+    setError(null)
+
+    const params = new URLSearchParams()
+    if (query.trim()) params.set('q', query.trim())
+    params.set('state', stateValue.trim())
+    params.set('lga', lgaValue.trim())
+    params.set('radius_km', '10')
+
+    window.location.href = `/public/search?${params.toString()}`
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleSearch()
     if (e.key === 'Escape') {
       setQuery('')
@@ -86,66 +159,142 @@ function StoreSearchBar() {
   }
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-lg">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-        Find stores near you
+    <div className="flex w-full flex-col gap-3">
+      <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground/70">
+        Find businesses near you
       </p>
 
-      <div
-        className={`relative flex items-center rounded-2xl border bg-background/80 backdrop-blur-sm transition-all duration-200 shadow-sm ${
-          focused
-            ? 'border-primary/60 shadow-md shadow-primary/10 ring-2 ring-primary/15'
-            : 'border-border/60 hover:border-border'
-        }`}
-      >
-        <div className="flex items-center pl-4 pr-2 shrink-0">
-          <MapPin className="w-4 h-4 text-primary/70" />
+      <div className="rounded-3xl border border-border/60 bg-background/85 p-3 shadow-sm backdrop-blur-sm">
+        <div
+          className={`relative flex items-center rounded-2xl border bg-background transition-all duration-200 ${
+            focused
+              ? 'border-primary/60 shadow-md shadow-primary/10 ring-2 ring-primary/15'
+              : 'border-border/60 hover:border-border'
+          }`}
+        >
+          <div className="flex shrink-0 items-center pl-4 pr-2">
+            <Search className="h-4 w-4 text-primary/70" />
+          </div>
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search by business name or keyword…"
+            className="min-w-0 flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none"
+          />
+
+          {query && (
+            <button
+              onClick={() => {
+                setQuery('')
+                inputRef.current?.focus()
+              }}
+              className="mr-1 rounded-lg p-1.5 text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
+              aria-label="Clear search"
+              type="button"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          <button
+            onClick={handleSearch}
+            type="button"
+            className="m-1.5 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Search</span>
+          </button>
         </div>
 
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          onKeyDown={handleKeyDown}
-          placeholder="Search by type, name, or keyword…"
-          className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none min-w-0"
-        />
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="relative">
+            <div className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground/60">
+              <MapPin className="h-4 w-4" />
+            </div>
+            <select
+              value={stateValue}
+              onChange={(e) => setStateValue(e.target.value)}
+              disabled={isBootstrapping}
+              className="h-11 w-full rounded-2xl border border-border/60 bg-background pr-3 pl-10 text-sm text-foreground outline-none transition focus:border-primary/50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="">{isBootstrapping ? 'Loading states...' : 'Select state'}</option>
+              {states.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {query && (
-          <button
-            onClick={() => { setQuery(''); inputRef.current?.focus() }}
-            className="p-1.5 mr-1 rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-secondary/60 transition-colors"
-            aria-label="Clear search"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+          <div className="relative">
+            <div className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground/60">
+              <MapPin className="h-4 w-4" />
+            </div>
+            <select
+              value={lgaValue}
+              onChange={(e) => setLgaValue(e.target.value)}
+              disabled={!stateValue || isLoadingLgas || isBootstrapping}
+              className="h-11 w-full rounded-2xl border border-border/60 bg-background pr-3 pl-10 text-sm text-foreground outline-none transition focus:border-primary/50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="">
+                {!stateValue
+                  ? 'Select LGA'
+                  : isLoadingLgas
+                    ? 'Loading LGAs...'
+                    : 'Select LGA'}
+              </option>
+              {lgas.map((lga) => (
+                <option key={lga} value={lga}>
+                  {lga}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {error ? (
+          <p className="mt-3 text-xs font-medium text-red-500">{error}</p>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground/75">
+            {hasLocation
+              ? `Searching from ${lgaValue}, ${stateValue}. If nothing is found nearby, users can continue within 50 km.`
+              : 'Choose a state and LGA to search nearby businesses.'}
+          </p>
         )}
 
-        <button
-          onClick={handleSearch}
-          className="m-1.5 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Search</span>
-        </button>
-      </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {SUGGESTED_TAGS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => {
+                setQuery(tag)
 
-      <div className="flex flex-wrap gap-2">
-        {SUGGESTED_TAGS.map((tag) => (
-          <button
-            key={tag}
-            onClick={() => {
-              setQuery(tag)
-              window.location.href = `/stores?q=${encodeURIComponent(tag)}`
-            }}
-            className="rounded-full border border-border/50 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-primary/8 hover:text-primary transition-all"
-          >
-            {tag}
-          </button>
-        ))}
+                if (!stateValue || !lgaValue) {
+                  setError('Please select your state and local government area first.')
+                  return
+                }
+
+                const params = new URLSearchParams()
+                params.set('q', tag)
+                params.set('state', stateValue)
+                params.set('lga', lgaValue)
+                params.set('radius_km', '10')
+
+                window.location.href = `/public/search?${params.toString()}`
+              }}
+              className="rounded-full border border-border/50 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/8 hover:text-primary"
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -169,43 +318,37 @@ export function Hero() {
   return (
     <BackgroundGrid>
       <section className="relative overflow-hidden">
-        {/* Ambient glow */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
-          <div className="absolute left-0 top-0 w-[55vw] h-[70vh] rounded-full bg-primary/6 blur-[130px] opacity-70" />
-          <div className="absolute right-0 bottom-0 w-[40vw] h-[60vh] rounded-full bg-emerald-500/5 blur-[120px] opacity-50" />
+          <div className="absolute top-0 left-0 h-[70vh] w-[55vw] rounded-full bg-primary/6 opacity-70 blur-[130px]" />
+          <div className="absolute right-0 bottom-0 h-[60vh] w-[40vw] rounded-full bg-emerald-500/5 opacity-50 blur-[120px]" />
         </div>
 
         <div
           className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
           style={{ paddingTop: `${navH + 24}px`, paddingBottom: '0' }}
         >
-          {/* TWO-COLUMN HERO */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-6 xl:gap-20 items-center min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-120px)]">
-
-            {/* LEFT: Copy */}
+          <div className="flex min-h-[calc(100vh-120px)] flex-col justify-center">
             <motion.div
               variants={container}
               initial="hidden"
               animate="visible"
-              className="flex flex-col justify-center pb-12 lg:pb-24"
+              className="mx-auto flex w-full max-w-3xl flex-col items-center text-center pb-12"
             >
-              {/* Badge */}
               <motion.div variants={item} className="mb-7">
                 <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/8 px-4 py-1.5 text-sm font-semibold text-primary">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                   </span>
                   Now live in Nigeria
                 </span>
               </motion.div>
 
-              {/* Headline */}
               <motion.h1
                 variants={item}
-                className="text-[2.75rem] sm:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-extrabold tracking-tight leading-[1.08] text-foreground mb-6"
+                className="mb-6 text-[2.75rem] leading-[1.08] font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem] xl:text-[4rem]"
               >
-                Run your business <br className="hidden sm:block" />
+                Run your business{' '}
                 like a{' '}
                 <span className="relative inline-block">
                   <span className="relative z-10 bg-linear-to-r from-primary via-primary/85 to-emerald-500 bg-clip-text text-transparent">
@@ -229,29 +372,27 @@ export function Hero() {
                 </span>
               </motion.h1>
 
-              {/* Subheading */}
               <motion.p
                 variants={item}
-                className="text-lg sm:text-xl text-muted-foreground/90 leading-relaxed max-w-lg mb-8"
+                className="mb-8 max-w-xl text-lg leading-relaxed text-muted-foreground/90 sm:text-xl"
               >
-                Track cash, manage staff, chase debtors & send WhatsApp reminders — all in one
+                Track cash, manage staff, chase debtors &amp; send WhatsApp reminders — all in one
                 platform built for Nigerian SMEs.
               </motion.p>
 
-              {/* Store Search Bar */}
-              <motion.div variants={item} className="mb-8">
+              <motion.div variants={item} className="mb-8 w-full">
                 <StoreSearchBar />
               </motion.div>
 
-              {/* Divider */}
-              <motion.div variants={item} className="flex items-center gap-3 mb-8">
+              <motion.div variants={item} className="mb-8 flex w-full max-w-xl items-center gap-3">
                 <div className="h-px flex-1 bg-border/50" />
-                <span className="text-xs text-muted-foreground/60 font-medium">or sign up to manage your own store</span>
+                <span className="text-xs font-medium text-muted-foreground/60">
+                  or sign up to manage your own store
+                </span>
                 <div className="h-px flex-1 bg-border/50" />
               </motion.div>
 
-              {/* Feature pills */}
-              <motion.div variants={item} className="flex flex-wrap gap-2.5 mb-10">
+              <motion.div variants={item} className="mb-10 flex flex-wrap justify-center gap-2.5">
                 {[
                   { icon: Wallet, label: 'Cash Tracking' },
                   { icon: Users, label: 'Staff Management' },
@@ -262,17 +403,16 @@ export function Hero() {
                     key={label}
                     className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-3 py-1.5 text-xs font-semibold text-secondary-foreground"
                   >
-                    <Icon className="w-3.5 h-3.5 text-primary" />
+                    <Icon className="h-3.5 w-3.5 text-primary" />
                     {label}
                   </div>
                 ))}
               </motion.div>
 
-              {/* CTAs */}
-              <motion.div variants={item} className="flex flex-col sm:flex-row gap-3 mb-10">
+              <motion.div variants={item} className="mb-10 flex flex-col gap-3 sm:flex-row">
                 <Button
                   size="lg"
-                  className="h-13 px-8 text-base font-semibold rounded-full bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all"
+                  className="h-13 rounded-full bg-linear-to-r from-primary to-primary/80 px-8 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:from-primary/90 hover:to-primary"
                   asChild
                 >
                   <a href="/auth/signup">Get started — it's free</a>
@@ -280,90 +420,33 @@ export function Hero() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-13 px-8 text-base font-semibold rounded-full border-2 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                  className="group h-13 rounded-full border-2 px-8 text-base font-semibold transition-all hover:border-primary/40 hover:bg-primary/5"
                   asChild
                 >
                   <a href="/auth/login">
                     Login
-                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </a>
                 </Button>
               </motion.div>
             </motion.div>
-
-            {/* RIGHT: Image + Floating Cards - HIDDEN ON MOBILE */}
-            <motion.div
-              variants={slideIn}
-              initial="hidden"
-              animate="visible"
-              className="relative flex items-end justify-center lg:justify-end -mb-2 lg:mb-0 hidden lg:block"   // ← Key change here
-            >
-              <div className="relative w-full">
-                {/* Glow behind image */}
-                <div
-                  className="pointer-events-none absolute -inset-8 -z-10 rounded-3xl"
-                  style={{
-                    background: 'radial-gradient(ellipse at 60% 40%, hsl(var(--primary)/0.18) 0%, transparent 70%)',
-                  }}
-                  aria-hidden
-                />
-
-                {/* Hero Image */}
-                <img
-                  src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/Layer%2002.png"
-                  alt="Business owner using OgaOS dashboard"
-                  className="w-full h-auto object-contain object-bottom relative z-0 block"
-                  style={{
-                    maxHeight: '900px',
-                    width: '115%',
-                    marginLeft: '-7.5%',
-                    marginBottom: 'clamp(-200px, -18vw, -160px)',
-                    marginTop: '-40px',
-                    filter: 'drop-shadow(0 32px 64px hsl(var(--primary)/0.12))',
-                  }}
-                />
-
-                {/* Floating stat cards */}
-                <FloatCard
-                  icon={TrendingUp}
-                  label="Today's Revenue"
-                  value="₦142,800"
-                  color="bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400"
-                  className="hidden sm:flex -left-8 top-36 lg:-left-12"
-                />
-
-                <FloatCard
-                  icon={Users}
-                  label="Active Customers"
-                  value="287 this week"
-                  color="bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-                  className="hidden sm:flex -right-4 top-1/3 lg:-right-6"
-                />
-
-                <FloatCard
-                  icon={MessageCircle}
-                  label="WhatsApp Alerts"
-                  value="Sent to 12 customers"
-                  color="bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400"
-                  className="hidden sm:flex -left-6 bottom-40 lg:-left-10"
-                />
-              </div>
-            </motion.div>
           </div>
 
-          {/* DASHBOARD SHOWCASE - Now moves up on mobile */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mt-0 lg:mt-4 pb-0 z-20"
+            className="relative z-20 mt-0 pb-0"
           >
-            <div className="pointer-events-none absolute -inset-x-16 -top-12 h-40 bg-linear-to-t from-primary/12 via-primary/6 to-transparent blur-3xl opacity-70 rounded-full" aria-hidden />
+            <div
+              className="pointer-events-none absolute -inset-x-16 -top-12 h-40 rounded-full bg-linear-to-t from-primary/12 via-primary/6 to-transparent opacity-70 blur-3xl"
+              aria-hidden
+            />
 
             <div
-              className="relative rounded-t-3xl overflow-hidden"
-              style={{ perspective: '1000px', maxHeight: '340px' }}
+              className="relative overflow-hidden rounded-t-3xl"
+              style={{ perspective: '1000px', maxHeight: '400px' }}
             >
               <motion.div
                 initial={{ rotateX: 4, scale: 1.01 }}
@@ -374,21 +457,35 @@ export function Hero() {
                 <motion.div
                   animate={{ opacity: [0.3, 0.6, 0.3] }}
                   transition={{ duration: 3, repeat: Infinity }}
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent z-10"
+                  className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent"
                   aria-hidden
                 />
 
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-linear-to-r from-background via-background/50 to-transparent z-10" aria-hidden />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-linear-to-l from-background via-background/50 to-transparent z-10" aria-hidden />
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-linear-to-r from-background via-background/50 to-transparent"
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-linear-to-l from-background via-background/50 to-transparent"
+                  aria-hidden
+                />
 
                 <div
                   className="pointer-events-none absolute inset-x-0 bottom-0 z-20"
-                  style={{ height: '60%', background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, hsl(var(--background)/0.4) 50%, hsl(var(--background)/0.8) 70%, hsl(var(--background)) 90%)' }}
+                  style={{
+                    height: '60%',
+                    background:
+                      'linear-gradient(to bottom, transparent 0%, transparent 30%, hsl(var(--background)/0.4) 50%, hsl(var(--background)/0.8) 70%, hsl(var(--background)) 90%)',
+                  }}
                   aria-hidden
                 />
                 <div
                   className="pointer-events-none absolute inset-x-0 bottom-0 z-30"
-                  style={{ height: '25%', background: 'linear-gradient(to bottom, transparent 0%, hsl(var(--background)/0.7) 40%, hsl(var(--background)) 80%)' }}
+                  style={{
+                    height: '25%',
+                    background:
+                      'linear-gradient(to bottom, transparent 0%, hsl(var(--background)/0.7) 40%, hsl(var(--background)) 80%)',
+                  }}
                   aria-hidden
                 />
                 <div
@@ -397,18 +494,24 @@ export function Hero() {
                   aria-hidden
                 />
 
-                <div style={{ maxHeight: '340px', overflow: 'hidden' }}>
+                <div style={{ maxHeight: '400px', overflow: 'hidden' }}>
                   <DashboardShowcase />
                 </div>
               </motion.div>
             </div>
 
-            <div className="absolute -bottom-12 left-0 right-0 h-16 bg-linear-to-t from-background via-background to-transparent pointer-events-none z-50" aria-hidden />
+            <div
+              className="pointer-events-none absolute -bottom-12 left-0 right-0 z-50 h-16 bg-linear-to-t from-background via-background to-transparent"
+              aria-hidden
+            />
           </motion.div>
-        </div>
 
-        {/* Final section fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-background via-background/80 to-transparent pointer-events-none z-30" aria-hidden />
+        </div>{/* end container */}
+
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 right-0 z-30 h-24 bg-linear-to-t from-background via-background/80 to-transparent"
+          aria-hidden
+        />
       </section>
     </BackgroundGrid>
   )

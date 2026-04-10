@@ -1,31 +1,31 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Grid3X3, Download, Package, Info, Image as ImageIcon } from 'lucide-react'
-import type {
-  PublicBusiness,
-  DigitalProduct,
-  PhysicalProduct,
-} from '@/components/public/public-profile-shared'
+import {
+  Grid3X3,
+  Download,
+  Package,
+  BriefcaseBusiness,
+  Info,
+  Image as ImageIcon,
+} from 'lucide-react'
+import type { PublicBusiness, DigitalProduct, ProductPublic } from '@/types/public'
 
 interface Props {
   biz: PublicBusiness
   digital: DigitalProduct[]
-  physical: PhysicalProduct[]
+  physical: ProductPublic[]
+  services: ProductPublic[]
+  gallery: string[]
 }
 
-type SectionId = 'overview' | 'digital' | 'physical' | 'about' | 'gallery'
+type SectionId = 'overview' | 'digital' | 'physical' | 'services' | 'about' | 'gallery'
 
-export function StickyNav({ biz, digital, physical }: Props) {
+export function StickyNav({ biz, digital, physical, services, gallery }: Props) {
   const sections = useMemo(
     () =>
       [
-        {
-          id: 'overview' as SectionId,
-          label: 'Overview',
-          icon: Grid3X3,
-          show: true,
-        },
+        { id: 'overview' as SectionId, label: 'Overview', icon: Grid3X3, show: true },
         {
           id: 'digital' as SectionId,
           label: 'Digital',
@@ -41,34 +41,41 @@ export function StickyNav({ biz, digital, physical }: Props) {
           badge: physical.length,
         },
         {
+          id: 'services' as SectionId,
+          label: 'Services',
+          icon: BriefcaseBusiness,
+          show: services.length > 0,
+          badge: services.length,
+        },
+        {
           id: 'about' as SectionId,
           label: 'About',
           icon: Info,
           show: Boolean(
             biz.description ||
-              biz.phone_number ||
               biz.website_url ||
               biz.street ||
               biz.city_town ||
-              biz.state
+              biz.state ||
+              biz.country
           ),
         },
         {
           id: 'gallery' as SectionId,
           label: 'Gallery',
           icon: ImageIcon,
-          show: Boolean(biz.gallery_image_urls),
+          show: gallery.length > 0,
+          badge: gallery.length,
         },
       ].filter((item) => item.show),
-    [biz, digital.length, physical.length]
+    [biz, digital.length, physical.length, services.length, gallery.length]
   )
 
   const [active, setActive] = useState<SectionId>('overview')
 
   useEffect(() => {
-    const ids = sections.map((section) => section.id)
-    const elements = ids
-      .map((id) => document.getElementById(id))
+    const elements = sections
+      .map((section) => document.getElementById(section.id))
       .filter((el): el is HTMLElement => Boolean(el))
 
     if (!elements.length) return
@@ -90,7 +97,6 @@ export function StickyNav({ biz, digital, physical }: Props) {
     )
 
     elements.forEach((el) => observer.observe(el))
-
     return () => observer.disconnect()
   }, [sections])
 
@@ -99,10 +105,7 @@ export function StickyNav({ biz, digital, physical }: Props) {
     if (!el) return
 
     const top = el.getBoundingClientRect().top + window.scrollY - 92
-    window.scrollTo({
-      top,
-      behavior: 'smooth',
-    })
+    window.scrollTo({ top, behavior: 'smooth' })
   }
 
   if (!sections.length) return null

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { BrowserMultiFormatReader } from '@zxing/browser'
-import { X, Camera, Loader2, RefreshCw, ScanSearch, AlertCircle } from 'lucide-react'
+import { X, Camera, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
 
 interface BarcodeScannerModalProps {
   open: boolean
@@ -18,7 +18,6 @@ const SHOW_DEBUG_CANVAS = true
 function getAdaptiveScanBox(videoWidth: number, videoHeight: number) {
   const aspectRatio = videoWidth / videoHeight
 
-  // Laptop webcams are often wider and need a shallower but wider crop
   if (aspectRatio >= 1.55) {
     return {
       x: 0.08,
@@ -28,7 +27,6 @@ function getAdaptiveScanBox(videoWidth: number, videoHeight: number) {
     }
   }
 
-  // Default mobile / balanced crop
   return {
     x: 0.1,
     y: 0.26,
@@ -152,7 +150,7 @@ export default function BarcodeScannerModal({
                 <div>
                   <h3 className="text-base font-bold text-white sm:text-lg">Scan Barcode</h3>
                   <p className="text-xs text-gray-400 sm:text-sm">
-                    Wider scan area for laptop webcams and fixed-focus cameras
+                    Position the barcode inside the guide frame for fast scanning
                   </p>
                 </div>
 
@@ -273,37 +271,15 @@ export default function BarcodeScannerModal({
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/10 px-4 py-3">
-                    <div className="flex items-start gap-3">
-                      <ScanSearch className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
-                      <div className="space-y-1">
-                        <p className="text-xs leading-5 text-cyan-100">
-                          The scanner now uses a wider crop and accepts a barcode after {REQUIRED_STABLE_FRAMES} stable frame
-                          {REQUIRED_STABLE_FRAMES > 1 ? 's' : ''}.
-                        </p>
-                      </div>
+                <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/10 px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <Camera className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                    <div className="space-y-1">
+                      <p className="text-xs leading-5 text-emerald-100">
+                        Hold the barcode a bit farther away on laptop cameras so it stays sharp inside the guide.
+                      </p>
                     </div>
                   </div>
-
-                  <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/10 px-4 py-3">
-                    <div className="flex items-start gap-3">
-                      <Camera className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                      <div className="space-y-1">
-                        <p className="text-xs leading-5 text-emerald-100">
-                          Hold the barcode a bit farther away on laptop cameras so it stays sharp inside the guide.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                  <p className="text-xs leading-5 text-gray-300">
-                    Debug canvas is enabled so you can see exactly what the decoder receives. Once you confirm detection is stable, you can set{' '}
-                    <span className="font-semibold text-cyan-300">SHOW_DEBUG_CANVAS</span> to{' '}
-                    <span className="font-semibold text-cyan-300">false</span>.
-                  </p>
                 </div>
               </div>
             </div>
@@ -383,7 +359,7 @@ export default function BarcodeScannerModal({
       active = false
       stopScanner()
     }
-  }, [open, refreshKey])
+  }, [open, refreshKey, deviceId, resetDetectionState, stopScanner])
 
   useEffect(() => {
     if (!open || !deviceId || loading) return
@@ -427,7 +403,7 @@ export default function BarcodeScannerModal({
     return () => {
       cancelled = true
     }
-  }, [deviceId])
+  }, [deviceId, loading, open, resetDetectionState, stopScanner])
 
   async function ensureCameraPermission() {
     const tempStream = await navigator.mediaDevices.getUserMedia({
