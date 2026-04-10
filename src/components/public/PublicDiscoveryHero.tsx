@@ -44,6 +44,10 @@ export default function PublicDiscoveryHero({
     if (!match?.lgas.includes(lgaValue)) setLgaValue('')
   }
 
+  function normalizeLga(lga: string) {
+    return lga.replace(/-/g, ' ')
+  }
+
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!stateValue) { setError('Please select a state.'); return }
@@ -52,7 +56,7 @@ export default function PublicDiscoveryHero({
     const params = new URLSearchParams()
     if (query.trim()) params.set('q', query.trim())
     params.set('state', stateValue)
-    params.set('lga', lgaValue)
+    params.set('lga', normalizeLga(lgaValue))
     params.set('radius_km', '10')
     router.push(`/public/search?${params.toString()}`)
   }
@@ -64,7 +68,7 @@ export default function PublicDiscoveryHero({
     const params = new URLSearchParams()
     params.set('q', tag)
     params.set('state', stateValue)
-    params.set('lga', lgaValue)
+    params.set('lga', normalizeLga(lgaValue))
     params.set('radius_km', '10')
     router.push(`/public/search?${params.toString()}`)
   }
