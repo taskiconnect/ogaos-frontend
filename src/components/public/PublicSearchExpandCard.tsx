@@ -18,33 +18,20 @@ export default function PublicSearchExpandCard({
   if (!suggestedRadiusKM) return null
 
   return (
-    <div
-      className="relative overflow-hidden rounded-3xl p-6"
-      style={{
-        background: 'linear-gradient(135deg, rgba(251,191,36,0.08) 0%, rgba(245,158,11,0.05) 100%)',
-        border: '1px solid rgba(251,191,36,0.20)',
-      }}
-    >
-      {/* Decorative glows */}
-      <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-20"
-        style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)' }} aria-hidden />
-      <div className="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full opacity-10"
-        style={{ background: 'radial-gradient(circle, #d97706 0%, transparent 70%)' }} aria-hidden />
-
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-4">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
-            style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.20)' }}
-          >
-            <Compass className="h-5 w-5" style={{ color: '#fbbf24' }} />
+    <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-yellow-500/20 bg-yellow-500/10">
+            <Compass className="h-4.5 w-4.5 text-yellow-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-amber-300">
+            <h3 className="text-sm font-semibold text-yellow-300">
               No businesses found within {radiusKM} km
             </h3>
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: 'rgba(251,191,36,0.60)' }}>
-              Expand to <span className="font-semibold text-amber-300">{suggestedRadiusKM} km</span> to discover more businesses nearby.
+            <p className="mt-0.5 text-sm text-yellow-400/60">
+              Expand to{' '}
+              <span className="font-semibold text-yellow-300">{suggestedRadiusKM} km</span>{' '}
+              to discover more businesses nearby.
             </p>
           </div>
         </div>
@@ -53,8 +40,7 @@ export default function PublicSearchExpandCard({
           type="button"
           onClick={onExpand}
           disabled={loading}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)', boxShadow: '0 6px 24px rgba(180,83,9,0.35)' }}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-yellow-600/80 border border-yellow-500/30 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-yellow-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
