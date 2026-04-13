@@ -1,3 +1,18 @@
+// lib/api/public.ts
+//
+// ─── NOTE ────────────────────────────────────────────────────────────────────
+// All functions in this file hit the Go backend DIRECTLY via NEXT_PUBLIC_API_URL.
+// We intentionally bypass the Next.js proxy (src/lib/api/proxy.ts) here because:
+//   1. These are all unauthenticated public endpoints — no auth tokens to protect.
+//   2. Hitting the backend directly eliminates the extra proxy hop, improving
+//      performance for both SSR (page.tsx server components) and client-side calls.
+//   3. The proxy is reserved for authenticated routes where the backend URL
+//      and user tokens must be hidden from the browser.
+//
+// In production, set NEXT_PUBLIC_API_URL in your Vercel environment variables:
+//   NEXT_PUBLIC_API_URL=https://api.ogaos.com/api/v1
+// ─────────────────────────────────────────────────────────────────────────────
+
 import type {
   PublicBusinessPage,
   PurchaseDigitalProductRequest,
@@ -7,9 +22,8 @@ import type {
   SearchPublicBusinessesParams,
 } from '@/types/public'
 
-// Note: Your proxy expects requests to /api/* which forwards to backend
-// The backend path should NOT include /api/v1 prefix since proxy adds it
-const API_BASE = '/api'
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1'
 
 async function parseJson<T>(res: Response): Promise<T | null> {
   try {
@@ -25,14 +39,17 @@ export async function getPublicBusinessFull(slug: string): Promise<PublicBusines
     next: { revalidate: 60 },
   })
 
-  const json = await parseJson<{ success?: boolean; message?: string; data?: PublicBusinessPage }>(res)
+  const json = await parseJson<{
+    success?: boolean
+    message?: string
+    data?: PublicBusinessPage
+  }>(res)
 
   if (!res.ok) {
     throw new Error(json?.message || 'Failed to fetch public business page')
   }
 
-  // Handle both response formats: { data: ... } or direct response
-  const data = json?.data ?? (json as unknown as PublicBusinessPage)
+  const data = json?.data
 
   if (!data || !('business' in data)) {
     throw new Error('Invalid public business page response')
@@ -46,26 +63,23 @@ export async function searchPublicBusinesses(
 ): Promise<PublicBusinessSearchResponse> {
   const searchParams = new URLSearchParams()
 
-  // Only add non-empty search query
   if (params.q?.trim()) {
     searchParams.set('q', params.q.trim())
   }
-  
-  // Add location parameters if both are provided
+
   if (typeof params.lat === 'number' && !isNaN(params.lat)) {
     searchParams.set('lat', String(params.lat))
   }
   if (typeof params.lng === 'number' && !isNaN(params.lng)) {
     searchParams.set('lng', String(params.lng))
   }
-  
-  // Add radius if provided and location is available
+
   if (typeof params.radius_km === 'number' && params.radius_km > 0) {
     searchParams.set('radius_km', String(params.radius_km))
   }
 
   const url = `${API_BASE}/public/business/search${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
-  
+
   const res = await fetch(url, {
     method: 'GET',
     cache: 'no-store',
@@ -81,8 +95,7 @@ export async function searchPublicBusinesses(
     throw new Error(json?.message || 'Failed to search businesses')
   }
 
-  // Handle both response formats
-  const data = json?.data ?? (json as unknown as PublicBusinessSearchResponse)
+  const data = json?.data
 
   if (!data || !Array.isArray(data.results) || !data.meta) {
     throw new Error('Invalid public business search response')
