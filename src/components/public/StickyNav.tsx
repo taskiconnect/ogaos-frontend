@@ -9,13 +9,13 @@ import {
   Info,
   Image as ImageIcon,
 } from 'lucide-react'
-import type { PublicBusiness, DigitalProduct, ProductPublic } from '@/types/public'
+import type { PublicBusiness, PublicDigitalProduct, PublicProduct } from '@/types/public'
 
 interface Props {
   biz: PublicBusiness
-  digital: DigitalProduct[]
-  physical: ProductPublic[]
-  services: ProductPublic[]
+  digital: PublicDigitalProduct[]
+  physical: PublicProduct[]
+  services: PublicProduct[]
   gallery: string[]
 }
 

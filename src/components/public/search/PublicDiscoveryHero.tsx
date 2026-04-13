@@ -1,8 +1,8 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, Search, Zap } from 'lucide-react'
+import { MapPin, Search, Zap, Loader2, Navigation } from 'lucide-react'
 
 type StateOption = {
   name: string
@@ -28,10 +28,12 @@ export default function PublicDiscoveryHero({
   className = '',
 }: PublicDiscoveryHeroProps) {
   const router = useRouter()
-  const [query, setQuery]           = useState('')
+  const [query, setQuery] = useState('')
   const [stateValue, setStateValue] = useState(initialState)
-  const [lgaValue, setLgaValue]     = useState(initialLga)
-  const [error, setError]           = useState<string | null>(null)
+  const [lgaValue, setLgaValue] = useState(initialLga)
+  const [error, setError] = useState<string | null>(null)
+  const [gettingLocation, setGettingLocation] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
 
   const lgaOptions = useMemo(() => {
     const match = states.find((item) => item.name === stateValue)
@@ -48,29 +50,94 @@ export default function PublicDiscoveryHero({
     return lga.replace(/-/g, ' ')
   }
 
+  // Get user's current location
+  function getCurrentLocation() {
+    setGettingLocation(true)
+    setLocationError(null)
+    
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser')
+      setGettingLocation(false)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        
+        // Search with coordinates instead of state/LGA
+        const params = new URLSearchParams()
+        if (query.trim()) params.set('q', query.trim())
+        params.set('lat', latitude.toString())
+        params.set('lng', longitude.toString())
+        params.set('radius_km', '10')
+        
+        router.push(`/public/search?${params.toString()}`)
+        setGettingLocation(false)
+      },
+      (err) => {
+        console.error('Location error:', err)
+        let errorMsg = 'Unable to get your location'
+        if (err.code === 1) errorMsg = 'Location permission denied'
+        if (err.code === 2) errorMsg = 'Location unavailable'
+        if (err.code === 3) errorMsg = 'Location request timeout'
+        
+        setLocationError(errorMsg)
+        setGettingLocation(false)
+        
+        // Still allow search without location
+        setTimeout(() => setLocationError(null), 3000)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    )
+  }
+
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!stateValue) { setError('Please select a state.'); return }
-    if (!lgaValue)   { setError('Please select a local government area.'); return }
+    
+    // Check if we have state and LGA selected
+    if (!stateValue) {
+      setError('Please select a state.')
+      return
+    }
+    if (!lgaValue) {
+      setError('Please select a local government area.')
+      return
+    }
+    
     setError(null)
+    
+    // Note: Backend doesn't support state/LGA search directly
+    // We'll use the LGA name as the search query
+    const searchQuery = query.trim() || lgaValue
     const params = new URLSearchParams()
-    if (query.trim()) params.set('q', query.trim())
-    params.set('state', stateValue)
-    params.set('lga', normalizeLga(lgaValue))
-    params.set('radius_km', '10')
+    params.set('q', searchQuery)
+    // We can't filter by state/LGA on backend, so we just search by keyword
+    // The backend will return all matching businesses across Nigeria
+    
     router.push(`/public/search?${params.toString()}`)
   }
 
   function handleTagClick(tag: string) {
     setQuery(tag)
-    if (!stateValue || !lgaValue) { setError('Please select your state and LGA first.'); return }
-    setError(null)
-    const params = new URLSearchParams()
-    params.set('q', tag)
-    params.set('state', stateValue)
-    params.set('lga', normalizeLga(lgaValue))
-    params.set('radius_km', '10')
-    router.push(`/public/search?${params.toString()}`)
+    
+    // If we have location, use it for better results
+    if (stateValue && lgaValue) {
+      const params = new URLSearchParams()
+      params.set('q', tag)
+      router.push(`/public/search?${params.toString()}`)
+    } else if (!stateValue || !lgaValue) {
+      setError('Select state & LGA for better results, or use "Near Me"')
+      setTimeout(() => setError(null), 3000)
+    } else {
+      const params = new URLSearchParams()
+      params.set('q', tag)
+      router.push(`/public/search?${params.toString()}`)
+    }
   }
 
   return (
@@ -94,7 +161,7 @@ export default function PublicDiscoveryHero({
               <span className="text-muted-foreground">across Nigeria.</span>
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Search by name, category, or keyword. Pick your state and LGA — we surface the closest businesses first.
+              Search by name, category, or keyword. Use your location for the closest results, or browse by state and LGA.
             </p>
           </div>
 
@@ -170,13 +237,37 @@ export default function PublicDiscoveryHero({
             <div className="mt-2.5 px-1 min-h-[18px]">
               {error ? (
                 <p className="text-xs font-semibold text-destructive">{error}</p>
+              ) : locationError ? (
+                <p className="text-xs font-semibold text-destructive">{locationError}</p>
               ) : (
                 <p className="text-xs text-muted-foreground/60">
-                  Closest businesses shown first — up to 50 km if needed.
+                  Search by keyword, or use <button type="button" onClick={getCurrentLocation} disabled={gettingLocation} className="text-primary hover:underline inline-flex items-center gap-1">Near Me <Navigation className="h-3 w-3" /></button> for location-based results.
                 </p>
               )}
             </div>
           </form>
+
+          {/* Near Me button alternative */}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={getCurrentLocation}
+              disabled={gettingLocation}
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/10 disabled:opacity-50"
+            >
+              {gettingLocation ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Getting location...
+                </>
+              ) : (
+                <>
+                  <Navigation className="h-4 w-4" />
+                  Use my current location
+                </>
+              )}
+            </button>
+          </div>
 
           {/* Category pills */}
           <div className="mt-7 flex flex-wrap items-center gap-2">

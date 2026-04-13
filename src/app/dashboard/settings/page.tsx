@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getBusiness,
@@ -14,10 +14,10 @@ import {
   removeBusinessGalleryImage,
   setStorefrontVideo,
 } from '@/lib/api/business'
+import { getStates, getLGAs } from '@/lib/api/location'
 import {
   getMyBusinessKeywords,
   setMyBusinessKeywords,
-  suggestKeywords,
 } from '@/lib/api/keyword'
 import { createStaff, deactivateStaff } from '@/lib/api/auth'
 import Sidebar from '@/components/dashboard/Sidebar'
@@ -38,9 +38,86 @@ import {
   Tags,
   Plus,
   Globe,
+  ChevronDown,
+  MapPinned,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Business } from '@/lib/api/types'
+
+// ─── Custom dropdown — replaces native <select> so options are always visible ─
+function LocationSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled = false,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+  placeholder: string
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        className={cn(
+          'w-full flex items-center justify-between gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none text-left transition-colors',
+          disabled ? 'opacity-60 cursor-not-allowed' : 'hover:border-white/25 cursor-pointer',
+          value ? 'text-white' : 'text-gray-400'
+        )}
+      >
+        <span className="truncate">{value || placeholder}</span>
+        <ChevronDown
+          className={cn('w-4 h-4 text-gray-500 shrink-0 transition-transform', open && 'rotate-180')}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full mt-1.5 w-full rounded-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.8)] overflow-hidden" style={{ backgroundColor: '#0d1526' }}>
+          <div className="max-h-56 overflow-y-auto overscroll-contain">
+            <button
+              type="button"
+              onClick={() => { onChange(''); setOpen(false) }}
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-500 hover:bg-white/[0.06] hover:text-gray-300 transition-colors border-b border-white/[0.06]"
+            >
+              {placeholder}
+            </button>
+            {options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { onChange(opt); setOpen(false) }}
+                className={cn(
+                  'w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-white/[0.04] last:border-b-0',
+                  value === opt
+                    ? 'bg-primary/20 text-white font-medium'
+                    : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
+                )}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function BusinessAvatar({ business }: { business: Business }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -582,9 +659,7 @@ function BusinessKeywordsSection() {
   }
 
   function keywordExists(value: string) {
-    return keywords.some(
-      (keyword) => keyword.toLowerCase() === value.toLowerCase()
-    )
+    return keywords.some((keyword) => keyword.toLowerCase() === value.toLowerCase())
   }
 
   async function loadSuggestions(query: string) {
@@ -598,15 +673,34 @@ function BusinessKeywordsSection() {
 
     setIsSuggesting(true)
     try {
-      const result = await suggestKeywords(trimmed)
-      const filtered = (Array.isArray(result) ? result : []).filter(
-        (item) => !keywordExists(item)
+      // Fetch directly so we can handle any response shape from the backend
+      const res = await fetch(
+        `/api/public/keywords/suggestions?q=${encodeURIComponent(trimmed)}`,
+        { cache: 'no-store' }
       )
+      const json = await res.json().catch(() => null)
+
+      // Handle all possible shapes:
+      // { data: { keywords: [] } }, { data: [] }, { keywords: [] }, []
+      const raw: unknown =
+        json?.data?.keywords ??
+        json?.data?.results ??
+        json?.data ??
+        json?.keywords ??
+        json?.results ??
+        json
+
+      const list: string[] = Array.isArray(raw)
+        ? raw.filter((x): x is string => typeof x === 'string')
+        : []
+
+      const filtered = list.filter((item) => !keywordExists(item))
 
       setSuggestions(filtered)
       setSuggestionsOpen(filtered.length > 0)
       setActiveSuggestionIndex(filtered.length > 0 ? 0 : -1)
-    } catch {
+    } catch (err) {
+      console.error('[suggestions] failed:', err)
       setSuggestions([])
       setSuggestionsOpen(false)
       setActiveSuggestionIndex(-1)
@@ -621,7 +715,7 @@ function BusinessKeywordsSection() {
     }, 250)
 
     return () => clearTimeout(timer)
-  }, [keywordInput]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [keywordInput])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -723,7 +817,6 @@ function BusinessKeywordsSection() {
           </div>
         </div>
 
-        {/* ── Input + suggestions ── */}
         <div className="relative">
           <div className="flex flex-col sm:flex-row gap-2.5">
             <div className="flex-1 relative">
@@ -778,20 +871,18 @@ function BusinessKeywordsSection() {
                 className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all"
               />
 
-              {/* spinner */}
               {isSuggesting && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                   <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
                 </div>
               )}
 
-              {/* suggestions dropdown */}
               {suggestionsOpen && suggestions.length > 0 && (
                 <div
                   ref={suggestionsRef}
-                  className="absolute z-30 top-full mt-1.5 w-full rounded-2xl border border-white/10 bg-[#0d1526] shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden"
+                  className="absolute z-30 top-full mt-1.5 w-full rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.8)] overflow-hidden"
+                  style={{ backgroundColor: '#0d1526' }}
                 >
-                  {/* header */}
                   <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06]">
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
                       Suggestions
@@ -849,7 +940,6 @@ function BusinessKeywordsSection() {
           </div>
         </div>
 
-        {/* ── Progress bar + counts ── */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-400">
@@ -870,7 +960,6 @@ function BusinessKeywordsSection() {
           </div>
         </div>
 
-        {/* ── Added keywords ── */}
         <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 min-h-[100px]">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -955,6 +1044,12 @@ export default function SettingsPage() {
     queryFn: listStaff,
   })
 
+  const { data: states = [], isLoading: statesLoading } = useQuery({
+    queryKey: ['location-states'],
+    queryFn: getStates,
+    staleTime: 1000 * 60 * 60,
+  })
+
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
@@ -963,10 +1058,19 @@ export default function SettingsPage() {
   const [cityTown, setCityTown] = useState('')
   const [localGovt, setLocalGovt] = useState('')
   const [state, setState] = useState('')
-  const [country, setCountry] = useState('')
+  const [country, setCountry] = useState('Nigeria')
   const [initialised, setInitialised] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState('')
+
+  const previousStateRef = useRef<string>('')
+
+  const { data: lgas = [], isLoading: lgasLoading } = useQuery({
+    queryKey: ['location-lgas', state],
+    queryFn: () => getLGAs(state),
+    enabled: !!state.trim(),
+    staleTime: 1000 * 60 * 60,
+  })
 
   useEffect(() => {
     if (business && !initialised) {
@@ -979,22 +1083,45 @@ export default function SettingsPage() {
       setLocalGovt(business.local_government ?? '')
       setState(business.state ?? '')
       setCountry(business.country ?? 'Nigeria')
+      previousStateRef.current = business.state ?? ''
       setInitialised(true)
     }
   }, [business, initialised])
 
+  useEffect(() => {
+    if (!initialised) return
+
+    if (previousStateRef.current && previousStateRef.current !== state) {
+      setLocalGovt('')
+    }
+
+    previousStateRef.current = state
+  }, [state, initialised])
+
+  useEffect(() => {
+    if (!state || !localGovt || lgas.length === 0) return
+
+    const exists = lgas.some((item) => item.toLowerCase() === localGovt.toLowerCase())
+    if (!exists) {
+      setLocalGovt('')
+    }
+  }, [lgas, localGovt, state])
+
+  const stateOptions = useMemo(() => states, [states])
+  const lgaOptions = useMemo(() => lgas, [lgas])
+
   const updateMut = useMutation({
     mutationFn: () =>
       updateBusiness({
-        name,
-        category,
-        description,
-        website_url: websiteUrl,
-        street,
-        city_town: cityTown,
-        local_government: localGovt,
-        state,
-        country,
+        name: name.trim(),
+        category: category.trim(),
+        description: description.trim(),
+        website_url: websiteUrl.trim(),
+        street: street.trim(),
+        city_town: cityTown.trim(),
+        local_government: localGovt.trim(),
+        state: state.trim(),
+        country: country.trim(),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['business'] })
@@ -1100,49 +1227,78 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    Street
-                  </label>
-                  <input
-                    value={street}
-                    onChange={(e) => setStreet(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
-                  />
+              <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                    <MapPinned className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Business Location</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Pick your state and local government from the official list used by search.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    City / Town
-                  </label>
-                  <input
-                    value={cityTown}
-                    onChange={(e) => setCityTown(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      Street
+                    </label>
+                    <input
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    LGA
-                  </label>
-                  <input
-                    value={localGovt}
-                    onChange={(e) => setLocalGovt(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      City / Town
+                    </label>
+                    <input
+                      value={cityTown}
+                      onChange={(e) => setCityTown(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    State
-                  </label>
-                  <input
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
-                  />
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      Country
+                    </label>
+                    <input
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      State
+                    </label>
+                    <LocationSelect
+                      value={state}
+                      onChange={setState}
+                      options={stateOptions}
+                      placeholder={statesLoading ? 'Loading states...' : 'Select state'}
+                      disabled={statesLoading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      Local Government
+                    </label>
+                    <LocationSelect
+                      value={localGovt}
+                      onChange={setLocalGovt}
+                      options={lgaOptions}
+                      placeholder={!state ? 'Select state first' : lgasLoading ? 'Loading LGAs...' : 'Select LGA'}
+                      disabled={!state || lgasLoading}
+                    />
+                  </div>
                 </div>
               </div>
 

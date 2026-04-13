@@ -17,18 +17,6 @@ interface Props {
   editing?: Product | null
 }
 
-interface CompressionInfo {
-  originalSize: number
-  compressedSize: number
-  savingsBytes: number
-  savingsPercent: number
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-}
 
 export default function ProductModal({ open, onOpenChange, onSuccess, editing }: Props) {
   const router = useRouter()
@@ -50,9 +38,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
 
-  const [isCompressingImage, setIsCompressingImage] = useState(false)
-  const [compressionProgress, setCompressionProgress] = useState(0)
-  const [compressionInfo, setCompressionInfo] = useState<CompressionInfo | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   useEffect(() => {
     if (open && !editing) {
@@ -91,9 +77,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
     }
 
     setSelectedImage(null)
-    setCompressionInfo(null)
-    setCompressionProgress(0)
-    setIsCompressingImage(false)
+    setIsUploadingImage(false)
     setError('')
     setScannerOpen(false)
   }, [editing, open])
@@ -120,14 +104,11 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       useWebWorker: true,
       fileType: outputType,
       initialQuality: 0.7,
-      onProgress: (progress: number) => {
-        setCompressionProgress(progress)
-      },
     })
 
-    const finalName = file.name.includes('.')
-      ? file.name
-      : `${file.name}.${outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'}`
+    const ext =
+      outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'
+    const finalName = file.name.includes('.') ? file.name : `${file.name}.${ext}`
 
     return new File([compressedBlob], finalName, {
       type: compressedBlob.type || outputType || 'image/jpeg',
@@ -139,7 +120,13 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
     mutationFn: async (d: CreateProductRequest) => {
       const product = await createProduct(d, idempotencyKey)
       if (selectedImage) {
-        await uploadProductImage(product.id, selectedImage)
+        setIsUploadingImage(true)
+        try {
+          const compressedFile = await compressImage(selectedImage)
+          await uploadProductImage(product.id, compressedFile)
+        } finally {
+          setIsUploadingImage(false)
+        }
       }
       return product
     },
@@ -172,7 +159,13 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
     mutationFn: async (d: UpdateProductRequest) => {
       const product = await updateProduct(editing!.id, d)
       if (selectedImage) {
-        await uploadProductImage(editing!.id, selectedImage)
+        setIsUploadingImage(true)
+        try {
+          const compressedFile = await compressImage(selectedImage)
+          await uploadProductImage(editing!.id, compressedFile)
+        } finally {
+          setIsUploadingImage(false)
+        }
       }
       return product
     },
@@ -204,53 +197,20 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
   async function handleImageChange(file?: File | null) {
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file')
+    const acceptedFormats = ['image/jpeg', 'image/png', 'image/webp']
+    if (!acceptedFormats.includes(file.type)) {
+      setError('Only JPG, PNG, or WEBP images are accepted. Please upload a valid image file.')
       return
     }
 
     const maxRawSizeBytes = 5 * 1024 * 1024
     if (file.size > maxRawSizeBytes) {
-      setError('Image must be 5MB or less before compression')
+      setError('Image must be 5MB or less.')
       return
     }
 
-    try {
-      setError('')
-      setIsCompressingImage(true)
-      setCompressionProgress(0)
-      setCompressionInfo(null)
-
-      const compressedFile = await compressImage(file)
-
-      const maxFinalSizeBytes = 200 * 1024
-      if (compressedFile.size > maxFinalSizeBytes) {
-        setError('Compressed image is still too large. Please choose a smaller image.')
-        setSelectedImage(null)
-        setCompressionInfo(null)
-        return
-      }
-
-      const savingsBytes = Math.max(file.size - compressedFile.size, 0)
-      const savingsPercent = file.size > 0 ? (savingsBytes / file.size) * 100 : 0
-
-      setSelectedImage(compressedFile)
-      setCompressionInfo({
-        originalSize: file.size,
-        compressedSize: compressedFile.size,
-        savingsBytes,
-        savingsPercent,
-      })
-    } catch (err: unknown) {
-      console.error('Image compression failed:', err)
-      const message = err instanceof Error ? err.message : 'Failed to compress image'
-      setError(`Image compression failed: ${message}`)
-      setSelectedImage(null)
-      setCompressionInfo(null)
-    } finally {
-      setIsCompressingImage(false)
-      setCompressionProgress(0)
-    }
+    setError('')
+    setSelectedImage(file)
   }
 
   function handleDetectedBarcode(value: string) {
@@ -261,11 +221,6 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
 
   function handleSubmit() {
     setError('')
-
-    if (isCompressingImage) {
-      setError('Please wait for image compression to finish')
-      return
-    }
 
     if (!name.trim()) {
       setError('Name is required')
@@ -307,7 +262,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
   }
 
   const isPending = createMut.isPending || updateMut.isPending
-  const isBusy = isPending || isCompressingImage
+  const isBusy = isPending || isUploadingImage
 
   if (!open) return null
 
@@ -404,17 +359,17 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                       <label
                         className={cn(
                           'inline-flex cursor-pointer items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-white transition',
-                          isCompressingImage
+                          isBusy
                             ? 'cursor-not-allowed border-white/10 bg-white/5 opacity-60'
                             : 'border-white/10 bg-white/10 hover:bg-white/15'
                         )}
                       >
-                        {isCompressingImage ? 'Compressing...' : 'Choose Image'}
+                        Choose Image
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp"
                           className="hidden"
-                          disabled={isCompressingImage}
+                          disabled={isBusy}
                           onChange={(e) => {
                             void handleImageChange(e.target.files?.[0] ?? null)
                             e.currentTarget.value = ''
@@ -427,7 +382,6 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                           type="button"
                           onClick={() => {
                             setSelectedImage(null)
-                            setCompressionInfo(null)
                             setError('')
                           }}
                           className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-500/15"
@@ -437,37 +391,10 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                       )}
                     </div>
 
-                    {isCompressingImage && (
-                      <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3">
-                        <div className="mb-2 flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-                          <p className="text-sm text-cyan-200">Compressing image...</p>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                          <div
-                            className="h-full rounded-full bg-cyan-400 transition-all"
-                            style={{ width: `${compressionProgress}%` }}
-                          />
-                        </div>
-                        <p className="mt-2 text-xs text-cyan-100">{compressionProgress}%</p>
-                      </div>
-                    )}
-
                     {selectedImage && (
                       <p className="text-xs text-emerald-400">
                         Selected: {selectedImage.name}
                       </p>
-                    )}
-
-                    {compressionInfo && (
-                      <div className="space-y-1 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200">
-                        <p>Original size: {formatFileSize(compressionInfo.originalSize)}</p>
-                        <p>Compressed size: {formatFileSize(compressionInfo.compressedSize)}</p>
-                        <p>
-                          Saved: {formatFileSize(compressionInfo.savingsBytes)} (
-                          {compressionInfo.savingsPercent.toFixed(1)}%)
-                        </p>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -662,15 +589,10 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
               className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold text-white disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
             >
-              {isPending ? (
+              {isPending || isUploadingImage ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : isCompressingImage ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Compressing Image...
+                  Uploading...
                 </>
               ) : editing ? (
                 'Save Changes'

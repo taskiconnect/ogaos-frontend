@@ -22,8 +22,8 @@ import {
 
 import type {
   PublicBusiness,
-  DigitalProduct,
-  ProductPublic,
+  PublicDigitalProduct,
+  PublicProduct,
   CartItem,
 } from '@/types/public'
 import {
@@ -31,7 +31,7 @@ import {
   fullAddress,
   mapsEmbed,
   mapsLink,
-  waLink,
+  parseGallery,
 } from '@/types/public'
 
 import { ProductCard } from './ProductCard'
@@ -57,9 +57,9 @@ interface NormalizedOffering {
 
 interface Props {
   biz: PublicBusiness
-  digital: DigitalProduct[]
-  physical: ProductPublic[]
-  services: ProductPublic[]
+  digital: PublicDigitalProduct[]
+  physical: PublicProduct[]
+  services: PublicProduct[]
   keywords: string[]
   gallery: string[]
   accent: string
@@ -226,10 +226,6 @@ export function ProfileContent({
         <div className="pb-20">
           {offerings.length > 0 && (
             <>
-              <section id="digital" className="sr-only" />
-              <section id="physical" className="sr-only" />
-              <section id="services" className="sr-only" />
-
               <div className="mb-6 flex flex-col gap-3 sm:flex-row">
                 <div className="relative flex-1">
                   <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

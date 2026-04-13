@@ -13,11 +13,10 @@ import {
   Search,
   MapPin,
   X,
+  Loader2,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { getMe, getNigeriaLGAs, getNigeriaStates } from '@/lib/api/auth'
+import { useEffect, useRef, useState } from 'react'
 
-/* ─── animation variants ─────────────────────────────────────── */
 const container = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
@@ -28,130 +27,56 @@ const item = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] } },
 } as const
 
-/* ─── store search bar ────────────────────────────────────────── */
 const SUGGESTED_TAGS = ['Electronics', 'Fashion', 'Food & Drinks', 'Pharmacy', 'Groceries', 'Beauty']
 
 function StoreSearchBar() {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
-  const [stateValue, setStateValue] = useState('')
-  const [lgaValue, setLgaValue] = useState('')
-  const [states, setStates] = useState<string[]>([])
-  const [lgas, setLgas] = useState<string[]>([])
-  const [isBootstrapping, setIsBootstrapping] = useState(true)
-  const [isLoadingLgas, setIsLoadingLgas] = useState(false)
+  const [isLocating, setIsLocating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const hasLocation = useMemo(() => Boolean(stateValue && lgaValue), [stateValue, lgaValue])
-
-  useEffect(() => {
-    let active = true
-
-    async function bootstrap() {
-      try {
-        setIsBootstrapping(true)
-        setError(null)
-
-        const allStates = await getNigeriaStates().catch(() => [])
-        if (!active) return
-
-        setStates(Array.isArray(allStates) ? allStates : [])
-
-        const me = await getMe().catch(() => null)
-        if (!active) return
-
-        const authState = me?.business?.state?.trim() || ''
-        const authLga = me?.business?.local_government?.trim() || ''
-
-        if (authState) {
-          setStateValue(authState)
-
-          const lgaList = await getNigeriaLGAs(authState).catch(() => [])
-          if (!active) return
-
-          const normalizedLgas = Array.isArray(lgaList) ? lgaList : []
-          setLgas(normalizedLgas)
-
-          if (authLga && normalizedLgas.includes(authLga)) {
-            setLgaValue(authLga)
-          }
-        }
-      } catch {
-        if (!active) return
-        setError('Unable to load location options right now.')
-      } finally {
-        if (active) setIsBootstrapping(false)
-      }
-    }
-
-    void bootstrap()
-
-    return () => {
-      active = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let active = true
-
-    async function loadLgas() {
-      if (!stateValue) {
-        setLgas([])
-        setLgaValue('')
-        return
-      }
-
-      try {
-        setIsLoadingLgas(true)
-        const nextLgas = await getNigeriaLGAs(stateValue).catch(() => [])
-        if (!active) return
-
-        const normalized = Array.isArray(nextLgas) ? nextLgas : []
-        setLgas(normalized)
-
-        setLgaValue((current) => (current && normalized.includes(current) ? current : ''))
-      } catch {
-        if (!active) return
-        setLgas([])
-        setLgaValue('')
-      } finally {
-        if (active) setIsLoadingLgas(false)
-      }
-    }
-
-    void loadLgas()
-
-    return () => {
-      active = false
-    }
-  }, [stateValue])
-
-  const handleSearch = () => {
-    if (!stateValue.trim()) {
-      setError('Please select a state.')
-      return
-    }
-
-    if (!lgaValue.trim()) {
-      setError('Please select a local government area.')
-      return
-    }
-
-    setError(null)
-
-    const params = new URLSearchParams()
-    if (query.trim()) params.set('q', query.trim())
-    params.set('state', stateValue.trim())
-    params.set('lga', lgaValue.trim())
-    params.set('radius_km', '10')
-
+  const redirectToSearch = (params: URLSearchParams) => {
     window.location.href = `/public/search?${params.toString()}`
   }
 
+  const searchWithLocation = () => {
+    setError(null)
+
+    if (!navigator.geolocation) {
+      const params = new URLSearchParams()
+      if (query.trim()) params.set('q', query.trim())
+      redirectToSearch(params)
+      return
+    }
+
+    setIsLocating(true)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const params = new URLSearchParams()
+        if (query.trim()) params.set('q', query.trim())
+        params.set('lat', String(position.coords.latitude))
+        params.set('lng', String(position.coords.longitude))
+        params.set('radius_km', '10')
+        redirectToSearch(params)
+      },
+      () => {
+        const params = new URLSearchParams()
+        if (query.trim()) params.set('q', query.trim())
+        params.set('location_denied', '1')
+        redirectToSearch(params)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
+    )
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSearch()
+    if (e.key === 'Enter') searchWithLocation()
     if (e.key === 'Escape') {
       setQuery('')
       inputRef.current?.blur()
@@ -203,68 +128,21 @@ function StoreSearchBar() {
           )}
 
           <button
-            onClick={handleSearch}
+            onClick={searchWithLocation}
             type="button"
-            className="m-1.5 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
+            disabled={isLocating}
+            className="m-1.5 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-70"
           >
-            <Search className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Search</span>
+            {isLocating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{isLocating ? 'Searching...' : 'Search nearby'}</span>
           </button>
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div className="relative">
-            <div className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground/60">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <select
-              value={stateValue}
-              onChange={(e) => setStateValue(e.target.value)}
-              disabled={isBootstrapping}
-              className="h-11 w-full rounded-2xl border border-border/60 bg-background pr-3 pl-10 text-sm text-foreground outline-none transition focus:border-primary/50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <option value="">{isBootstrapping ? 'Loading states...' : 'Select state'}</option>
-              {states.map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="relative">
-            <div className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground/60">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <select
-              value={lgaValue}
-              onChange={(e) => setLgaValue(e.target.value)}
-              disabled={!stateValue || isLoadingLgas || isBootstrapping}
-              className="h-11 w-full rounded-2xl border border-border/60 bg-background pr-3 pl-10 text-sm text-foreground outline-none transition focus:border-primary/50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <option value="">
-                {!stateValue
-                  ? 'Select LGA'
-                  : isLoadingLgas
-                    ? 'Loading LGAs...'
-                    : 'Select LGA'}
-              </option>
-              {lgas.map((lga) => (
-                <option key={lga} value={lga}>
-                  {lga}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {error ? (
           <p className="mt-3 text-xs font-medium text-red-500">{error}</p>
         ) : (
           <p className="mt-3 text-xs text-muted-foreground/75">
-            {hasLocation
-              ? `Searching from ${lgaValue}, ${stateValue}. If nothing is found nearby, users can continue within 50 km.`
-              : 'Choose a state and LGA to search nearby businesses.'}
+            We’ll ask for your current location. If you deny permission, we’ll still show matching businesses from all available results.
           </p>
         )}
 
@@ -276,18 +154,37 @@ function StoreSearchBar() {
               onClick={() => {
                 setQuery(tag)
 
-                if (!stateValue || !lgaValue) {
-                  setError('Please select your state and local government area first.')
+                if (!navigator.geolocation) {
+                  const params = new URLSearchParams()
+                  params.set('q', tag)
+                  redirectToSearch(params)
                   return
                 }
 
-                const params = new URLSearchParams()
-                params.set('q', tag)
-                params.set('state', stateValue)
-                params.set('lga', lgaValue)
-                params.set('radius_km', '10')
+                setIsLocating(true)
+                setError(null)
 
-                window.location.href = `/public/search?${params.toString()}`
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    const params = new URLSearchParams()
+                    params.set('q', tag)
+                    params.set('lat', String(position.coords.latitude))
+                    params.set('lng', String(position.coords.longitude))
+                    params.set('radius_km', '10')
+                    redirectToSearch(params)
+                  },
+                  () => {
+                    const params = new URLSearchParams()
+                    params.set('q', tag)
+                    params.set('location_denied', '1')
+                    redirectToSearch(params)
+                  },
+                  {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000,
+                  }
+                )
               }}
               className="rounded-full border border-border/50 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/8 hover:text-primary"
             >
@@ -300,7 +197,6 @@ function StoreSearchBar() {
   )
 }
 
-/* ─── Hero ────────────────────────────────────────────────────── */
 export function Hero() {
   const [navH, setNavH] = useState(80)
 
@@ -505,8 +401,7 @@ export function Hero() {
               aria-hidden
             />
           </motion.div>
-
-        </div>{/* end container */}
+        </div>
 
         <div
           className="pointer-events-none absolute bottom-0 left-0 right-0 z-30 h-24 bg-linear-to-t from-background via-background/80 to-transparent"

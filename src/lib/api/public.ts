@@ -7,8 +7,9 @@ import type {
   SearchPublicBusinessesParams,
 } from '@/types/public'
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1').replace(/\/$/, '')
+// Note: Your proxy expects requests to /api/* which forwards to backend
+// The backend path should NOT include /api/v1 prefix since proxy adds it
+const API_BASE = '/api'
 
 async function parseJson<T>(res: Response): Promise<T | null> {
   try {
@@ -20,6 +21,7 @@ async function parseJson<T>(res: Response): Promise<T | null> {
 
 export async function getPublicBusinessFull(slug: string): Promise<PublicBusinessPage> {
   const res = await fetch(`${API_BASE}/public/business/${slug}/full`, {
+    method: 'GET',
     next: { revalidate: 60 },
   })
 
@@ -29,6 +31,7 @@ export async function getPublicBusinessFull(slug: string): Promise<PublicBusines
     throw new Error(json?.message || 'Failed to fetch public business page')
   }
 
+  // Handle both response formats: { data: ... } or direct response
   const data = json?.data ?? (json as unknown as PublicBusinessPage)
 
   if (!data || !('business' in data)) {
@@ -41,14 +44,30 @@ export async function getPublicBusinessFull(slug: string): Promise<PublicBusines
 export async function searchPublicBusinesses(
   params: SearchPublicBusinessesParams
 ): Promise<PublicBusinessSearchResponse> {
-  const search = new URLSearchParams()
+  const searchParams = new URLSearchParams()
 
-  if (params.q?.trim()) search.set('q', params.q.trim())
-  search.set('state', params.state.trim())
-  search.set('lga', params.lga.trim())
-  search.set('radius_km', String(params.radius_km ?? 10))
+  // Only add non-empty search query
+  if (params.q?.trim()) {
+    searchParams.set('q', params.q.trim())
+  }
+  
+  // Add location parameters if both are provided
+  if (typeof params.lat === 'number' && !isNaN(params.lat)) {
+    searchParams.set('lat', String(params.lat))
+  }
+  if (typeof params.lng === 'number' && !isNaN(params.lng)) {
+    searchParams.set('lng', String(params.lng))
+  }
+  
+  // Add radius if provided and location is available
+  if (typeof params.radius_km === 'number' && params.radius_km > 0) {
+    searchParams.set('radius_km', String(params.radius_km))
+  }
 
-  const res = await fetch(`${API_BASE}/public/business/search?${search.toString()}`, {
+  const url = `${API_BASE}/public/business/search${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+  
+  const res = await fetch(url, {
+    method: 'GET',
     cache: 'no-store',
   })
 
@@ -62,6 +81,7 @@ export async function searchPublicBusinesses(
     throw new Error(json?.message || 'Failed to search businesses')
   }
 
+  // Handle both response formats
   const data = json?.data ?? (json as unknown as PublicBusinessSearchResponse)
 
   if (!data || !Array.isArray(data.results) || !data.meta) {
@@ -90,13 +110,14 @@ export async function purchaseDigitalProduct(
     throw new Error(json?.message || 'Failed to start purchase')
   }
 
-  return json ?? { success: true }
+  return json ?? { success: true, message: 'Purchase initiated' }
 }
 
 export async function getOrderFulfillment(
   orderId: string
 ): Promise<PublicOrderFulfillmentResponse> {
   const res = await fetch(`${API_BASE}/public/orders/${orderId}/fulfillment`, {
+    method: 'GET',
     cache: 'no-store',
   })
 
@@ -106,7 +127,7 @@ export async function getOrderFulfillment(
     throw new Error(json?.message || 'Failed to fetch fulfillment')
   }
 
-  return json ?? { success: true }
+  return json ?? { success: false, message: 'No fulfillment data returned' }
 }
 
 export function getOrderDownloadUrl(orderId: string): string {

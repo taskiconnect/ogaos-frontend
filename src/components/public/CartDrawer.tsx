@@ -35,10 +35,7 @@ export function CartDrawer({ items, onUpdate, onClose, biz }: Props) {
       .join('\n')
 
     const msg = `Hi ${biz.name}! I'd like to order:\n\n${lines}\n\nTotal: ${formatCurrency(total)}`
-    const phone = ''
-    const url = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`
+    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
 
     window.open(url, '_blank', 'noopener,noreferrer')
   }
