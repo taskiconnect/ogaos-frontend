@@ -1,9 +1,15 @@
-// src/lib/api/recruitment.ts
 import api from './client'
 import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
 import type {
-  JobOpening, CreateJobRequest, JobListParams,
-  RecruitmentApplication, ReviewApplicationRequest, ApplicationListParams,
+  JobOpening,
+  CreateJobRequest,
+  JobListParams,
+  RecruitmentApplication,
+  ReviewApplicationRequest,
+  ApplicationListParams,
+  PublicJobItem,
+  PublicJobListParams,
+  PublicJobApplicationRequest,
 } from './types'
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
@@ -19,6 +25,46 @@ export const getJob = (id: string) =>
 
 export const closeJob = (id: string) =>
   api.patch<ApiMessage>(`/jobs/${id}/close`).then(() => undefined)
+
+// ─── Public Jobs ──────────────────────────────────────────────────────────────
+
+export const listPublicJobs = (params?: PublicJobListParams) =>
+  api.get<ApiCursorList<PublicJobItem>>('/public/jobs', { params }).then((r) => r.data)
+
+export const getPublicJob = (slug: string) =>
+  api.get<ApiSuccess<JobOpening>>(`/public/jobs/${slug}`).then((r) => r.data.data)
+
+export const applyToPublicJob = async (
+  id: string,
+  data: PublicJobApplicationRequest
+) => {
+  const form = new FormData()
+  form.append('first_name', data.first_name)
+  form.append('last_name', data.last_name)
+  form.append('email', data.email)
+  form.append('phone_number', data.phone_number)
+
+  if (data.cover_letter?.trim()) {
+    form.append('cover_letter', data.cover_letter.trim())
+  }
+
+  if (data.cv) {
+    form.append('cv', data.cv)
+  }
+
+  const response = await fetch(`/api/public/job-applications/${id}`, {
+    method: 'POST',
+    body: form,
+  })
+
+  const json = await response.json()
+
+  if (!response.ok) {
+    throw new Error(json?.message || 'Failed to submit application')
+  }
+
+  return json
+}
 
 // ─── Applications ─────────────────────────────────────────────────────────────
 

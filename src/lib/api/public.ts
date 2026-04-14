@@ -9,6 +9,10 @@
 //   3. The proxy is reserved for authenticated routes where the backend URL
 //      and user tokens must be hidden from the browser.
 //
+// getPublicBusinessFull uses `Connection: close` to prevent Node.js's HTTP
+// connection pool from reusing stale connections to the Go backend during SSR.
+// Other functions are called client-side (browser) so they don't have this issue.
+//
 // In production, set NEXT_PUBLIC_API_URL in your Vercel environment variables:
 //   NEXT_PUBLIC_API_URL=https://api.ogaos.com/api/v1
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,6 +41,11 @@ export async function getPublicBusinessFull(slug: string): Promise<PublicBusines
   const res = await fetch(`${API_BASE}/public/business/${slug}/full`, {
     method: 'GET',
     next: { revalidate: 60 },
+    headers: {
+      // Prevent Node.js SSR connection pool from reusing stale connections
+      // to the Go backend, which causes ECONNRESET errors.
+      Connection: 'close',
+    },
   })
 
   const json = await parseJson<{
@@ -78,7 +87,9 @@ export async function searchPublicBusinesses(
     searchParams.set('radius_km', String(params.radius_km))
   }
 
-  const url = `${API_BASE}/public/business/search${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+  const url = `${API_BASE}/public/business/search${
+    searchParams.toString() ? `?${searchParams.toString()}` : ''
+  }`
 
   const res = await fetch(url, {
     method: 'GET',

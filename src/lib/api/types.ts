@@ -862,3 +862,41 @@ export interface BusinessKeywordsResponse {
     keywords: string[]
   }
 }
+
+
+export interface PublicJobItem {
+  id: string
+  business_id: string
+  business_name: string
+  business_slug: string
+  business_logo_url: string | null
+  title: string
+  slug: string
+  description: string
+  requirements: string | null
+  responsibilities: string | null
+  type: 'full_time' | 'part_time' | 'contract' | 'internship' | string
+  location: string | null
+  is_remote: boolean
+  salary_range_min: number | null
+  salary_range_max: number | null
+  application_deadline: string | null
+  assessment_enabled: boolean
+  created_at: string
+}
+
+export interface PublicJobListParams extends CursorParams {
+  q?: string
+  type?: 'full_time' | 'part_time' | 'contract' | 'internship' | string
+  location?: string
+  is_remote?: boolean
+}
+
+export interface PublicJobApplicationRequest {
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  cover_letter?: string
+  cv?: File | null
+}
