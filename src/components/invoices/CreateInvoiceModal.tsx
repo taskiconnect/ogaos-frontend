@@ -49,9 +49,9 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
   const [dueDate, setDueDate]           = useState(addDays(30))
   const [paymentTerms, setPaymentTerms] = useState('Net 30')
   const [notes, setNotes]               = useState('')
-  const [vatRate, setVatRate]           = useState(0)
+  const [vatRate, setVatRate]           = useState('')
   const [vatInclusive, setVatInclusive] = useState(false)
-  const [whtRate, setWhtRate]           = useState(0)
+  const [whtRate, setWhtRate]           = useState('')
   const [items, setItems]               = useState<{ description: string; qty: string; unitPrice: string; discount: string }[]>([
     { description: '', qty: '1', unitPrice: '', discount: '0' }
   ])
@@ -75,8 +75,8 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
 
   function reset() {
     setCustomerId(''); setCustSearch(''); setIssueDate(today()); setDueDate(addDays(30))
-    setPaymentTerms('Net 30'); setNotes(''); setVatRate(0); setVatInclusive(false)
-    setWhtRate(0)
+    setPaymentTerms('Net 30'); setNotes(''); setVatRate(''); setVatInclusive(false)
+    setWhtRate('')
     setItems([{ description: '', qty: '1', unitPrice: '', discount: '0' }]); setError('')
   }
 
@@ -94,8 +94,8 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
     line:  ((parseFloat(it.unitPrice) || 0) * (parseFloat(it.qty) || 0)) - (parseFloat(it.discount) || 0),
   }))
   const subTotal = lineItems.reduce((s, l) => s + l.line, 0)
-  const vatAmt   = calcVAT(subTotal, vatRate, vatInclusive)
-  const whtAmt   = calcWHT(subTotal, whtRate)
+  const vatAmt   = calcVAT(subTotal, parseFloat(vatRate) || 0, vatInclusive)
+  const whtAmt   = calcWHT(subTotal, parseFloat(whtRate) || 0)
   // FIX: exclusive VAT is added; inclusive VAT is already inside subTotal.
   // WHT is always deducted.
   const total = vatInclusive
@@ -116,9 +116,9 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
       due_date:       dueDate,
       payment_terms:  paymentTerms || undefined,
       notes:          notes || undefined,
-      vat_rate:       vatRate,
+      vat_rate:       parseFloat(vatRate) || 0,
       vat_inclusive:  vatInclusive,
-      wht_rate:       whtRate,         // FIX: was never sent before
+      wht_rate:       parseFloat(whtRate) || 0,
       items: validItems.map(it => ({
         description: it.description,
         unit_price:  Math.round(parseFloat(it.unitPrice) * 100),
@@ -255,7 +255,8 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">VAT Rate (%)</label>
                 <input type="number" min="0" max="100" value={vatRate}
-                  onChange={e => setVatRate(parseFloat(e.target.value) || 0)}
+                  onChange={e => setVatRate(e.target.value)}
+                  placeholder="0"
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
               </div>
               <div className="flex items-center gap-2">
@@ -269,7 +270,8 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">WHT Rate (%)</label>
               <input type="number" min="0" max="100" value={whtRate}
-                onChange={e => setWhtRate(parseFloat(e.target.value) || 0)}
+                onChange={e => setWhtRate(e.target.value)}
+                placeholder="0"
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
               <p className="text-[10px] text-gray-500 mt-1">Withholding tax deducted from total</p>
             </div>
@@ -281,13 +283,13 @@ export default function CreateInvoiceModal({ open, onOpenChange, onSuccess }: Pr
               <span>Subtotal</span>
               <span>₦{subTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
             </div>
-            {vatRate > 0 && (
+            {(parseFloat(vatRate) || 0) > 0 && (
               <div className="flex justify-between text-gray-400">
                 <span>VAT ({vatRate}%{vatInclusive ? ', inclusive' : ''})</span>
                 <span>{vatInclusive ? '−' : '+'}₦{vatAmt.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
               </div>
             )}
-            {whtRate > 0 && (
+            {(parseFloat(whtRate) || 0) > 0 && (
               <div className="flex justify-between text-gray-400">
                 <span>WHT ({whtRate}%)</span>
                 <span>−₦{whtAmt.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>

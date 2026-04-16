@@ -2,7 +2,7 @@ import api from './client'
 import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
 import type {
   Sale, CreateSaleRequest, SaleListParams,
-  Invoice, CreateInvoiceRequest, InvoiceListParams,
+  Invoice, CreateInvoiceRequest, UpdateInvoiceRequest, InvoiceListParams,
   Expense, CreateExpenseRequest, UpdateExpenseRequest, ExpenseMonthlySummary, ExpenseListParams,
   Debt, CreateDebtRequest, RecordDebtPaymentRequest, DebtListParams,
 } from './types'
@@ -41,8 +41,6 @@ export const createSale = async (data: CreateSaleRequest, idempotencyKey?: strin
   }
 }
 
-// listSales wraps the page/limit backend response into ApiCursorList shape
-// so it works with useInfiniteQuery on the sales page.
 export const listSales = async (params?: SaleListParams): Promise<ApiCursorList<Sale>> => {
   try {
     const p: Record<string, unknown> = { ...params }
@@ -87,9 +85,6 @@ export const getSale = async (id: string) => {
   }
 }
 
-// cancelSale marks a sale as cancelled without deleting it.
-// The backend reverses stock, customer stats, debt, and ledger in one transaction.
-// An optional reason is recorded in the sale's notes for the audit trail.
 export const cancelSale = async (id: string, reason?: string) => {
   try {
     const res = await api.patch<ApiSuccess<Sale>>(`/sales/${id}/cancel`, {
@@ -125,10 +120,6 @@ export const recordSalePayment = async (id: string, data: RecordSalePaymentReque
   }
 }
 
-// getSalesSummary fetches aggregated totals for a given month.
-// Cancelled sales are excluded at the backend via status != 'cancelled'.
-// Falls back gracefully by computing totals client-side if the endpoint
-// isn't available yet.
 export interface SalesMonthlySummary {
   year: number
   month: number
@@ -183,6 +174,24 @@ export const createInvoice = async (data: CreateInvoiceRequest) => {
   }
 }
 
+export const updateInvoice = async (id: string, data: UpdateInvoiceRequest) => {
+  try {
+    const res = await api.patch<ApiSuccess<Invoice>>(`/invoices/${id}`, data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const reviseInvoice = async (id: string) => {
+  try {
+    const res = await api.post<ApiSuccess<Invoice>>(`/invoices/${id}/revise`)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
 export const listInvoices = async (params?: InvoiceListParams) => {
   try {
     const res = await api.get<ApiCursorList<Invoice>>('/invoices', { params })
@@ -222,6 +231,33 @@ export const recordInvoicePayment = async (id: string, amount: number) => {
 export const cancelInvoice = async (id: string) => {
   try {
     await api.delete<ApiMessage>(`/invoices/${id}`)
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const downloadInvoicePdf = async (id: string, invoiceNumber?: string) => {
+  try {
+    const res = await api.get(`/invoices/${id}/pdf`, {
+      responseType: 'blob',
+    })
+
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    link.download = `${invoiceNumber || 'invoice'}.pdf`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    window.setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+    }, 1000)
   } catch (error) {
     handleApiError(error)
   }

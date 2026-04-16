@@ -250,10 +250,7 @@ export interface InitiateSubscriptionData {
   paystack_authorization_url?: string
 }
 
-// ─── NEW: Verify Subscription Types ───────────────────────────────────────────
-
 export interface VerifySubscriptionRequest {
-  /** Paystack transaction reference returned after the payment redirect */
   reference: string
 }
 
@@ -502,6 +499,10 @@ export interface Invoice {
   customer_id: string | null
   created_by: string
   invoice_number: string
+  public_token?: string
+  revision_number?: number
+  revised_from_invoice_id?: string | null
+  superseded_by_invoice_id?: string | null
   issue_date: string
   due_date: string
   sub_total: number
@@ -515,7 +516,15 @@ export interface Invoice {
   amount_paid: number
   balance_due: number
   currency: string
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | string
+  status:
+    | 'draft'
+    | 'sent'
+    | 'partial'
+    | 'paid'
+    | 'overdue'
+    | 'cancelled'
+    | 'superseded'
+    | string
   notes: string | null
   payment_terms: string | null
   sent_at: string | null
@@ -539,10 +548,22 @@ export interface CreateInvoiceItemRequest {
 export interface CreateInvoiceRequest {
   customer_id?: string
   store_id?: string
-  /** YYYY-MM-DD — optional, defaults to today on the server */
   issue_date?: string
-  /** YYYY-MM-DD */
   due_date: string
+  items: CreateInvoiceItemRequest[]
+  discount_amount?: number
+  vat_rate?: number
+  vat_inclusive?: boolean
+  wht_rate?: number
+  notes?: string
+  payment_terms?: string
+}
+
+export interface UpdateInvoiceRequest {
+  customer_id?: string
+  store_id?: string
+  issue_date?: string
+  due_date?: string
   items: CreateInvoiceItemRequest[]
   discount_amount?: number
   vat_rate?: number
@@ -557,6 +578,51 @@ export interface InvoiceListParams extends CursorParams {
   customer_id?: string
   date_from?: string
   date_to?: string
+}
+
+export interface PublicInvoiceCustomer {
+  id: string
+  first_name: string
+  last_name: string
+  email: string | null
+  phone_number: string | null
+}
+
+export interface PublicInvoice {
+  id: string
+  invoice_number: string
+  public_token?: string
+  revision_number?: number
+  issue_date: string
+  due_date: string
+  sub_total: number
+  discount_amount: number
+  vat_rate: number
+  vat_inclusive: boolean
+  vat_amount: number
+  wht_rate: number
+  wht_amount: number
+  total_amount: number
+  amount_paid: number
+  balance_due: number
+  currency: string
+  status:
+    | 'draft'
+    | 'sent'
+    | 'partial'
+    | 'paid'
+    | 'overdue'
+    | 'cancelled'
+    | 'superseded'
+    | string
+  notes: string | null
+  payment_terms: string | null
+  sent_at: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+  customer?: PublicInvoiceCustomer
+  items?: InvoiceItem[]
 }
 
 // ─── Expense ──────────────────────────────────────────────────────────────────
@@ -862,7 +928,6 @@ export interface BusinessKeywordsResponse {
     keywords: string[]
   }
 }
-
 
 export interface PublicJobItem {
   id: string
