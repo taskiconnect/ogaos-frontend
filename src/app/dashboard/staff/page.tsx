@@ -4,34 +4,65 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listStaff } from '@/lib/api/business'
-import { createStaff, deactivateStaff } from '@/lib/api/auth'
+import { listStaff, inviteStaff, deactivateStaff } from '@/lib/api/business'
 import Sidebar from '@/components/dashboard/Sidebar'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import { UserPlus, Users, UserX, Check, X, Loader2, Circle, Mail, Phone, Calendar } from 'lucide-react'
+import { UserPlus, Users, UserX, Check, X, Loader2, Mail, Phone, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { StaffMember } from '@/lib/api/business'
+import type { StaffMember, InviteStaffRequest } from '@/lib/api/types'
 
 function fmtDate(iso: string) {
-  return new Intl.DateTimeFormat('en-NG', { day:'numeric', month:'short', year:'numeric' }).format(new Date(iso))
+  return new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
+}
+
+// Resolve a field from nested user object OR flat on member.
+// Handles both API shapes: { user: { first_name } } and { first_name } directly.
+function resolve(member: StaffMember, field: string): string {
+  const u = member.user as any
+  const m = member as any
+  return u?.[field] || m[field] || ''
 }
 
 // ─── Invite Modal ─────────────────────────────────────────────────────────────
 
-function InviteModal({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (v: boolean) => void; onSuccess: () => void }) {
+function InviteModal({
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onSuccess: () => void
+}) {
   const [firstName, setFirstName] = useState('')
   const [lastName,  setLastName]  = useState('')
   const [email,     setEmail]     = useState('')
   const [phone,     setPhone]     = useState('')
   const [password,  setPassword]  = useState('')
+  const [jobTitle,  setJobTitle]  = useState('')
+  const [department, setDepartment] = useState('')
   const [error,     setError]     = useState('')
 
-  function reset() { setFirstName(''); setLastName(''); setEmail(''); setPhone(''); setPassword(''); setError('') }
+  function reset() {
+    setFirstName(''); setLastName(''); setEmail(''); setPhone('')
+    setPassword(''); setJobTitle(''); setDepartment(''); setError('')
+  }
 
   const mut = useMutation({
-    mutationFn: () => createStaff({ first_name: firstName, last_name: lastName, email, phone_number: phone, password }),
+    mutationFn: () => {
+      const payload: InviteStaffRequest = {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone_number: phone,
+        password,
+      }
+      if (jobTitle.trim())   payload.job_title  = jobTitle.trim()
+      if (department.trim()) payload.department = department.trim()
+      return inviteStaff(payload)
+    },
     onSuccess: () => { onSuccess(); onOpenChange(false); reset() },
-    onError: (e: any) => setError(e?.response?.data?.message ?? 'Failed to invite staff'),
+    onError: (e: any) => setError(e?.message ?? 'Failed to invite staff'),
   })
 
   function handleSubmit() {
@@ -77,6 +108,18 @@ function InviteModal({ open, onOpenChange, onSuccess }: { open: boolean; onOpenC
             <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="08012345678"
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none" />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Job Title</label>
+              <input value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="Cashier"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Department</label>
+              <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none" />
+            </div>
+          </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Temporary Password *</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="They can change this later"
@@ -84,7 +127,6 @@ function InviteModal({ open, onOpenChange, onSuccess }: { open: boolean; onOpenC
           </div>
           <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl px-4 py-3 text-xs text-blue-300">
             Staff members can access sales, customers, and products but cannot change business settings.
-            Maximum 2 staff on Starter plan.
           </div>
           {error && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>}
           <button onClick={handleSubmit} disabled={mut.isPending}
@@ -102,15 +144,14 @@ function InviteModal({ open, onOpenChange, onSuccess }: { open: boolean; onOpenC
 
 export default function StaffPage() {
   const qc = useQueryClient()
-  const [showInvite, setShowInvite]   = useState(false)
-  const [confirming, setConfirming]   = useState<string | null>(null)
+  const [showInvite, setShowInvite] = useState(false)
+  const [confirming, setConfirming] = useState<string | null>(null)
 
-  const { data, isLoading } = useQuery({ queryKey: ['staff'], queryFn: listStaff })
+  const { data, isLoading } = useQuery({ queryKey: ['staff'], queryFn: () => listStaff() })
   const staff: StaffMember[] = Array.isArray(data) ? data : []
 
-  const activeStaff   = staff.filter(s => s.is_active !== false)
-  const inactiveStaff = staff.filter(s => s.is_active === false)
-  const canInvite     = activeStaff.length < 2
+  const activeStaff   = staff.filter(s => s.is_active)
+  const inactiveStaff = staff.filter(s => !s.is_active)
 
   const deactivateMut = useMutation({
     mutationFn: (id: string) => deactivateStaff(id),
@@ -129,8 +170,8 @@ export default function StaffPage() {
               <h1 className="text-3xl font-bold tracking-tight">Staff Management</h1>
               <p className="text-gray-400 mt-1 text-sm">Invite and manage your team members</p>
             </div>
-            <button onClick={() => setShowInvite(true)} disabled={!canInvite}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            <button onClick={() => setShowInvite(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0"
               style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
               <UserPlus className="w-4 h-4" /> Invite Staff
             </button>
@@ -140,8 +181,7 @@ export default function StaffPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl p-5">
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Active</p>
-              <p className="text-2xl font-bold text-emerald-400">{activeStaff.length} / 2</p>
-              <p className="text-xs text-gray-500 mt-0.5">Starter plan limit</p>
+              <p className="text-2xl font-bold text-emerald-400">{activeStaff.length}</p>
             </div>
             <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl p-5">
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Total</p>
@@ -152,13 +192,6 @@ export default function StaffPage() {
               <p className="text-2xl font-bold text-gray-500">{inactiveStaff.length}</p>
             </div>
           </div>
-
-          {/* Slots warning */}
-          {!canInvite && (
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-sm text-yellow-300">
-              You have reached the 2-staff limit on the Starter plan. Deactivate a member to invite someone new, or upgrade your plan.
-            </div>
-          )}
 
           {/* Staff list */}
           {isLoading ? (
@@ -176,89 +209,111 @@ export default function StaffPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {staff.map(member => (
-                <div key={member.id}
-                  className={cn('bg-[rgba(255,255,255,0.03)] border rounded-2xl p-5 flex items-start gap-4',
-                    member.is_active !== false ? 'border-white/10' : 'border-white/5 opacity-60')}>
+              {staff.map(member => {
+                // resolve() checks member.user.field first, then member.field directly
+                const firstName   = resolve(member, 'first_name')
+                const lastName    = resolve(member, 'last_name')
+                const email       = resolve(member, 'email')
+                const phoneNumber = resolve(member, 'phone_number')
+                const displayName = (firstName || lastName)
+                  ? `${firstName} ${lastName}`.trim()
+                  : email || '—'
+                const initials = firstName?.[0]?.toUpperCase() ?? email?.[0]?.toUpperCase() ?? '?'
 
-                  {/* Avatar */}
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                    <span className="text-base font-bold text-primary">
-                      {member.first_name?.[0]?.toUpperCase() ?? '?'}
-                    </span>
-                  </div>
+                return (
+                  <div key={member.id}
+                    className={cn('bg-[rgba(255,255,255,0.03)] border rounded-2xl p-5 flex items-start gap-4',
+                      member.is_active ? 'border-white/10' : 'border-white/5 opacity-60')}>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-white">{member.first_name} {member.last_name}</p>
-                      <span className={cn('text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border',
-                        member.is_active !== false
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : 'bg-gray-500/10 text-gray-500 border-gray-500/20')}>
-                        {member.is_active !== false ? 'Active' : 'Inactive'}
-                      </span>
+                    {/* Avatar */}
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                      <span className="text-base font-bold text-primary">{initials}</span>
                     </div>
-                    <div className="flex flex-col gap-1 mt-2">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                        <Mail className="w-3 h-3 text-gray-500" />{member.email}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-white">{displayName}</p>
+                        {member.job_title && (
+                          <span className="text-[10px] text-gray-500">{member.job_title}</span>
+                        )}
+                        <span className={cn('text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border',
+                          member.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-gray-500/10 text-gray-500 border-gray-500/20')}>
+                          {member.is_active ? 'Active' : 'Inactive'}
+                        </span>
                       </div>
-                      {member.phone_number && (
-                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                          <Phone className="w-3 h-3 text-gray-500" />{member.phone_number}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Calendar className="w-3 h-3" />Joined {fmtDate(member.joined_at)}
+                      <div className="flex flex-col gap-1 mt-2">
+                        {email && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                            <Mail className="w-3 h-3 text-gray-500" />{email}
+                          </div>
+                        )}
+                        {phoneNumber && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                            <Phone className="w-3 h-3 text-gray-500" />{phoneNumber}
+                          </div>
+                        )}
+                        {member.department && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                            <span className="text-gray-500">Dept:</span> {member.department}
+                          </div>
+                        )}
+                        {member.joined_at && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Calendar className="w-3 h-3" />Joined {fmtDate(member.joined_at)}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  {member.is_active !== false && (
-                    <div className="shrink-0">
-                      {confirming === member.id ? (
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-gray-400">Deactivate?</p>
-                          <button onClick={() => deactivateMut.mutate(member.id)} disabled={deactivateMut.isPending}
-                            className="w-7 h-7 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 flex items-center justify-center">
-                            {deactivateMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    {/* Actions */}
+                    {member.is_active && (
+                      <div className="shrink-0">
+                        {confirming === member.id ? (
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-gray-400">Deactivate?</p>
+                            <button onClick={() => deactivateMut.mutate(member.id)} disabled={deactivateMut.isPending}
+                              className="w-7 h-7 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 flex items-center justify-center">
+                              {deactivateMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            </button>
+                            <button onClick={() => setConfirming(null)}
+                              className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-gray-400 flex items-center justify-center">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setConfirming(member.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 hover:bg-red-500/20 transition-colors font-semibold">
+                            <UserX className="w-3.5 h-3.5" /> Deactivate
                           </button>
-                          <button onClick={() => setConfirming(null)}
-                            className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-gray-400 flex items-center justify-center">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setConfirming(member.id)}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 hover:bg-red-500/20 transition-colors font-semibold">
-                          <UserX className="w-3.5 h-3.5" /> Deactivate
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 
           {/* Permissions info */}
-          <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-5 space-y-3">
+          <div className="bg-white/2 border border-white/10 rounded-2xl p-5 space-y-3">
             <h3 className="text-sm font-semibold text-white">Staff Permissions</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {[
+              {([
                 ['Record sales', true], ['View customers', true], ['Add customers', true],
                 ['View products', true], ['Adjust stock', true], ['View invoices', true],
                 ['Record expenses', true], ['Record debt payments', true],
                 ['Change business settings', false], ['Delete records', false],
                 ['View financial reports', false], ['Manage other staff', false],
-              ].map(([label, allowed]) => (
-                <div key={label as string} className="flex items-center gap-2">
+              ] as [string, boolean][]).map(([label, allowed]) => (
+                <div key={label} className="flex items-center gap-2">
                   <div className={cn('w-4 h-4 rounded-full flex items-center justify-center shrink-0',
                     allowed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400')}>
                     {allowed ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
                   </div>
-                  <span className={allowed ? 'text-gray-300' : 'text-gray-500'}>{label as string}</span>
+                  <span className={allowed ? 'text-gray-300' : 'text-gray-500'}>{label}</span>
                 </div>
               ))}
             </div>
@@ -267,8 +322,11 @@ export default function StaffPage() {
         </main>
       </div>
 
-      <InviteModal open={showInvite} onOpenChange={setShowInvite}
-        onSuccess={() => qc.invalidateQueries({ queryKey: ['staff'] })} />
+      <InviteModal
+        open={showInvite}
+        onOpenChange={setShowInvite}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['staff'] })}
+      />
     </div>
   )
 }

@@ -35,6 +35,15 @@ function toIsoUtcMidnight(dateString: string): string {
   return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0)).toISOString()
 }
 
+function getErrorMessage(error: any, fallback: string): string {
+  return (
+    error?.message ||
+    error?.response?.data?.message ||
+    error?.data?.message ||
+    fallback
+  )
+}
+
 export default function CreateExpenseModal({
   open,
   onOpenChange,
@@ -59,7 +68,7 @@ export default function CreateExpenseModal({
       reset()
     },
     onError: (e: any) => {
-      setError(e?.response?.data?.message ?? 'Failed to add expense')
+      setError(getErrorMessage(e, 'Failed to add expense'))
     },
   })
 
@@ -125,9 +134,11 @@ export default function CreateExpenseModal({
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
+
       <div className="relative max-h-[95vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0f0f14] shadow-2xl sm:max-w-lg sm:rounded-3xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#0f0f14] px-6 py-4">
           <h2 className="text-lg font-bold text-white">Add Expense</h2>
+
           <button
             type="button"
             onClick={() => onOpenChange(false)}
@@ -142,6 +153,7 @@ export default function CreateExpenseModal({
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
               Expense Type
             </label>
+
             <div className="flex gap-2">
               {(['opex', 'capex'] as const).map((type) => (
                 <button
@@ -161,6 +173,7 @@ export default function CreateExpenseModal({
                 </button>
               ))}
             </div>
+
             <p className="mt-1.5 text-xs text-gray-500">
               {expenseType === 'opex'
                 ? 'Operating expense — day-to-day costs'
@@ -172,17 +185,14 @@ export default function CreateExpenseModal({
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
               Category
             </label>
+
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className={selectCls}
             >
               {CATEGORIES.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                  className="bg-[#0f0f14] text-white"
-                >
+                <option key={item} value={item} className="bg-[#0f0f14] text-white">
                   {item}
                 </option>
               ))}
@@ -193,6 +203,7 @@ export default function CreateExpenseModal({
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
               Description
             </label>
+
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -206,6 +217,7 @@ export default function CreateExpenseModal({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Amount (₦)
               </label>
+
               <input
                 type="number"
                 min="0"
@@ -221,6 +233,7 @@ export default function CreateExpenseModal({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Date
               </label>
+
               <input
                 type="date"
                 value={expenseDate}
@@ -235,6 +248,7 @@ export default function CreateExpenseModal({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
                 VAT Rate (%)
               </label>
+
               <input
                 type="number"
                 min="0"
@@ -264,6 +278,7 @@ export default function CreateExpenseModal({
                   )}
                 />
               </button>
+
               <span className="text-xs text-gray-400">VAT inclusive</span>
             </div>
           </div>
@@ -273,6 +288,7 @@ export default function CreateExpenseModal({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Asset Life (years)
               </label>
+
               <input
                 type="number"
                 min="1"
@@ -302,6 +318,7 @@ export default function CreateExpenseModal({
                 )}
               />
             </button>
+
             <div>
               <p className="text-sm font-medium text-white">Tax deductible</p>
               <p className="text-xs text-gray-500">

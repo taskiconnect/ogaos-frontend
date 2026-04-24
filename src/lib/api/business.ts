@@ -1,10 +1,12 @@
+// src/lib/api/business.ts
 import api from './client'
 import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
 import type {
-  Business, UpdateBusinessRequest,
+  Business, UpdateBusinessRequest, SetBusinessKeywordsRequest,
   Store, CreateStoreRequest, UpdateStoreRequest,
   Customer, CreateCustomerRequest, UpdateCustomerRequest, CustomerListParams,
   Product, CreateProductRequest, UpdateProductRequest, AdjustStockRequest, ProductListParams,
+  StaffMember, InviteStaffRequest, UpdateStaffRequest, StaffListParams,
 } from './types'
 
 function handleApiError(error: any): never {
@@ -68,6 +70,24 @@ export const setBusinessVisibility = async (isPublic: boolean) => {
   }
 }
 
+export const getBusinessKeywords = async () => {
+  try {
+    const res = await api.get<ApiSuccess<{ keywords: string[] }>>('/business/me/keywords')
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const setBusinessKeywords = async (data: SetBusinessKeywordsRequest) => {
+  try {
+    const res = await api.put<ApiSuccess<{ keywords: string[] }>>('/business/me/keywords', data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
 // ─── Storefront gallery ───────────────────────────────────────────────────────
 
 export const addBusinessGalleryImage = async (file: File) => {
@@ -98,6 +118,34 @@ export const setStorefrontVideo = async (videoUrl: string) => {
       video_url: videoUrl,
     })
     return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+// ─── Staff ────────────────────────────────────────────────────────────────────
+
+export const listStaff = async (params?: StaffListParams) => {
+  try {
+    const res = await api.get<ApiSuccess<StaffMember[]>>('/staff', { params })
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const inviteStaff = async (data: InviteStaffRequest) => {
+  try {
+    const res = await api.post<ApiSuccess<StaffMember>>('/staff', data)
+    return res.data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+export const deactivateStaff = async (id: string) => {
+  try {
+    await api.delete<ApiMessage>(`/staff/${id}`)
   } catch (error) {
     handleApiError(error)
   }
@@ -281,28 +329,6 @@ export const scanProductByBarcode = async (barcode: string) => {
     const res = await api.get<ApiSuccess<Product>>('/products/scan', {
       params: { barcode },
     })
-    return res.data.data
-  } catch (error) {
-    handleApiError(error)
-  }
-}
-
-// ─── Staff ────────────────────────────────────────────────────────────────────
-
-export interface StaffMember {
-  id: string
-  first_name: string
-  last_name: string
-  email: string
-  phone_number: string
-  role: string
-  is_active: boolean
-  joined_at: string
-}
-
-export const listStaff = async () => {
-  try {
-    const res = await api.get<{ success: boolean; data: StaffMember[] }>('/staff')
     return res.data.data
   } catch (error) {
     handleApiError(error)

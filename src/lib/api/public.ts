@@ -1,29 +1,14 @@
-// lib/api/public.ts
-//
-// ─── NOTE ────────────────────────────────────────────────────────────────────
-// All functions in this file hit the Go backend DIRECTLY via NEXT_PUBLIC_API_URL.
-// We intentionally bypass the Next.js proxy (src/lib/api/proxy.ts) here because:
-//   1. These are all unauthenticated public endpoints — no auth tokens to protect.
-//   2. Hitting the backend directly eliminates the extra proxy hop, improving
-//      performance for both SSR (page.tsx server components) and client-side calls.
-//   3. The proxy is reserved for authenticated routes where the backend URL
-//      and user tokens must be hidden from the browser.
-//
-// getPublicBusinessFull uses `Connection: close` to prevent Node.js's HTTP
-// connection pool from reusing stale connections to the Go backend during SSR.
-// Other functions are called client-side (browser) so they don't have this issue.
-//
-// In production, set NEXT_PUBLIC_API_URL in your Vercel environment variables:
-//   NEXT_PUBLIC_API_URL=https://api.ogaos.com/api/v1
-// ─────────────────────────────────────────────────────────────────────────────
+// src/lib/api/public.ts
 
 import type {
   PublicBusinessPage,
-  PurchaseDigitalProductRequest,
-  PurchaseDigitalProductResponse,
   PublicOrderFulfillmentResponse,
   PublicBusinessSearchResponse,
   SearchPublicBusinessesParams,
+  PublicDigitalStoreResponse,
+  PublicDigitalProductResponse,
+  InitializeDigitalCheckoutRequest,
+  InitializeDigitalCheckoutResponse,
 } from '@/types/public'
 
 const API_BASE =
@@ -42,8 +27,6 @@ export async function getPublicBusinessFull(slug: string): Promise<PublicBusines
     method: 'GET',
     next: { revalidate: 60 },
     headers: {
-      // Prevent Node.js SSR connection pool from reusing stale connections
-      // to the Go backend, which causes ECONNRESET errors.
       Connection: 'close',
     },
   })
@@ -79,6 +62,7 @@ export async function searchPublicBusinesses(
   if (typeof params.lat === 'number' && !isNaN(params.lat)) {
     searchParams.set('lat', String(params.lat))
   }
+
   if (typeof params.lng === 'number' && !isNaN(params.lng)) {
     searchParams.set('lng', String(params.lng))
   }
@@ -115,35 +99,104 @@ export async function searchPublicBusinesses(
   return data
 }
 
-export async function purchaseDigitalProduct(
-  businessId: string,
-  payload: PurchaseDigitalProductRequest
-): Promise<PurchaseDigitalProductResponse> {
-  const res = await fetch(`${API_BASE}/public/store/${businessId}/purchase`, {
-    method: 'POST',
+export async function getPublicDigitalStore(
+  slug: string
+): Promise<PublicDigitalStoreResponse> {
+  const res = await fetch(`${API_BASE}/public/digital-store/${slug}`, {
+    method: 'GET',
+    next: { revalidate: 60 },
     headers: {
-      'Content-Type': 'application/json',
+      Connection: 'close',
     },
-    body: JSON.stringify(payload),
-    cache: 'no-store',
   })
 
-  const json = await parseJson<PurchaseDigitalProductResponse>(res)
+  const json = await parseJson<{
+    success?: boolean
+    message?: string
+    data?: PublicDigitalStoreResponse
+  }>(res)
 
   if (!res.ok) {
-    throw new Error(json?.message || 'Failed to start purchase')
+    throw new Error(json?.message || 'Failed to fetch digital store')
   }
 
-  return json ?? { success: true, message: 'Purchase initiated' }
+  const data = json?.data
+
+  if (!data || !data.business || !Array.isArray(data.products)) {
+    throw new Error('Invalid digital store response')
+  }
+
+  return data
+}
+
+export async function getPublicDigitalProduct(
+  slug: string
+): Promise<PublicDigitalProductResponse> {
+  const res = await fetch(`${API_BASE}/public/digital-store/product/${slug}`, {
+    method: 'GET',
+    next: { revalidate: 60 },
+    headers: {
+      Connection: 'close',
+    },
+  })
+
+  const json = await parseJson<{
+    success?: boolean
+    message?: string
+    data?: PublicDigitalProductResponse
+  }>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to fetch digital product')
+  }
+
+  const data = json?.data
+
+  if (!data || !data.id || !data.business) {
+    throw new Error('Invalid digital product response')
+  }
+
+  return data
+}
+
+export async function initializeDigitalCheckout(
+  productId: string,
+  payload: InitializeDigitalCheckoutRequest
+): Promise<InitializeDigitalCheckoutResponse> {
+  const res = await fetch(
+    `${API_BASE}/public/digital-store/${productId}/initialize-payment`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    }
+  )
+
+  const json = await parseJson<InitializeDigitalCheckoutResponse>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to initialize payment')
+  }
+
+  return json ?? { message: 'Payment initialized' }
 }
 
 export async function getOrderFulfillment(
-  orderId: string
+  orderId: string,
+  token: string
 ): Promise<PublicOrderFulfillmentResponse> {
-  const res = await fetch(`${API_BASE}/public/orders/${orderId}/fulfillment`, {
-    method: 'GET',
-    cache: 'no-store',
-  })
+  const qs = new URLSearchParams({ token })
+
+  const res = await fetch(
+    `${API_BASE}/public/digital-orders/${orderId}/fulfillment?${qs.toString()}`,
+    {
+      method: 'GET',
+      cache: 'no-store',
+    }
+  )
 
   const json = await parseJson<PublicOrderFulfillmentResponse>(res)
 
@@ -151,13 +204,9 @@ export async function getOrderFulfillment(
     throw new Error(json?.message || 'Failed to fetch fulfillment')
   }
 
-  return json ?? { success: false, message: 'No fulfillment data returned' }
-}
-
-export function getOrderDownloadUrl(orderId: string): string {
-  return `${API_BASE}/public/orders/${orderId}/download`
+  return json ?? { message: 'No fulfillment data returned' }
 }
 
 export function getTokenDownloadUrl(token: string): string {
-  return `${API_BASE}/public/downloads/${token}`
+  return `${API_BASE}/public/digital-downloads/${token}`
 }

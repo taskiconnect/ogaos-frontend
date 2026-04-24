@@ -3,27 +3,46 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useMemo, useRef } from 'react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listDigitalProducts, deleteDigitalProduct, updateDigitalProduct, uploadDigitalFile, uploadDigitalCover } from '@/lib/api/digital'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  listDigitalProducts,
+  deleteDigitalProduct,
+  updateDigitalProduct,
+  uploadDigitalFile,
+  uploadDigitalCover,
+} from '@/lib/api/digital'
+import { getBusiness } from '@/lib/api/business'
 import Sidebar from '@/components/dashboard/Sidebar'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import { Plus, ShoppingBag, ChevronDown, Trash2, Eye, EyeOff, Upload, Image, Loader2, Pencil, Globe } from 'lucide-react'
+import {
+  Plus, ShoppingBag, ChevronDown, Trash2, Eye, EyeOff,
+  Upload, Image, Loader2, Pencil,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DigitalProduct } from '@/lib/api/types'
 import CreateDigitalModal from '@/components/digital/CreateDigitalModal'
 import EditDigitalDrawer from '@/components/digital/EditDigitalDrawer'
 
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ?? ''
+
 function fmt(kobo: number) {
   const n = kobo / 100
-  if (n >= 1_000_000) return `₦${(n/1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `₦${(n/1_000).toFixed(0)}k`
+  if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `₦${(n / 1_000).toFixed(0)}k`
   return `₦${n.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
 }
 function fmtBytes(bytes: number | null) {
   if (!bytes) return null
-  if (bytes >= 1_000_000) return `${(bytes/1_000_000).toFixed(1)} MB`
-  if (bytes >= 1_000)     return `${(bytes/1_000).toFixed(0)} KB`
+  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
+  if (bytes >= 1_000)     return `${(bytes / 1_000).toFixed(0)} KB`
   return `${bytes} B`
+}
+
+const FULFILLMENT_LABELS: Record<string, string> = {
+  file_download:    'File Download',
+  course_access:    'Course Access',
+  external_link:    'External Link',
+  manual_delivery:  'Manual Delivery',
 }
 
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
@@ -37,13 +56,23 @@ function MiniStat({ label, value, color }: { label: string; value: string; color
 
 export default function DigitalProductsPage() {
   const qc = useQueryClient()
-  const [showCreate, setShowCreate] = useState(false)
-  const [selected,   setSelected]   = useState<DigitalProduct | null>(null)
-  const [deleting,   setDeleting]   = useState<string | null>(null)
-  const [uploading,  setUploading]  = useState<string | null>(null)
+  const [showCreate,     setShowCreate]     = useState(false)
+  const [selected,       setSelected]       = useState<DigitalProduct | null>(null)
+  const [deleting,       setDeleting]       = useState<string | null>(null)
+  const [uploading,      setUploading]      = useState<string | null>(null)
+  const [activeUploadId, setActiveUploadId] = useState<string | null>(null)
   const fileRef  = useRef<HTMLInputElement>(null)
   const coverRef = useRef<HTMLInputElement>(null)
-  const [activeUploadId, setActiveUploadId] = useState<string | null>(null)
+
+  const { data: bizData } = useQuery({
+    queryKey: ['business-me'],
+    queryFn: getBusiness,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const businessName = bizData?.name ?? ''
+  const businessSlug = bizData?.slug ?? ''
+  const businessLogoURL = bizData?.logo_url ?? ''
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ['digital-products'],
@@ -53,7 +82,8 @@ export default function DigitalProductsPage() {
   })
 
   const allProducts: DigitalProduct[] = useMemo(
-    () => (data?.pages ?? []).flatMap((p: any) => p.data ?? []), [data]
+    () => (data?.pages ?? []).flatMap((p: any) => p.data ?? []),
+    [data]
   )
 
   const publishedCount = allProducts.filter(p => p.is_published).length
@@ -65,7 +95,8 @@ export default function DigitalProductsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['digital-products'] }); setDeleting(null) },
   })
   const togglePublishMut = useMutation({
-    mutationFn: ({ id, val }: { id: string; val: boolean }) => updateDigitalProduct(id, { is_published: val }),
+    mutationFn: ({ id, val }: { id: string; val: boolean }) =>
+      updateDigitalProduct(id, { is_published: val }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['digital-products'] }),
   })
   const uploadFileMut = useMutation({
@@ -91,7 +122,8 @@ export default function DigitalProductsPage() {
               <h1 className="text-3xl font-bold tracking-tight">Digital Products</h1>
               <p className="text-gray-400 mt-1 text-sm">Sell files, courses, templates and more</p>
             </div>
-            <button onClick={() => setShowCreate(true)}
+            <button
+              onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0"
               style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
               <Plus className="w-4 h-4" /> New Product
@@ -115,31 +147,47 @@ export default function DigitalProductsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {allProducts.map(product => (
-                <div key={product.id} className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl overflow-hidden flex flex-col">
+                <div key={product.id}
+                  className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl overflow-hidden flex flex-col">
 
-                  {/* Cover image */}
                   <div className="relative h-40 bg-white/[0.02] flex items-center justify-center group">
                     {product.cover_image_url ? (
-                      <img src={product.cover_image_url} alt={product.title} className="w-full h-full object-cover" />
+                      <img src={product.cover_image_url} alt={product.title}
+                        className="w-full h-full object-cover" />
                     ) : (
                       <ShoppingBag className="w-12 h-12 text-gray-600" />
                     )}
                     <button
                       onClick={() => { setActiveUploadId(product.id); coverRef.current?.click() }}
                       className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-xs text-white font-semibold">
-                      {uploading === product.id + '-cover' ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Image className="w-4 h-4" /> Change Cover</>}
+                      {uploading === product.id + '-cover'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <><Image className="w-4 h-4" /> Change Cover</>}
                     </button>
-                    <span className={cn('absolute top-2 right-2 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border',
-                      product.is_published ? 'bg-emerald-500/80 text-white border-emerald-400' : 'bg-black/60 text-gray-400 border-white/20')}>
+                    <span className={cn(
+                      'absolute top-2 right-2 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border',
+                      product.is_published
+                        ? 'bg-emerald-500/80 text-white border-emerald-400'
+                        : 'bg-black/60 text-gray-400 border-white/20'
+                    )}>
                       {product.is_published ? 'Live' : 'Draft'}
                     </span>
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 p-4 space-y-3">
                     <div>
                       <h3 className="text-sm font-semibold text-white line-clamp-1">{product.title}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5 capitalize">{product.type}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-xs text-gray-500 capitalize">{product.type}</p>
+                        {product.fulfillment_mode && (
+                          <>
+                            <span className="text-gray-700">·</span>
+                            <p className="text-xs text-gray-600">
+                              {FULFILLMENT_LABELS[product.fulfillment_mode] ?? product.fulfillment_mode}
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-gray-400 line-clamp-2">{product.description}</p>
 
@@ -147,25 +195,39 @@ export default function DigitalProductsPage() {
                       <span className="text-lg font-bold text-white">{fmt(product.price)}</span>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">{product.sales_count} sold</p>
-                        {product.file_size && <p className="text-xs text-gray-600">{fmtBytes(product.file_size)}</p>}
+                        {product.file_size && (
+                          <p className="text-xs text-gray-600">{fmtBytes(product.file_size)}</p>
+                        )}
                       </div>
                     </div>
 
-                    {/* File upload status */}
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={cn('font-medium', product.file_size ? 'text-emerald-400' : 'text-yellow-400')}>
-                        {product.file_size ? 'File uploaded' : 'No file yet'}
-                      </span>
-                      <button
-                        onClick={() => { setActiveUploadId(product.id); fileRef.current?.click() }}
-                        className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
-                        {uploading === product.id + '-file' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-                        {product.file_size ? 'Replace' : 'Upload'}
-                      </button>
-                    </div>
+                    {product.fulfillment_mode === 'file_download' && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className={cn('font-medium',
+                          product.file_size ? 'text-emerald-400' : 'text-yellow-400')}>
+                          {product.file_size ? 'File uploaded' : 'No file yet'}
+                        </span>
+                        <button
+                          onClick={() => { setActiveUploadId(product.id); fileRef.current?.click() }}
+                          className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
+                          {uploading === product.id + '-file'
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <Upload className="w-3 h-3" />}
+                          {product.file_size ? 'Replace' : 'Upload'}
+                        </button>
+                      </div>
+                    )}
+                    {(product.fulfillment_mode === 'course_access' ||
+                      product.fulfillment_mode === 'external_link') && (
+                      <div className="text-xs">
+                        <span className={cn('font-medium',
+                          product.access_redirect_url ? 'text-emerald-400' : 'text-yellow-400')}>
+                          {product.access_redirect_url ? 'Fulfillment link set' : 'No fulfillment link yet'}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2 p-3 border-t border-white/5">
                     <button onClick={() => setSelected(product)}
                       className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-300 hover:bg-white/10 transition-colors flex items-center justify-center gap-1">
@@ -173,18 +235,26 @@ export default function DigitalProductsPage() {
                     </button>
                     <button onClick={() => togglePublishMut.mutate({ id: product.id, val: !product.is_published })}
                       disabled={togglePublishMut.isPending}
-                      className={cn('flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors flex items-center justify-center gap-1',
+                      className={cn(
+                        'flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors flex items-center justify-center gap-1',
                         product.is_published
                           ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20'
-                          : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20')}>
-                      {product.is_published ? <><EyeOff className="w-3 h-3" /> Unpublish</> : <><Eye className="w-3 h-3" /> Publish</>}
+                          : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                      )}>
+                      {product.is_published
+                        ? <><EyeOff className="w-3 h-3" /> Unpublish</>
+                        : <><Eye className="w-3 h-3" /> Publish</>}
                     </button>
                     {deleting === product.id ? (
                       <div className="flex gap-1">
                         <button onClick={() => deleteMut.mutate(product.id)}
-                          className="px-2 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-xs text-red-400 font-semibold">Yes</button>
+                          className="px-2 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-xs text-red-400 font-semibold">
+                          Yes
+                        </button>
                         <button onClick={() => setDeleting(null)}
-                          className="px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">No</button>
+                          className="px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">
+                          No
+                        </button>
                       </div>
                     ) : (
                       <button onClick={() => setDeleting(product.id)}
@@ -202,7 +272,8 @@ export default function DigitalProductsPage() {
             <div className="text-center">
               <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10">
-                <ChevronDown className="w-4 h-4" />{isFetchingNextPage ? 'Loading...' : 'Load more'}
+                <ChevronDown className="w-4 h-4" />
+                {isFetchingNextPage ? 'Loading...' : 'Load more'}
               </button>
             </div>
           )}
@@ -210,23 +281,42 @@ export default function DigitalProductsPage() {
         </main>
       </div>
 
-      {/* Hidden file inputs */}
       <input ref={fileRef} type="file" className="hidden"
         onChange={e => {
           const f = e.target.files?.[0]
-          if (f && activeUploadId) { setUploading(activeUploadId + '-file'); uploadFileMut.mutate({ id: activeUploadId, file: f }) }
+          if (f && activeUploadId) {
+            setUploading(activeUploadId + '-file')
+            uploadFileMut.mutate({ id: activeUploadId, file: f })
+          }
         }} />
       <input ref={coverRef} type="file" accept="image/*" className="hidden"
         onChange={e => {
           const f = e.target.files?.[0]
-          if (f && activeUploadId) { setUploading(activeUploadId + '-cover'); uploadCoverMut.mutate({ id: activeUploadId, file: f }) }
+          if (f && activeUploadId) {
+            setUploading(activeUploadId + '-cover')
+            uploadCoverMut.mutate({ id: activeUploadId, file: f })
+          }
         }} />
 
-      <CreateDigitalModal open={showCreate} onOpenChange={setShowCreate}
-        onSuccess={() => qc.invalidateQueries({ queryKey: ['digital-products'] })} />
+      <CreateDigitalModal
+        open={showCreate}
+        onOpenChange={setShowCreate}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['digital-products'] })}
+      />
+
       {selected && (
-        <EditDigitalDrawer product={selected} onClose={() => setSelected(null)}
-          onSuccess={() => { qc.invalidateQueries({ queryKey: ['digital-products'] }); setSelected(null) }} />
+        <EditDigitalDrawer
+          product={selected}
+          businessName={businessName}
+          businessSlug={businessSlug}
+          businessLogoURL={businessLogoURL}
+          frontendURL={FRONTEND_URL}
+          onClose={() => setSelected(null)}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ['digital-products'] })
+            setSelected(null)
+          }}
+        />
       )}
     </div>
   )

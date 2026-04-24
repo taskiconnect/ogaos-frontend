@@ -190,6 +190,17 @@ export interface UpdateBusinessRequest {
   country?: string
 }
 
+export interface SetBusinessKeywordsRequest {
+  keywords: string[]
+}
+
+export interface BusinessKeywordsResponse {
+  success: boolean
+  data: {
+    keywords: string[]
+  }
+}
+
 // ─── Subscription ─────────────────────────────────────────────────────────────
 
 export type SubscriptionPlan = 'free' | 'growth' | 'pro' | 'custom'
@@ -734,6 +745,12 @@ export interface DebtListParams extends CursorParams {
 
 // ─── Digital Products ─────────────────────────────────────────────────────────
 
+export type DigitalFulfillmentMode =
+  | 'file_download'
+  | 'course_access'
+  | 'external_link'
+  | 'manual_delivery'
+
 export interface DigitalProduct {
   id: string
   business_id: string
@@ -743,6 +760,11 @@ export interface DigitalProduct {
   type: string
   price: number
   currency: string
+  fulfillment_mode: DigitalFulfillmentMode
+  access_redirect_url: string | null
+  requires_account: boolean
+  access_duration_hours: number | null
+  delivery_note: string | null
   cover_image_url: string | null
   gallery_image_urls: string
   promo_video_url: string | null
@@ -761,6 +783,11 @@ export interface CreateDigitalProductRequest {
   description: string
   type: string
   price: number
+  fulfillment_mode?: DigitalFulfillmentMode
+  access_redirect_url?: string
+  requires_account?: boolean
+  access_duration_hours?: number
+  delivery_note?: string
   promo_video_url?: string
 }
 
@@ -768,6 +795,11 @@ export interface UpdateDigitalProductRequest {
   title?: string
   description?: string
   price?: number
+  fulfillment_mode?: DigitalFulfillmentMode
+  access_redirect_url?: string
+  requires_account?: boolean
+  access_duration_hours?: number
+  delivery_note?: string
   promo_video_url?: string
   is_published?: boolean
 }
@@ -916,19 +948,6 @@ export interface ApplicationListParams extends CursorParams {
   status?: string
 }
 
-// ─── Business Keywords ────────────────────────────────────────────────────────
-
-export interface SetBusinessKeywordsRequest {
-  keywords: string[]
-}
-
-export interface BusinessKeywordsResponse {
-  success: boolean
-  data: {
-    keywords: string[]
-  }
-}
-
 export interface PublicJobItem {
   id: string
   business_id: string
@@ -964,4 +983,82 @@ export interface PublicJobApplicationRequest {
   phone_number: string
   cover_letter?: string
   cv?: File | null
+}
+
+// ─── Payout ───────────────────────────────────────────────────────────────────
+
+export interface PaystackBank {
+  id: number
+  name: string
+  code: string
+  slug: string
+  longcode: string
+  gateway: string | null
+  active: boolean
+  country: string
+  currency: string
+  type: string
+}
+
+export interface ListBanksResponse {
+  status: boolean
+  message: string
+  data: PaystackBank[]
+}
+
+export interface ResolveAccountData {
+  account_number: string
+  account_name: string
+  bank_id: number
+}
+
+export interface ResolveAccountResponse {
+  status: boolean
+  message: string
+  data: ResolveAccountData
+}
+
+export interface ResolveAccountRequest {
+  bank_code: string
+  account_number: string
+}
+
+export interface StartVerificationRequest {
+  bank_name: string
+  bank_code: string
+  account_number: string
+  account_name: string
+}
+
+export interface ConfirmVerificationRequest {
+  verification_id: string
+  otp: string
+}
+
+export interface ResendVerificationRequest {
+  verification_id: string
+}
+
+export interface VerificationResponse {
+  id: string
+  business_id: string
+  bank_name: string
+  bank_code: string
+  account_number: string
+  account_name: string
+  expires_at: string
+  resend_after: string
+}
+
+export interface PayoutAccountResponse {
+  id: string
+  business_id: string
+  bank_name: string
+  bank_code: string
+  account_number: string  // masked e.g. "******1234"
+  account_name: string
+  is_verified: boolean
+  is_default: boolean
+  created_at: string
+  updated_at: string
 }

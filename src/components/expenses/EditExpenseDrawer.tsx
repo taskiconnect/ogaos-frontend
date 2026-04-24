@@ -39,6 +39,15 @@ function toIsoUtcMidnight(dateString: string): string {
   return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0)).toISOString()
 }
 
+function getErrorMessage(error: any, fallback: string): string {
+  return (
+    error?.message ||
+    error?.response?.data?.message ||
+    error?.data?.message ||
+    fallback
+  )
+}
+
 const CATEGORIES = [
   'Rent',
   'Salaries',
@@ -74,7 +83,7 @@ export default function EditExpenseDrawer({
       onSuccess()
     },
     onError: (e: any) => {
-      setError(e?.response?.data?.message ?? 'Update failed')
+      setError(getErrorMessage(e, 'Update failed'))
     },
   })
 
@@ -107,9 +116,11 @@ export default function EditExpenseDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
       <div className="relative flex h-full w-full flex-col overflow-y-auto border-l border-white/10 bg-[#0f0f14] sm:w-[440px]">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#0f0f14] px-6 py-4">
           <h2 className="text-lg font-bold text-white">Edit Expense</h2>
+
           <button
             type="button"
             onClick={onClose}
@@ -130,6 +141,7 @@ export default function EditExpenseDrawer({
               >
                 {expense.expense_type}
               </span>
+
               <span className="text-xl font-bold text-white">
                 {formatCurrency(expense.amount)}
               </span>
@@ -154,17 +166,14 @@ export default function EditExpenseDrawer({
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
               Category
             </label>
+
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-[#0f0f14] px-4 py-3 text-sm text-white focus:outline-none"
             >
               {CATEGORIES.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                  className="bg-[#0f0f14] text-white"
-                >
+                <option key={item} value={item} className="bg-[#0f0f14] text-white">
                   {item}
                 </option>
               ))}
@@ -175,6 +184,7 @@ export default function EditExpenseDrawer({
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
               Description
             </label>
+
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -187,6 +197,7 @@ export default function EditExpenseDrawer({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Amount (₦)
               </label>
+
               <input
                 type="number"
                 min="0"
@@ -201,6 +212,7 @@ export default function EditExpenseDrawer({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Date
               </label>
+
               <input
                 type="date"
                 value={expenseDate}
