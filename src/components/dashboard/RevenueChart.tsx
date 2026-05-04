@@ -3,14 +3,14 @@
 // src/components/dashboard/RevenueChart.tsx
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { listSales } from '@/lib/api/finance'
+import { listSales, listExpenses } from '@/lib/api/finance'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, LineChart, Line,
+  Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { cn } from '@/lib/utils'
 import { TrendingUp, ChevronDown, Calendar } from 'lucide-react'
-import type { Sale } from '@/lib/api/types'
+import type { Sale, Expense } from '@/lib/api/types'
 
 type Period = '1d' | '3d' | '5d' | '1w' | '2w' | '1m' | '3m' | '6m' | '1y' | '2y'
 
@@ -38,7 +38,7 @@ function formatDay(date: Date): string {
   const today = new Date()
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
-  
+
   if (date.toDateString() === today.toDateString()) return 'Today'
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
   return DAY_NAMES[date.getDay()] || date.toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })
@@ -48,94 +48,58 @@ function formatMonth(date: Date): string {
   return MONTH_NAMES[date.getMonth()]
 }
 
-function buildChartData(sales: Sale[], days: number, format: 'hour' | 'day' | 'month') {
+function getBucketKey(date: Date, format: 'hour' | 'day' | 'month', days: number): string {
+  if (format === 'hour' && days <= 3) return date.toISOString().slice(0, 13)
+  if (format === 'day' || (format === 'hour' && days > 3)) return date.toISOString().slice(0, 10)
+  return `${date.getFullYear()}-${date.getMonth()}`
+}
+
+function buildChartData(
+  sales: Sale[],
+  expenses: Expense[],
+  days: number,
+  format: 'hour' | 'day' | 'month',
+) {
   const now = new Date()
-  const startDate = new Date(now)
-  startDate.setDate(now.getDate() - days + 1)
-  startDate.setHours(0, 0, 0, 0)
-  
-  const result: any[] = []
-  
+  const result: { key: string; label: string; date: Date; revenue: number; expenses: number }[] = []
+
   if (format === 'hour' && days <= 3) {
-    // For 1-3 days, show hourly data
     const hours = days * 24
     for (let i = hours - 1; i >= 0; i--) {
       const date = new Date(now)
-      date.setHours(now.getHours() - i)
-      const hourKey = date.toISOString().slice(0, 13)
-      result.push({
-        key: hourKey,
-        label: formatHour(date),
-        date: date,
-        revenue: 0,
-        expenses: 0,
-      })
+      date.setHours(now.getHours() - i, 0, 0, 0)
+      result.push({ key: date.toISOString().slice(0, 13), label: formatHour(date), date, revenue: 0, expenses: 0 })
     }
   } else if (format === 'day' || (format === 'hour' && days > 3)) {
-    // For days/weeks, show daily data
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(now)
       date.setDate(now.getDate() - i)
       date.setHours(0, 0, 0, 0)
-      const dayKey = date.toISOString().slice(0, 10)
-      result.push({
-        key: dayKey,
-        label: formatDay(date),
-        date: date,
-        revenue: 0,
-        expenses: 0,
-      })
+      result.push({ key: date.toISOString().slice(0, 10), label: formatDay(date), date, revenue: 0, expenses: 0 })
     }
   } else {
-    // For months/years, show monthly data
     const months = Math.ceil(days / 30)
     for (let i = months - 1; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthKey = `${date.getFullYear()}-${date.getMonth()}`
-      result.push({
-        key: monthKey,
-        label: formatMonth(date),
-        date: date,
-        revenue: 0,
-        expenses: 0,
-      })
+      result.push({ key: `${date.getFullYear()}-${date.getMonth()}`, label: formatMonth(date), date, revenue: 0, expenses: 0 })
     }
   }
-  
-  // Aggregate sales data
+
+  // Build a quick lookup map for O(n) aggregation
+  const bucketMap = new Map(result.map(b => [b.key, b]))
+
   for (const sale of sales) {
-    const saleDate = new Date(sale.created_at)
-    let matched = false
-    
-    for (const bucket of result) {
-      if (format === 'hour' && days <= 3) {
-        const bucketHour = new Date(bucket.key + ':00:00')
-        if (saleDate.getTime() >= bucketHour.getTime() && 
-            saleDate.getTime() < bucketHour.getTime() + 3600000) {
-          bucket.revenue += Math.round(sale.amount_paid / 100)
-          matched = true
-          break
-        }
-      } else if (format === 'day' || (format === 'hour' && days > 3)) {
-        const bucketDay = bucket.key
-        const saleDay = saleDate.toISOString().slice(0, 10)
-        if (bucketDay === saleDay) {
-          bucket.revenue += Math.round(sale.amount_paid / 100)
-          matched = true
-          break
-        }
-      } else {
-        const bucketMonth = bucket.key
-        const saleMonth = `${saleDate.getFullYear()}-${saleDate.getMonth()}`
-        if (bucketMonth === saleMonth) {
-          bucket.revenue += Math.round(sale.amount_paid / 100)
-          matched = true
-          break
-        }
-      }
-    }
+    const key = getBucketKey(new Date(sale.created_at), format, days)
+    const bucket = bucketMap.get(key)
+    if (bucket) bucket.revenue += Math.round(sale.amount_paid / 100)
   }
-  
+
+  for (const expense of expenses) {
+    const key = getBucketKey(new Date(expense.created_at), format, days)
+    const bucket = bucketMap.get(key)
+    if (bucket) bucket.expenses += Math.round(expense.amount / 100)
+  }
+
   return result
 }
 
@@ -148,50 +112,66 @@ function fmt(n: number) {
 export default function RevenueChart() {
   const [period, setPeriod] = useState<Period>('1m')
   const [showDropdown, setShowDropdown] = useState(false)
-  
+
   const periodConfig = PERIODS.find(p => p.key === period)!
   const { days, format } = periodConfig
-  
-  const { data, isLoading } = useQuery({
+
+  const dateFrom = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - days)
+    return d.toISOString().slice(0, 10)
+  }, [days])
+
+  const { data: salesData, isLoading: salesLoading } = useQuery({
     queryKey: ['sales', 'chart', period],
-    queryFn: async () => {
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - days)
-      const dateFrom = startDate.toISOString().slice(0, 10)
-      return listSales({ date_from: dateFrom, limit: 2000 })
-    },
+    queryFn: () => listSales({ date_from: dateFrom, limit: 2000 }),
     staleTime: 1000 * 60 * 2,
   })
-  
+
+  const { data: expensesData, isLoading: expensesLoading } = useQuery({
+    queryKey: ['expenses', 'chart', period],
+    queryFn: () => listExpenses({ date_from: dateFrom, limit: 2000 }),
+    staleTime: 1000 * 60 * 2,
+  })
+
+  const isLoading = salesLoading || expensesLoading
+
   const chartData = useMemo(() => {
-    return buildChartData(data?.data ?? [], days, format)
-  }, [data, days, format])
-  
+    return buildChartData(
+      salesData?.data ?? [],
+      expensesData?.data ?? [],
+      days,
+      format,
+    )
+  }, [salesData, expensesData, days, format])
+
   const totalRevenue = chartData.reduce((s, d) => s + d.revenue, 0)
+  const totalExpenses = chartData.reduce((s, d) => s + d.expenses, 0)
   const averageRevenue = chartData.length ? totalRevenue / chartData.length : 0
   const maxRevenue = Math.max(...chartData.map(d => d.revenue), 0)
-  
-  // Get visible periods for dropdown (first 5 and last 5)
-  const visiblePeriods = PERIODS
-  
+  const hasData = totalRevenue > 0 || totalExpenses > 0
+
   return (
     <div className="rounded-2xl border border-white/8 bg-white/2 p-5 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h3 className="font-semibold text-white text-sm">Revenue vs Expenses</h3>
-          {!isLoading && totalRevenue > 0 && (
+          {!isLoading && hasData && (
             <div className="flex items-center gap-3 mt-1">
               <p className="text-xs text-gray-500">
-                Total: <span className="text-emerald-400 font-semibold">{fmt(totalRevenue)}</span>
+                Revenue: <span className="text-emerald-400 font-semibold">{fmt(totalRevenue)}</span>
               </p>
               <p className="text-xs text-gray-500">
-                Avg: <span className="text-blue-400">{fmt(averageRevenue)}</span>
+                Expenses: <span className="text-red-400 font-semibold">{fmt(totalExpenses)}</span>
+              </p>
+              <p className="text-xs text-gray-500">
+                Avg/period: <span className="text-blue-400">{fmt(averageRevenue)}</span>
               </p>
             </div>
           )}
         </div>
-        
+
         {/* Period selector - Desktop */}
         <div className="hidden sm:flex gap-1 flex-wrap">
           {PERIODS.map(p => (
@@ -209,7 +189,7 @@ export default function RevenueChart() {
             </button>
           ))}
         </div>
-        
+
         {/* Period selector - Mobile dropdown */}
         <div className="relative sm:hidden">
           <button
@@ -220,21 +200,15 @@ export default function RevenueChart() {
             {periodConfig.label}
             <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showDropdown && 'rotate-180')} />
           </button>
-          
+
           {showDropdown && (
             <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowDropdown(false)}
-              />
+              <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} />
               <div className="absolute right-0 top-full mt-2 z-20 w-32 rounded-xl bg-dash-surface border border-dash-border shadow-lg overflow-hidden">
                 {PERIODS.map(p => (
                   <button
                     key={p.key}
-                    onClick={() => {
-                      setPeriod(p.key)
-                      setShowDropdown(false)
-                    }}
+                    onClick={() => { setPeriod(p.key); setShowDropdown(false) }}
                     className={cn(
                       'w-full px-3 py-2 text-xs text-left transition-colors',
                       period === p.key
@@ -250,28 +224,32 @@ export default function RevenueChart() {
           )}
         </div>
       </div>
-      
+
       {/* Chart */}
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </div>
-      ) : totalRevenue === 0 ? (
+      ) : !hasData ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
           <TrendingUp className="w-8 h-8 text-gray-700 mb-2" />
-          <p className="text-sm text-gray-500">No sales data yet</p>
+          <p className="text-sm text-gray-500">No data yet</p>
           <p className="text-xs text-gray-600 mt-0.5">
-            Revenue will appear here once you record sales
+            Revenue and expenses will appear here once recorded
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-[280px]">
+        <div className="flex-1 min-h-70">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3f9af5" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#3f9af5" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f87171" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -300,7 +278,10 @@ export default function RevenueChart() {
                   fontSize: 11,
                 }}
                 labelStyle={{ color: '#fff', fontWeight: 600 }}
-                formatter={(v: number | string | undefined) => [fmt(Number(v ?? 0)), 'Revenue']}
+                formatter={(v: number | string | undefined, name: string | undefined) => [
+                  fmt(Number(v ?? 0)),
+                  name === 'revenue' ? 'Revenue' : 'Expenses',
+                ]}
               />
               <Area
                 type="monotone"
@@ -309,11 +290,18 @@ export default function RevenueChart() {
                 strokeWidth={2}
                 fill="url(#revGrad)"
               />
+              <Area
+                type="monotone"
+                dataKey="expenses"
+                stroke="#f87171"
+                strokeWidth={2}
+                fill="url(#expGrad)"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
-      
+
       {/* Legend */}
       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5 text-xs text-gray-500">
         <span className="flex items-center gap-1.5">

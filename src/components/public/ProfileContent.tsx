@@ -14,7 +14,6 @@ import {
   QrCode,
   Copy,
   Play,
-  ShoppingCart,
   Download,
   Package,
   BriefcaseBusiness,
@@ -24,18 +23,14 @@ import type {
   PublicBusiness,
   PublicDigitalProduct,
   PublicProduct,
-  CartItem,
 } from '@/types/public'
 import {
-  formatCurrency,
   fullAddress,
   mapsEmbed,
   mapsLink,
-  parseGallery,
 } from '@/types/public'
 
 import { ProductCard } from './ProductCard'
-import { CartDrawer } from './CartDrawer'
 import { ShareModal } from './ShareModal'
 import { Lightbox } from './Lightbox'
 
@@ -76,8 +71,6 @@ export function ProfileContent({
   const [activeTab, setActiveTab] = useState<'shop' | 'about' | 'gallery'>('shop')
   const [filter, setFilter] = useState<OfferingKind>('all')
   const [search, setSearch] = useState('')
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [showCart, setShowCart] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -156,29 +149,7 @@ export function ProfileContent({
     return matchesFilter && matchesSearch
   })
 
-  const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0)
   const address = fullAddress(biz)
-
-  function addToCart(item: CartItem) {
-    setCart((prev) => {
-      const existing = prev.find((entry) => entry.id === item.id)
-      if (existing) {
-        return prev.map((entry) =>
-          entry.id === item.id ? { ...entry, qty: entry.qty + 1 } : entry
-        )
-      }
-      return [...prev, item]
-    })
-  }
-
-  function updateCart(id: string, qty: number) {
-    setCart((prev) =>
-      qty <= 0
-        ? prev.filter((item) => item.id !== id)
-        : prev.map((item) => (item.id === id ? { ...item, qty } : item))
-    )
-  }
 
   return (
     <>
@@ -305,7 +276,7 @@ export function ProfileContent({
                   fileSize={item.fileSize}
                   itemKind={item.itemKind}
                   inStock={item.inStock}
-                  onAddToCart={addToCart}
+                  bizSlug={biz.slug}
                 />
               ))}
             </div>
@@ -589,32 +560,6 @@ export function ProfileContent({
         </div>
       )}
 
-      {cartCount > 0 && !showCart && (
-        <>
-          <div className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2 sm:hidden">
-            <button
-              onClick={() => setShowCart(true)}
-              className="flex items-center gap-2.5 rounded-2xl bg-brand-blue px-5 py-3 text-sm font-bold text-white shadow-2xl shadow-brand-blue/40 transition-all hover:bg-brand-blue/90"
-              style={{ animation: 'bounceIn 0.4s cubic-bezier(0.16,1,0.3,1)' }}
-            >
-              <ShoppingCart className="h-4 w-4" />
-              View Cart · {formatCurrency(cartTotal)}
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-black text-brand-blue">
-                {cartCount}
-              </span>
-            </button>
-          </div>
-
-          <style>{`
-            @keyframes bounceIn {
-              0%   { transform: translateX(-50%) scale(0.8); opacity: 0; }
-              60%  { transform: translateX(-50%) scale(1.05); }
-              100% { transform: translateX(-50%) scale(1); opacity: 1; }
-            }
-          `}</style>
-        </>
-      )}
-
       {lightbox && (
         <Lightbox
           images={lightbox.images}
@@ -624,15 +569,6 @@ export function ProfileContent({
       )}
 
       {showShare && <ShareModal biz={biz} onClose={() => setShowShare(false)} />}
-
-      {showCart && (
-        <CartDrawer
-          items={cart}
-          onUpdate={updateCart}
-          onClose={() => setShowCart(false)}
-          biz={biz}
-        />
-      )}
     </>
   )
 }

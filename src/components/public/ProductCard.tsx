@@ -1,17 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import {
-  Heart,
-  Plus,
-  CheckCircle2,
   Download,
   Package,
   BriefcaseBusiness,
   Star,
+  ArrowRight,
 } from 'lucide-react'
-import type { CartItem } from '@/types/public'
 import { formatBytes, formatCurrency } from '@/types/public'
 
 interface Props {
@@ -25,9 +22,9 @@ interface Props {
   salesCount?: number
   fileSize?: number | null
   slug?: string
-  onAddToCart: (item: CartItem) => void
   itemKind: 'digital' | 'physical' | 'service'
   inStock?: boolean
+  bizSlug: string
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -48,32 +45,15 @@ export function ProductCard({
   description,
   salesCount,
   fileSize,
-  onAddToCart,
   itemKind,
   inStock = true,
+  bizSlug,
 }: Props) {
-  const [wishlisted, setWishlisted] = useState(false)
-  const [added, setAdded] = useState(false)
-
-  function addToCart(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-
-    onAddToCart({
-      id,
-      name,
-      price,
-      qty: 1,
-      image,
-      type: itemKind,
-    })
-
-    setAdded(true)
-    window.setTimeout(() => setAdded(false), 1500)
-  }
-
   return (
-    <div className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/6 bg-[#0e0e1a] transition-all duration-300 hover:border-brand-blue/40 hover:shadow-[0_8px_32px_rgba(28,53,234,0.12)]">
+    <Link
+      href={`/public/${bizSlug}/product/${id}`}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/6 bg-[#0e0e1a] transition-all duration-300 hover:border-brand-blue/40 hover:shadow-[0_8px_32px_rgba(28,53,234,0.12)]"
+    >
       <div className="relative h-44 shrink-0 overflow-hidden bg-[#141420]">
         {image ? (
           <Image
@@ -97,21 +77,6 @@ export function ProductCard({
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-
-        <button
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            setWishlisted((prev) => !prev)
-          }}
-          className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 opacity-0 backdrop-blur transition-all hover:scale-110 group-hover:opacity-100"
-        >
-          <Heart
-            className={`h-4 w-4 transition-colors ${
-              wishlisted ? 'fill-red-400 text-red-400' : 'text-white'
-            }`}
-          />
-        </button>
 
         <span
           className={`absolute left-2.5 top-2.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
@@ -152,29 +117,12 @@ export function ProductCard({
         <div className="mt-auto flex items-center justify-between pt-2">
           <p className="text-lg font-black text-white">{formatCurrency(price, currency)}</p>
 
-          <button
-            onClick={addToCart}
-            disabled={itemKind !== 'digital' && !inStock}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
-              added
-                ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-400'
-                : 'border-brand-blue/50 bg-brand-blue text-white hover:bg-[#1528d4] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/10 disabled:text-white/40'
-            }`}
-          >
-            {added ? (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Added
-              </>
-            ) : (
-              <>
-                <Plus className="h-3.5 w-3.5" />
-                Add
-              </>
-            )}
-          </button>
+          <span className="flex items-center gap-1.5 rounded-xl border border-brand-blue/50 bg-brand-blue/10 px-3 py-2 text-xs font-bold text-brand-blue transition-all group-hover:bg-brand-blue group-hover:text-white">
+            View
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
