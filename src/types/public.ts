@@ -208,9 +208,11 @@ export interface CartItem {
 }
 
 export function formatCurrency(amount: number, currency = 'NGN'): string {
+  // Prices are stored in kobo; divide by 100 to get naira
+  const naira = amount / 100
+
   if (currency === 'NGN') {
-    // Use en-US locale to avoid en-NG treating values as kobo subunits
-    return `₦${amount.toLocaleString('en-US', {
+    return `\u20a6${naira.toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     })}`
@@ -221,7 +223,7 @@ export function formatCurrency(amount: number, currency = 'NGN'): string {
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(naira)
 }
 
 export function formatBytes(bytes: number | null): string {
