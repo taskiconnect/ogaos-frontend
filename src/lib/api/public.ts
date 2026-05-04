@@ -1,282 +1,212 @@
-export interface PublicBusiness {
-  id: string
-  name: string
-  slug: string
-  category: string
-  description: string | null
-  logo_url: string | null
-  website_url: string | null
-  street: string
-  city_town: string
-  local_government: string
-  state: string
-  country: string
-  is_verified: boolean
-  profile_views: number
-  gallery_image_urls: string
-  storefront_video_url: string | null
-  keywords: string[]
-}
+// src/lib/api/public.ts
 
-export interface PublicDigitalProduct {
-  id: string
-  title: string
-  slug: string
-  description: string
-  type: string
-  price: number
-  currency: string
-  fulfillment_mode: string
-  cover_image_url: string | null
-  gallery_image_urls: string
-  promo_video_url: string | null
-  file_size: number | null
-  file_mime_type: string | null
-  delivery_note: string | null
-  sales_count: number
-  created_at: string
-}
+import type {
+  PublicBusinessPage,
+  PublicOrderFulfillmentResponse,
+  PublicBusinessSearchResponse,
+  SearchPublicBusinessesParams,
+  PublicDigitalStoreResponse,
+  PublicDigitalProductResponse,
+  InitializeDigitalCheckoutRequest,
+  InitializeDigitalCheckoutResponse,
+} from '@/types/public'
 
-export type DigitalProduct = PublicDigitalProduct
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1'
 
-export interface PublicProduct {
-  id: string
-  name: string
-  description: string | null
-  type: string
-  price: number
-  image_url: string | null
-  sku: string | null
-  in_stock: boolean
-  created_at: string
-}
-
-export type ProductPublic = PublicProduct
-
-export interface PublicStats {
-  total_products: number
-  total_services: number
-  total_digital_products: number
-}
-
-export interface PublicPageCursors {
-  digital_products?: string
-  physical_products?: string
-  services?: string
-}
-
-export interface PublicBusinessPage {
-  business: PublicBusiness
-  digital_products: PublicDigitalProduct[]
-  physical_products: PublicProduct[]
-  services: PublicProduct[]
-  stats: PublicStats
-  next_cursors?: PublicPageCursors | null
-  cached_at?: string | null
-}
-
-export interface PublicBusinessSearchItem {
-  id: string
-  name: string
-  slug: string
-  category: string
-  description: string | null
-  logo_url: string | null
-  city_town: string
-  local_government: string
-  state: string
-  country: string
-  is_verified: boolean
-  keywords: string[]
-  distance_km: number
-}
-
-export interface PublicBusinessSearchMeta {
-  query: string
-  radius_km: number
-  used_current_location: boolean
-  location_denied: boolean
-  total: number
-}
-
-export interface PublicBusinessSearchResponse {
-  meta: PublicBusinessSearchMeta
-  results: PublicBusinessSearchItem[]
-}
-
-export interface SearchPublicBusinessesParams {
-  q?: string
-  lat?: number
-  lng?: number
-  radius_km?: number
-}
-
-export interface PublicDigitalStoreBusiness {
-  name: string
-  slug: string
-  logo_url: string | null
-}
-
-export interface PublicDigitalStoreResponse {
-  business: PublicDigitalStoreBusiness
-  products: PublicDigitalProduct[]
-}
-
-export interface PublicDigitalProductResponse {
-  id: string
-  business_id: string
-  title: string
-  slug: string
-  description: string
-  type: string
-  price: number
-  currency: string
-  fulfillment_mode: string
-  access_redirect_url: string | null
-  requires_account: boolean
-  access_duration_hours: number | null
-  delivery_note: string | null
-  cover_image_url: string | null
-  gallery_image_urls: string
-  promo_video_url: string | null
-  file_size: number | null
-  file_mime_type: string | null
-  is_published: boolean
-  sales_count: number
-  total_revenue: number
-  created_at: string
-  updated_at: string
-  business: PublicDigitalStoreBusiness
-}
-
-export interface InitializeDigitalCheckoutRequest {
-  buyer_name: string
-  buyer_email: string
-  buyer_phone?: string
-  callback_url?: string
-}
-
-export interface InitializeDigitalCheckoutData {
-  message: string
-  order_id: string
-  reference: string
-  authorization_url: string
-  access_code: string
-  amount: number
-  currency: string
-  platform_fee: number
-  owner_payout_amount: number
-}
-
-export interface InitializeDigitalCheckoutResponse {
-  success?: boolean
-  message?: string
-  data?: InitializeDigitalCheckoutData
-}
-
-export interface PublicOrderFulfillmentData {
-  order_id: string
-  product_id: string
-  product_title: string
-  product_type: string
-  fulfillment_mode: string
-  fulfillment_status: string
-  payment_status: string
-  access_granted: boolean
-  requires_account: boolean
-  redirect_url?: string | null
-  download_token?: string | null
-  delivery_note?: string | null
-  access_expires_at?: string | null
-  message: string
-}
-
-export interface PublicOrderFulfillmentResponse {
-  success?: boolean
-  message?: string
-  data?: PublicOrderFulfillmentData
-}
-
-export interface CartItem {
-  id: string
-  name: string
-  price: number
-  qty: number
-  image: string | null
-  type: 'digital' | 'physical' | 'service'
-  slug?: string
-}
-
-export function formatCurrency(amount: number, currency = 'NGN'): string {
-  if (currency === 'NGN') {
-    // Use en-US locale to avoid en-NG treating values as kobo subunits
-    return `₦${amount.toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`
-  }
-
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
-
-export function formatBytes(bytes: number | null): string {
-  if (!bytes) return ''
-  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
-  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`
-  return `${bytes} B`
-}
-
-export function fullAddress(b: PublicBusiness): string {
-  return [b.street, b.city_town, b.local_government, b.state, b.country]
-    .filter(Boolean)
-    .join(', ')
-}
-
-export function mapsEmbed(b: PublicBusiness): string {
-  const q = encodeURIComponent(fullAddress(b) || `${b.name} Nigeria`)
-  return `https://maps.google.com/maps?q=${q}&output=embed&z=15`
-}
-
-export function mapsLink(b: PublicBusiness): string {
-  return `https://maps.google.com/?q=${encodeURIComponent(fullAddress(b) || b.name)}`
-}
-
-export function waLink(phone: string, name: string): string {
-  const n = phone.replace(/\D/g, '').replace(/^0/, '234')
-  return `https://wa.me/${n}?text=${encodeURIComponent(
-    `Hi ${name}, I found your business on OgaOS`
-  )}`
-}
-
-export function parseGallery(raw: string): string[] {
+async function parseJson<T>(res: Response): Promise<T | null> {
   try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
+    return (await res.json()) as T
   } catch {
-    return []
+    return null
   }
 }
 
-export function slugAccent(slug: string): string {
-  const ACCENTS = [
-    '#1C35EA',
-    '#2A45F5',
-    '#4B5EFF',
-    '#1C35EA',
-    '#1C35EA',
-    '#3040F0',
-    '#1C35EA',
-    '#2540FF',
-  ]
-  const i = slug.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % ACCENTS.length
-  return ACCENTS[i]
+export async function getPublicBusinessFull(slug: string): Promise<PublicBusinessPage> {
+  const res = await fetch(`${API_BASE}/public/business/${slug}/full`, {
+    method: 'GET',
+    next: { revalidate: 60 },
+    headers: {
+      Connection: 'close',
+    },
+  })
+
+  const json = await parseJson<{
+    success?: boolean
+    message?: string
+    data?: PublicBusinessPage
+  }>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to fetch public business page')
+  }
+
+  const data = json?.data
+
+  if (!data || !('business' in data)) {
+    throw new Error('Invalid public business page response')
+  }
+
+  return data
 }
 
-export function yearSince(iso: string): number {
-  return new Date(iso).getFullYear()
+export async function searchPublicBusinesses(
+  params: SearchPublicBusinessesParams
+): Promise<PublicBusinessSearchResponse> {
+  const searchParams = new URLSearchParams()
+
+  if (params.q?.trim()) {
+    searchParams.set('q', params.q.trim())
+  }
+
+  if (typeof params.lat === 'number' && !isNaN(params.lat)) {
+    searchParams.set('lat', String(params.lat))
+  }
+
+  if (typeof params.lng === 'number' && !isNaN(params.lng)) {
+    searchParams.set('lng', String(params.lng))
+  }
+
+  if (typeof params.radius_km === 'number' && params.radius_km > 0) {
+    searchParams.set('radius_km', String(params.radius_km))
+  }
+
+  const url = `${API_BASE}/public/business/search${
+    searchParams.toString() ? `?${searchParams.toString()}` : ''
+  }`
+
+  const res = await fetch(url, {
+    method: 'GET',
+    cache: 'no-store',
+  })
+
+  const json = await parseJson<{
+    success?: boolean
+    message?: string
+    data?: PublicBusinessSearchResponse
+  }>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to search businesses')
+  }
+
+  const data = json?.data
+
+  if (!data || !Array.isArray(data.results) || !data.meta) {
+    throw new Error('Invalid public business search response')
+  }
+
+  return data
+}
+
+export async function getPublicDigitalStore(
+  slug: string
+): Promise<PublicDigitalStoreResponse> {
+  const res = await fetch(`${API_BASE}/public/digital-store/${slug}`, {
+    method: 'GET',
+    next: { revalidate: 60 },
+    headers: {
+      Connection: 'close',
+    },
+  })
+
+  const json = await parseJson<{
+    success?: boolean
+    message?: string
+    data?: PublicDigitalStoreResponse
+  }>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to fetch digital store')
+  }
+
+  const data = json?.data
+
+  if (!data || !data.business || !Array.isArray(data.products)) {
+    throw new Error('Invalid digital store response')
+  }
+
+  return data
+}
+
+export async function getPublicDigitalProduct(
+  slug: string
+): Promise<PublicDigitalProductResponse> {
+  const res = await fetch(`${API_BASE}/public/digital-store/product/${slug}`, {
+    method: 'GET',
+    next: { revalidate: 60 },
+    headers: {
+      Connection: 'close',
+    },
+  })
+
+  const json = await parseJson<{
+    success?: boolean
+    message?: string
+    data?: PublicDigitalProductResponse
+  }>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to fetch digital product')
+  }
+
+  const data = json?.data
+
+  if (!data || !data.id || !data.business) {
+    throw new Error('Invalid digital product response')
+  }
+
+  return data
+}
+
+export async function initializeDigitalCheckout(
+  productId: string,
+  payload: InitializeDigitalCheckoutRequest
+): Promise<InitializeDigitalCheckoutResponse> {
+  const res = await fetch(
+    `${API_BASE}/public/digital-store/${productId}/initialize-payment`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    }
+  )
+
+  const json = await parseJson<InitializeDigitalCheckoutResponse>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to initialize payment')
+  }
+
+  return json ?? { message: 'Payment initialized' }
+}
+
+export async function getOrderFulfillment(
+  orderId: string,
+  token: string
+): Promise<PublicOrderFulfillmentResponse> {
+  const qs = new URLSearchParams({ token })
+
+  const res = await fetch(
+    `${API_BASE}/public/digital-orders/${orderId}/fulfillment?${qs.toString()}`,
+    {
+      method: 'GET',
+      cache: 'no-store',
+    }
+  )
+
+  const json = await parseJson<PublicOrderFulfillmentResponse>(res)
+
+  if (!res.ok) {
+    throw new Error(json?.message || 'Failed to fetch fulfillment')
+  }
+
+  return json ?? { message: 'No fulfillment data returned' }
+}
+
+export function getTokenDownloadUrl(token: string): string {
+  return `${API_BASE}/public/digital-downloads/${token}`
 }

@@ -209,7 +209,8 @@ export interface CartItem {
 
 export function formatCurrency(amount: number, currency = 'NGN'): string {
   if (currency === 'NGN') {
-    return `₦${amount.toLocaleString('en-NG', {
+    // Use en-US locale to avoid en-NG treating values as kobo subunits
+    return `₦${amount.toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     })}`
