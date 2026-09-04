@@ -2,7 +2,6 @@
 //
 // All calls go to Next.js API proxy routes (/api/admin/*).
 // The proxy (src/lib/api/proxy.ts) forwards them server-side to the Go backend,
-// keeping the real backend URL and httpOnly cookies off the browser entirely.
 
 import api from './adminClient'
 import type {
@@ -22,6 +21,12 @@ import type {
   CouponApiResponse,
   CouponListApiResponse,
 } from '@/types/admin'
+import type {
+  AdminBusinessListParams,
+  AdminBusinessListApiResponse,
+  AdminBusinessApiResponse,
+  AdminBusinessSubscriptionApiResponse,
+} from '@/types/admin-business'
 
 // ── Auth flow ─────────────────────────────────────────────────────────────────
 
@@ -123,5 +128,55 @@ export async function updateCoupon(id: string, payload: UpdateCouponPayload): Pr
 
 export async function deleteCoupon(id: string): Promise<ApiResponse> {
   const res = await api.delete<ApiResponse>(`/api/admin/coupons/${id}`)
+  return res.data
+}
+
+// ── Businesses (super_admin + support + finance for reads; see individual
+//    endpoints for write-role restrictions, enforced server-side) ─────────────
+
+export async function listAdminBusinesses(
+  params?: AdminBusinessListParams
+): Promise<AdminBusinessListApiResponse> {
+  const res = await api.get<AdminBusinessListApiResponse>('/api/admin/businesses', { params })
+  return res.data
+}
+
+export async function getAdminBusiness(id: string): Promise<AdminBusinessApiResponse> {
+  const res = await api.get<AdminBusinessApiResponse>(`/api/admin/businesses/${id}`)
+  return res.data
+}
+
+export async function setAdminBusinessVerified(id: string, isVerified: boolean): Promise<ApiResponse> {
+  const res = await api.patch<ApiResponse>(`/api/admin/businesses/${id}/verify`, {
+    is_verified: isVerified,
+  })
+  return res.data
+}
+
+export async function compAdminBusinessSubscription(
+  id: string,
+  plan: string,
+  durationDays: number
+): Promise<AdminBusinessSubscriptionApiResponse> {
+  const res = await api.post<AdminBusinessSubscriptionApiResponse>(
+    `/api/admin/businesses/${id}/subscription/comp`,
+    { plan, duration_days: durationDays }
+  )
+  return res.data
+}
+
+export async function extendAdminBusinessSubscription(
+  id: string,
+  days: number
+): Promise<AdminBusinessSubscriptionApiResponse> {
+  const res = await api.post<AdminBusinessSubscriptionApiResponse>(
+    `/api/admin/businesses/${id}/subscription/extend`,
+    { days }
+  )
+  return res.data
+}
+
+export async function cancelAdminBusinessSubscription(id: string): Promise<ApiResponse> {
+  const res = await api.post<ApiResponse>(`/api/admin/businesses/${id}/subscription/cancel`)
   return res.data
 }
