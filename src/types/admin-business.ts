@@ -70,16 +70,14 @@ export interface AdminBusinessListParams {
 }
 
 // ── API response envelopes, matching AdminListApiResponse / AdminProfileApiResponse ──
+// ApiResponse is generic (ApiResponse<T>, defaulting to null) — pass the data
+// type as the type argument rather than extending + redeclaring `data`,
+// which TypeScript rejects since the base `data: null` can't widen.
 
-export interface AdminBusinessListApiResponse extends ApiResponse {
-  data: AdminBusinessListItem[]
+export type AdminBusinessListApiResponse = ApiResponse<AdminBusinessListItem[]> & {
   next_cursor: string | null
 }
 
-export interface AdminBusinessApiResponse extends ApiResponse {
-  data: AdminBusinessDetail
-}
+export type AdminBusinessApiResponse = ApiResponse<AdminBusinessDetail>
 
-export interface AdminBusinessSubscriptionApiResponse extends ApiResponse {
-  data: AdminBusinessSubscription
-}
+export type AdminBusinessSubscriptionApiResponse = ApiResponse<AdminBusinessSubscription>
