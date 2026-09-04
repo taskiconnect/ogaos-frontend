@@ -13,7 +13,9 @@ export function useAdminBusinessList(filters: Omit<AdminBusinessListParams, 'cur
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   })
 
-  const businesses = query.data?.pages.flatMap((page) => page.data) ?? []
+  // page.data is optional on ApiResponse<T> — guard with `?? []` so flatMap
+  // never has to carry `undefined` into the element type.
+  const businesses = query.data?.pages.flatMap((page) => page.data ?? []) ?? []
 
   return { ...query, businesses }
 }
