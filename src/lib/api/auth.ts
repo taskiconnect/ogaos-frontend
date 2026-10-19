@@ -1,17 +1,21 @@
 // src/lib/api/auth.ts
 //
 // IMPORTANT: loginUser, registerUser, logoutUser, refreshToken, resendVerification,
-// and verifyEmail MUST go through the Next.js API proxy routes (/api/auth/...) — NOT
-// directly to the backend. This keeps auth cookies and auth flows on the frontend domain.
+// verifyEmail, forgotPassword and resetPassword MUST go through the Next.js API proxy
+// routes (/api/auth/...) — NOT directly to the backend. This keeps auth cookies and
+// auth flows on the frontend domain.
 
 import api from './client'
 import type {
   AuthResponse,
+  ForgotPasswordRequest,
   InviteStaffRequest,
   LGAsResponse,
   LoginRequest,
   MeResponse,
+  MessageResponse,
   RegisterRequest,
+  ResetPasswordRequest,
   StatesResponse,
 } from './types'
 
@@ -104,6 +108,62 @@ export const verifyEmail = async (
 
   return json as { success: boolean; message: string }
 }
+
+// ─── Password reset (via Next.js proxy) ──────────────────────────────────────
+
+/**
+ * Error thrown by the password-reset calls. `status` is the HTTP status and
+ * `response.data` is the parsed JSON body, so callers can read `data.code`
+ * (e.g. "invalid_token") as well as the message.
+ */
+export type AuthRequestError = Error & {
+  status: number
+  response: { status: number; data: Record<string, unknown> }
+}
+
+async function postAuthJson(
+  path: string,
+  body: unknown,
+  fallbackMessage: string,
+): Promise<MessageResponse> {
+  const res = await fetch(path, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  // Proxy/gateway errors may not return JSON — never let that mask the real status.
+  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+
+  if (!res.ok || json?.success === false) {
+    const message =
+      (typeof json?.message === 'string' && json.message) ||
+      (typeof json?.error === 'string' && json.error) ||
+      fallbackMessage
+    const err = new Error(message) as AuthRequestError
+    err.status = res.status
+    err.response = { status: res.status, data: json }
+    throw err
+  }
+
+  return json as unknown as MessageResponse
+}
+
+/**
+ * Request a password reset email. The backend always answers 200 for well-formed
+ * requests (no account enumeration), so success never means the account exists.
+ */
+export const forgotPassword = (data: ForgotPasswordRequest): Promise<MessageResponse> =>
+  postAuthJson(
+    '/api/auth/forgot-password',
+    { email: data.email.trim().toLowerCase() },
+    'Could not send the reset link',
+  )
+
+/** Set a new password using the single-use token from the emailed link. */
+export const resetPassword = (data: ResetPasswordRequest): Promise<MessageResponse> =>
+  postAuthJson('/api/auth/reset-password', data, 'Could not reset your password')
 
 // ─── Protected user endpoints (axios client with bearer token) ───────────────
 

@@ -1,6 +1,7 @@
 'use client'
 import { DocumentPreview } from '@/features/documents/DocumentPreview'
 import { saleDocument } from '@/features/documents/model'
+import { whatsappUrl } from '@/features/documents/whatsapp'
 import { getBusiness } from '@/lib/api/business'
 import { generateReceipt, getSale } from '@/lib/api/finance'
 import type { Sale } from '@/lib/api/types'
@@ -33,9 +34,22 @@ export default function ReceiptModal({ sale, onClose }: Props) {
     },
   })
   if (!current) return null
+
+  // NOTE: `name` on the business object is assumed; adjust if your Business type differs.
+  const businessName = business.data?.name ?? user?.business?.name
+  const canShare = !detail.isError && !detail.isFetching && !!detail.data
+
   return (
     <DocumentPreview
-      canPrint={!detail.isError && !detail.isFetching && !!detail.data}
+      canPrint={canShare}
+      share={
+        current.status !== 'cancelled'
+          ? {
+              caption: `Receipt ${current.receipt_number ?? current.sale_number}${businessName ? ` from ${businessName}` : ''}`,
+              fallbackUrl: whatsappUrl(current, businessName),
+            }
+          : undefined
+      }
       document={saleDocument(current, business.data ?? user?.business)}
       onClose={onClose}
     >

@@ -57,6 +57,20 @@ export interface AuthResponse {
   message?: string
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  password: string
+}
+
+export interface MessageResponse {
+  success: boolean
+  message: string
+}
+
 export interface BusinessProfile {
   id: string
   name: string
