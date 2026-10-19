@@ -2,15 +2,13 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { toast } from 'sonner'
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
 import CouponBox from '@/components/dashboard/subscription/CouponBox'
-import { BILLING_OPTIONS, PLAN_META, formatNaira, getPlanTotal } from '@/lib/utils/Utils'
 import { initiateSubscription } from '@/lib/api/subscription'
 import type { CouponValidationData, SubscriptionPlan } from '@/lib/api/types'
+import { BILLING_OPTIONS, PLAN_META, formatNaira, getPlanTotal } from '@/lib/utils/Utils'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 export default function SubscriptionCheckoutPage() {
   const params = useSearchParams()
@@ -25,7 +23,7 @@ export default function SubscriptionCheckoutPage() {
   const [couponData, setCouponData] = useState<CouponValidationData | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const meta = PLAN_META[plan]
+  const meta = PLAN_META[plan] ?? PLAN_META.growth
   const originalAmount = useMemo(() => getPlanTotal(plan, periodMonths), [plan, periodMonths])
   const finalAmount = couponData?.final_amount ?? originalAmount
 
@@ -59,10 +57,7 @@ export default function SubscriptionCheckoutPage() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-      <div className="lg:pl-72">
-        <DashboardHeader />
-
+      <div className="">
         <main className="p-4 sm:p-6 lg:p-10 space-y-6 pb-20 max-w-5xl">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Checkout</h1>
@@ -75,7 +70,9 @@ export default function SubscriptionCheckoutPage() {
             <div className="lg:col-span-3 space-y-5">
               <div className="rounded-3xl border border-white/10 bg-white/2 p-6 space-y-5">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Selected Plan</p>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                    Selected Plan
+                  </p>
                   <h2 className="text-2xl font-bold text-white mt-2">{meta.label}</h2>
                   <p className="text-sm text-gray-400 mt-1">{meta.description}</p>
                 </div>
@@ -135,7 +132,9 @@ export default function SubscriptionCheckoutPage() {
                   {couponData && (
                     <div className="flex items-center justify-between text-emerald-400">
                       <span>Discount</span>
-                      <span className="font-semibold">- {formatNaira(couponData.discount_amount)}</span>
+                      <span className="font-semibold">
+                        - {formatNaira(couponData.discount_amount)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -151,7 +150,11 @@ export default function SubscriptionCheckoutPage() {
                   className="w-full h-12 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
                   style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
                 >
-                  {loading ? 'Processing…' : finalAmount === 0 ? 'Activate Now' : 'Proceed to Paystack'}
+                  {loading
+                    ? 'Processing…'
+                    : finalAmount === 0
+                      ? 'Activate Now'
+                      : 'Proceed to Paystack'}
                 </button>
 
                 <button

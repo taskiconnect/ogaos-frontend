@@ -3,38 +3,48 @@
 // src/components/shared/VideoURLInput.tsx
 // Accepts a YouTube/Vimeo/Drive link. No upload — link only.
 
+import { AlertCircle, CheckCircle2, Link, X } from 'lucide-react'
 import { useState } from 'react'
-import { Link, X, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const ALLOWED_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com', 'drive.google.com']
 
 function isValidVideoUrl(url: string): boolean {
   try {
     const { hostname } = new URL(url)
-    return ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h}`))
-  } catch { return false }
+    return ALLOWED_HOSTS.some((h) => hostname === h || hostname.endsWith(`.${h}`))
+  } catch {
+    return false
+  }
 }
 
 interface Props {
-  value:       string | null
-  onChange:    (v: string | null) => void
-  label?:      string
+  value: string | null
+  onChange: (v: string | null) => void
+  label?: string
   placeholder?: string
 }
 
 export default function VideoURLInput({
-  value, onChange, label = 'Promo Video URL', placeholder = 'https://youtube.com/watch?v=...',
+  value,
+  onChange,
+  label = 'Promo Video URL',
+  placeholder = 'https://youtube.com/watch?v=...',
 }: Props) {
   const [draft, setDraft] = useState(value ?? '')
   const [touched, setTouched] = useState(false)
 
-  const isValid  = !draft || isValidVideoUrl(draft)
+  const isValid = !draft || isValidVideoUrl(draft)
   const hasValue = !!draft.trim()
 
   function handleBlur() {
     setTouched(true)
-    if (!draft.trim()) { onChange(null); return }
-    if (isValidVideoUrl(draft)) { onChange(draft.trim()) }
+    if (!draft.trim()) {
+      onChange(null)
+      return
+    }
+    if (isValidVideoUrl(draft)) {
+      onChange(draft.trim())
+    }
   }
 
   function handleClear() {
@@ -53,7 +63,10 @@ export default function VideoURLInput({
         <input
           type="url"
           value={draft}
-          onChange={e => { setDraft(e.target.value); setTouched(false) }}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            setTouched(false)
+          }}
           onBlur={handleBlur}
           placeholder={placeholder}
           className={`w-full bg-white/5 border rounded-xl pl-9 pr-10 py-3 text-sm text-white placeholder-gray-500 focus:outline-none transition-colors ${

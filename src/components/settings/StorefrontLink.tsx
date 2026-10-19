@@ -1,8 +1,8 @@
 // src/components/settings/StorefrontLink.tsx
 'use client'
 
-import { useState } from 'react'
 import { Check, Copy, ExternalLink, Eye, EyeOff } from 'lucide-react'
+import { useState } from 'react'
 
 interface StorefrontLinkProps {
   slug: string

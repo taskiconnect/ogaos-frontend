@@ -1,15 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import {
-  Grid3X3,
-  Download,
-  Package,
-  BriefcaseBusiness,
-  Info,
-  Image as ImageIcon,
-} from 'lucide-react'
 import type { PublicBusiness, PublicDigitalProduct, PublicProduct } from '@/types/public'
+import {
+  BriefcaseBusiness,
+  Download,
+  Grid3X3,
+  Image as ImageIcon,
+  Info,
+  Package,
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 interface Props {
   biz: PublicBusiness
@@ -53,11 +53,11 @@ export function StickyNav({ biz, digital, physical, services, gallery }: Props) 
           icon: Info,
           show: Boolean(
             biz.description ||
-              biz.website_url ||
-              biz.street ||
-              biz.city_town ||
-              biz.state ||
-              biz.country
+            biz.website_url ||
+            biz.street ||
+            biz.city_town ||
+            biz.state ||
+            biz.country,
           ),
         },
         {
@@ -68,7 +68,7 @@ export function StickyNav({ biz, digital, physical, services, gallery }: Props) 
           badge: gallery.length,
         },
       ].filter((item) => item.show),
-    [biz, digital.length, physical.length, services.length, gallery.length]
+    [biz, digital.length, physical.length, services.length, gallery.length],
   )
 
   const [active, setActive] = useState<SectionId>('overview')
@@ -93,7 +93,7 @@ export function StickyNav({ biz, digital, physical, services, gallery }: Props) 
       {
         rootMargin: '-35% 0px -50% 0px',
         threshold: [0.15, 0.3, 0.5, 0.75],
-      }
+      },
     )
 
     elements.forEach((el) => observer.observe(el))

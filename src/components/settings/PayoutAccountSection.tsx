@@ -1,9 +1,9 @@
 // src/components/settings/PayoutAccountSection.tsx
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, CreditCard, Landmark, Loader2, RefreshCw, ShieldCheck, X } from 'lucide-react'
+import BankSelect from '@/components/settings/BankSelect'
+import OTPInput from '@/components/settings/OTPInput'
+import Section from '@/components/settings/Section'
 import {
   confirmPayoutVerification,
   getDefaultPayoutAccount,
@@ -14,9 +14,9 @@ import {
 } from '@/lib/api/payout'
 import type { PaystackBank, VerificationResponse } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
-import Section from '@/components/settings/Section'
-import BankSelect from '@/components/settings/BankSelect'
-import OTPInput from '@/components/settings/OTPInput'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, CreditCard, Landmark, Loader2, RefreshCw, ShieldCheck, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 type PayoutStep = 'idle' | 'form' | 'otp'
 
@@ -56,6 +56,7 @@ export default function PayoutAccountSection() {
   // ── Resolve account number
   useEffect(() => {
     if (accountNumber.length !== 10 || !bankCode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize editable form with the selected external record
       setResolvedName('')
       setResolveErr('')
       return
@@ -80,7 +81,9 @@ export default function PayoutAccountSection() {
         if (!cancelled) setResolving(false)
       })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [accountNumber, bankCode])
 
   // ── Cooldown timer
@@ -90,18 +93,31 @@ export default function PayoutAccountSection() {
     if (cooldownRef.current) clearInterval(cooldownRef.current)
     cooldownRef.current = setInterval(() => {
       setResendCooldown((prev) => {
-        if (prev <= 1) { clearInterval(cooldownRef.current!); return 0 }
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!)
+          return 0
+        }
         return prev - 1
       })
     }, 1000)
   }
 
-  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current) }, [])
+  useEffect(
+    () => () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current)
+    },
+    [],
+  )
 
   // ── Mutations
   const startMut = useMutation({
     mutationFn: () =>
-      startPayoutVerification({ bank_name: bankName, bank_code: bankCode, account_number: accountNumber, account_name: resolvedName }),
+      startPayoutVerification({
+        bank_name: bankName,
+        bank_code: bankCode,
+        account_number: accountNumber,
+        account_name: resolvedName,
+      }),
     onSuccess: (data) => {
       if (!data) return
       setVerification(data)
@@ -132,7 +148,10 @@ export default function PayoutAccountSection() {
       setStep('idle')
       setOtp('')
       setVerification(null)
-      setBankCode(''); setBankName(''); setAccountNumber(''); setResolvedName('')
+      setBankCode('')
+      setBankName('')
+      setAccountNumber('')
+      setResolvedName('')
       setTimeout(() => setSuccess(false), 4000)
     },
     onError: (e: any) => setOtpErr(e?.message ?? 'Invalid OTP'),
@@ -140,8 +159,15 @@ export default function PayoutAccountSection() {
 
   function resetForm() {
     setStep('idle')
-    setBankCode(''); setBankName(''); setAccountNumber(''); setResolvedName('')
-    setResolveErr(''); setFormErr(''); setOtp(''); setOtpErr(''); setVerification(null)
+    setBankCode('')
+    setBankName('')
+    setAccountNumber('')
+    setResolvedName('')
+    setResolveErr('')
+    setFormErr('')
+    setOtp('')
+    setOtpErr('')
+    setVerification(null)
     if (cooldownRef.current) clearInterval(cooldownRef.current)
     setResendCooldown(0)
   }
@@ -169,7 +195,9 @@ export default function PayoutAccountSection() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white">{account.account_name}</p>
               <p className="text-xs text-gray-400 mt-0.5">{account.bank_name}</p>
-              <p className="text-xs font-mono text-gray-500 mt-1 tracking-wider">{account.account_number}</p>
+              <p className="text-xs font-mono text-gray-500 mt-1 tracking-wider">
+                {account.account_number}
+              </p>
             </div>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
               Default
@@ -191,7 +219,10 @@ export default function PayoutAccountSection() {
         )}
 
         <button
-          onClick={() => { setStep('form'); setSuccess(false) }}
+          onClick={() => {
+            setStep('form')
+            setSuccess(false)
+          }}
           className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-semibold"
         >
           <Landmark className="w-4 h-4" />
@@ -207,16 +238,26 @@ export default function PayoutAccountSection() {
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-2">
           <p className="text-sm font-semibold text-white flex-1">Add Bank Account</p>
-          <button onClick={resetForm} className="text-gray-500 hover:text-gray-300 transition-colors">
+          <button
+            onClick={resetForm}
+            className="text-gray-500 hover:text-gray-300 transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Bank</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Bank
+          </label>
           <BankSelect
             value={bankCode}
-            onChange={(code, name) => { setBankCode(code); setBankName(name); setResolvedName(''); setResolveErr('') }}
+            onChange={(code, name) => {
+              setBankCode(code)
+              setBankName(name)
+              setResolvedName('')
+              setResolveErr('')
+            }}
             banks={banks as PaystackBank[]}
             disabled={banksLoading}
           />
@@ -228,7 +269,9 @@ export default function PayoutAccountSection() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Account Number</label>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Account Number
+          </label>
           <input
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
@@ -259,7 +302,9 @@ export default function PayoutAccountSection() {
         </div>
 
         {formErr && (
-          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{formErr}</p>
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+            {formErr}
+          </p>
         )}
 
         <div className="flex gap-2 pt-1">
@@ -289,7 +334,10 @@ export default function PayoutAccountSection() {
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-2">
           <p className="text-sm font-semibold text-white flex-1">Verify Your Account</p>
-          <button onClick={resetForm} className="text-gray-500 hover:text-gray-300 transition-colors">
+          <button
+            onClick={resetForm}
+            className="text-gray-500 hover:text-gray-300 transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -297,7 +345,9 @@ export default function PayoutAccountSection() {
         <div className="rounded-xl border border-white/8 bg-white/2 p-4 space-y-1">
           <p className="text-xs text-gray-500">Adding account for</p>
           <p className="text-sm font-semibold text-white">{verification?.account_name}</p>
-          <p className="text-xs text-gray-400">{verification?.bank_name} · {verification?.account_number}</p>
+          <p className="text-xs text-gray-400">
+            {verification?.bank_name} · {verification?.account_number}
+          </p>
         </div>
 
         <div>
@@ -308,7 +358,9 @@ export default function PayoutAccountSection() {
         </div>
 
         {otpErr && (
-          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{otpErr}</p>
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+            {otpErr}
+          </p>
         )}
 
         <button
@@ -317,7 +369,11 @@ export default function PayoutAccountSection() {
           className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2"
           style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
         >
-          {confirmMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+          {confirmMut.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <ShieldCheck className="w-4 h-4" />
+          )}
           Confirm & Save Account
         </button>
 
@@ -352,7 +408,8 @@ export default function PayoutAccountSection() {
           <div>
             <p className="text-sm font-medium text-white">Bank Account for Payouts</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              This account receives your earnings. Adding a new account replaces the current default.
+              This account receives your earnings. Adding a new account replaces the current
+              default.
             </p>
           </div>
         </div>

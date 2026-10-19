@@ -1,6 +1,6 @@
 // src/app/api/admin/auth/refresh/route.ts
-import { NextRequest } from 'next/server'
 import { proxyRequest } from '@/lib/api/proxy'
+import { NextRequest } from 'next/server'
 
 // The admin_refresh_token cookie is httpOnly and same-origin to Next.js.
 // This proxy route forwards it server-side to the Go backend so the browser

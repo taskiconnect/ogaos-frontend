@@ -1,14 +1,14 @@
 'use client'
 
+import { createExpense, updateExpense } from '@/lib/api/finance'
+import type { Expense } from '@/lib/api/types'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Receipt, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm, type SubmitHandler } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createExpense, updateExpense } from '@/lib/api/finance'
-import { X, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Expense } from '@/lib/api/types'
+import { z } from 'zod'
 
 const CATEGORIES = [
   'rent',
@@ -57,20 +57,10 @@ function toIsoUtcMidnight(dateString: string): string {
 }
 
 function getErrorMessage(error: any, fallback: string): string {
-  return (
-    error?.message ||
-    error?.response?.data?.message ||
-    error?.data?.message ||
-    fallback
-  )
+  return error?.message || error?.response?.data?.message || error?.data?.message || fallback
 }
 
-export default function AddExpenseModal({
-  open,
-  onOpenChange,
-  onSuccess,
-  editing,
-}: Props) {
+export default function AddExpenseModal({ open, onOpenChange, onSuccess, editing }: Props) {
   const qc = useQueryClient()
 
   const {
@@ -173,9 +163,7 @@ export default function AddExpenseModal({
               <h2 className="text-lg font-semibold text-foreground">
                 {editing ? 'Edit Expense' : 'Record Expense'}
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Track your business spending
-              </p>
+              <p className="text-xs text-muted-foreground">Track your business spending</p>
             </div>
           </div>
 
@@ -201,9 +189,7 @@ export default function AddExpenseModal({
             />
 
             {errors.description && (
-              <p className="mt-1 text-xs text-red-500">
-                {errors.description.message}
-              </p>
+              <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>
             )}
           </div>
 
@@ -223,9 +209,7 @@ export default function AddExpenseModal({
               />
 
               {errors.amount && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.amount.message}
-                </p>
+                <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>
               )}
             </div>
 
@@ -237,9 +221,7 @@ export default function AddExpenseModal({
               <input type="date" {...register('expense_date')} className={inputCls} />
 
               {errors.expense_date && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.expense_date.message}
-                </p>
+                <p className="mt-1 text-xs text-red-500">{errors.expense_date.message}</p>
               )}
             </div>
           </div>
@@ -260,9 +242,7 @@ export default function AddExpenseModal({
               </select>
 
               {errors.expense_type && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.expense_type.message}
-                </p>
+                <p className="mt-1 text-xs text-red-500">{errors.expense_type.message}</p>
               )}
             </div>
 
@@ -284,9 +264,7 @@ export default function AddExpenseModal({
               </select>
 
               {errors.category && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.category.message}
-                </p>
+                <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>
               )}
             </div>
           </div>

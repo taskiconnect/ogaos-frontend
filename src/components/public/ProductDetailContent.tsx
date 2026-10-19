@@ -1,28 +1,28 @@
 'use client'
 
-import { useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import {
-  Download,
-  Package,
-  BriefcaseBusiness,
-  Star,
-  CheckCircle,
-  MessageCircle,
-  Share2,
-  Copy,
-  Check,
-  MapPin,
-  Globe,
-  ExternalLink,
-  Tag,
-  HardDrive,
-  Calendar,
-  XCircle,
-} from 'lucide-react'
 import type { PublicBusiness, PublicDigitalProduct, PublicProduct } from '@/types/public'
 import { formatBytes, formatCurrency } from '@/types/public'
+import {
+  BriefcaseBusiness,
+  Calendar,
+  Check,
+  CheckCircle,
+  Copy,
+  Download,
+  ExternalLink,
+  Globe,
+  HardDrive,
+  MapPin,
+  MessageCircle,
+  Package,
+  Share2,
+  Star,
+  Tag,
+  XCircle,
+} from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useState } from 'react'
 
 const TYPE_COLORS: Record<string, string> = {
   download: 'border-blue-500/20 bg-blue-500/15 text-blue-400',
@@ -51,8 +51,12 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
   const description = product.description
   const price = product.price
   const currency = isDigital(product) ? product.currency : 'NGN'
-  const coverImage = isDigital(product) ? product.cover_image_url : (product as PublicProduct).image_url
-  const type = isDigital(product) ? product.type : (product as PublicProduct).type || (itemKind === 'service' ? 'service' : 'product')
+  const coverImage = isDigital(product)
+    ? product.cover_image_url
+    : (product as PublicProduct).image_url
+  const type = isDigital(product)
+    ? product.type
+    : (product as PublicProduct).type || (itemKind === 'service' ? 'service' : 'product')
   const salesCount = isDigital(product) ? product.sales_count : undefined
   const fileSize = isDigital(product) ? product.file_size : null
   const createdAt = product.created_at
@@ -111,7 +115,9 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
           )}
 
           {/* Type badge */}
-          <span className={`absolute left-3 top-3 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase ${typeColor}`}>
+          <span
+            className={`absolute left-3 top-3 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase ${typeColor}`}
+          >
             {type}
           </span>
 
@@ -143,7 +149,14 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
                     : 'border-white/6 opacity-60 hover:opacity-100'
                 }`}
               >
-                <Image src={img} alt={`${name} image ${i + 1}`} fill className="object-cover" unoptimized sizes="64px" />
+                <Image
+                  src={img}
+                  alt={`${name} image ${i + 1}`}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                  sizes="64px"
+                />
               </button>
             ))}
           </div>
@@ -174,7 +187,9 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
             <h2 className="mb-2 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
               Description
             </h2>
-            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">{description}</p>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
+              {description}
+            </p>
           </div>
         )}
 
@@ -183,7 +198,9 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
           {fileSize && (
             <div className="flex flex-col gap-1 rounded-xl border border-white/6 bg-[#0e0e1a] p-3">
               <HardDrive className="h-4 w-4 text-brand-blue" />
-              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">File Size</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                File Size
+              </span>
               <span className="text-sm font-semibold text-foreground">{formatBytes(fileSize)}</span>
             </div>
           )}
@@ -191,16 +208,24 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
           {createdAt && (
             <div className="flex flex-col gap-1 rounded-xl border border-white/6 bg-[#0e0e1a] p-3">
               <Calendar className="h-4 w-4 text-purple-400" />
-              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Listed</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Listed
+              </span>
               <span className="text-sm font-semibold text-foreground">
-                {new Date(createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
+                {new Date(createdAt).toLocaleDateString('en-NG', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
               </span>
             </div>
           )}
 
           <div className="flex flex-col gap-1 rounded-xl border border-white/6 bg-[#0e0e1a] p-3">
             <Tag className="h-4 w-4 text-amber-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Category</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              Category
+            </span>
             <span className="text-sm font-semibold capitalize text-foreground">{type}</span>
           </div>
         </div>
@@ -209,7 +234,14 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
         <div className="flex items-center gap-3 rounded-2xl border border-white/6 bg-[#0e0e1a] p-4">
           <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5">
             {biz.logo_url ? (
-              <Image src={biz.logo_url} alt={biz.name} fill className="object-cover" unoptimized sizes="44px" />
+              <Image
+                src={biz.logo_url}
+                alt={biz.name}
+                fill
+                className="object-cover"
+                unoptimized
+                sizes="44px"
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-lg font-black text-white/30">
                 {biz.name.charAt(0)}
@@ -235,18 +267,28 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
         </div>
 
         {/* Actions */}
+        {isDigital(product) && product.slug && (
+          <Link
+            href={`/public/digital-store/product/${encodeURIComponent(product.slug)}`}
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand-blue py-3.5 text-sm font-bold text-white"
+          >
+            <Download className="h-4 w-4" /> Buy this digital product
+          </Link>
+        )}
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             onClick={handleWhatsApp}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#20bd5a]"
           >
             <MessageCircle className="h-4 w-4" />
-            Enquire via WhatsApp
+            Share enquiry on WhatsApp
           </button>
 
           {biz.website_url && (
             <a
-              href={biz.website_url.startsWith('http') ? biz.website_url : `https://${biz.website_url}`}
+              href={
+                biz.website_url.startsWith('http') ? biz.website_url : `https://${biz.website_url}`
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 rounded-xl border border-dash-border bg-dash-surface px-5 py-3.5 text-sm font-bold text-foreground transition-colors hover:bg-dash-hover"
@@ -265,7 +307,11 @@ export function ProductDetailContent({ product, itemKind, biz, slug }: Props) {
             onClick={handleCopy}
             className="flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-surface px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-all hover:bg-dash-hover hover:text-foreground"
           >
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-emerald-400" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
             {copied ? 'Copied!' : 'Copy link'}
           </button>
           <a

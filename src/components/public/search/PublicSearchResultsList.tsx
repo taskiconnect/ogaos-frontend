@@ -1,6 +1,6 @@
-import Link from 'next/link'
-import { CheckCircle2, MapPin, SearchX, Store, ArrowUpRight, Tag, Navigation } from 'lucide-react'
 import type { PublicBusinessSearchItem } from '@/types/public'
+import { ArrowUpRight, CheckCircle2, MapPin, Navigation, SearchX, Store, Tag } from 'lucide-react'
+import Link from 'next/link'
 
 interface PublicSearchResultsListProps {
   results: PublicBusinessSearchItem[]

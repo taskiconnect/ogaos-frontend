@@ -1,31 +1,44 @@
 // components/shared/BusinessCategoriesNav.tsx
 'use client'
 
-import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
-  ShoppingBag, Utensils, Shirt, Smartphone, Stethoscope,
-  GraduationCap, Wrench, Car, Home, Scissors,
-  Package, Tv, Dumbbell, Landmark, Wheat,
-  ChevronLeft, ChevronRight,
+  Car,
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  GraduationCap,
+  Home,
+  Landmark,
+  Package,
+  Scissors,
+  Shirt,
+  ShoppingBag,
+  Smartphone,
+  Stethoscope,
+  Tv,
+  Utensils,
+  Wheat,
+  Wrench,
 } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 const CATEGORIES = [
-  { label: 'All',             icon: Package,      slug: 'all' },
-  { label: 'Provisions',      icon: ShoppingBag,  slug: 'provisions' },
-  { label: 'Food & Drinks',   icon: Utensils,     slug: 'food-drinks' },
-  { label: 'Fashion',         icon: Shirt,        slug: 'fashion' },
-  { label: 'Electronics',     icon: Smartphone,   slug: 'electronics' },
-  { label: 'Health',          icon: Stethoscope,  slug: 'health' },
-  { label: 'Education',       icon: GraduationCap,slug: 'education' },
-  { label: 'Repairs',         icon: Wrench,       slug: 'repairs' },
-  { label: 'Automobile',      icon: Car,          slug: 'automobile' },
-  { label: 'Real Estate',     icon: Home,         slug: 'real-estate' },
-  { label: 'Beauty & Salon',  icon: Scissors,     slug: 'beauty-salon' },
-  { label: 'Agriculture',     icon: Wheat,        slug: 'agriculture' },
-  { label: 'Electronics Mkt', icon: Tv,           slug: 'electronics-mkt' },
-  { label: 'Fitness',         icon: Dumbbell,     slug: 'fitness' },
-  { label: 'Finance',         icon: Landmark,     slug: 'finance' },
+  { label: 'All', icon: Package, slug: 'all' },
+  { label: 'Provisions', icon: ShoppingBag, slug: 'provisions' },
+  { label: 'Food & Drinks', icon: Utensils, slug: 'food-drinks' },
+  { label: 'Fashion', icon: Shirt, slug: 'fashion' },
+  { label: 'Electronics', icon: Smartphone, slug: 'electronics' },
+  { label: 'Health', icon: Stethoscope, slug: 'health' },
+  { label: 'Education', icon: GraduationCap, slug: 'education' },
+  { label: 'Repairs', icon: Wrench, slug: 'repairs' },
+  { label: 'Automobile', icon: Car, slug: 'automobile' },
+  { label: 'Real Estate', icon: Home, slug: 'real-estate' },
+  { label: 'Beauty & Salon', icon: Scissors, slug: 'beauty-salon' },
+  { label: 'Agriculture', icon: Wheat, slug: 'agriculture' },
+  { label: 'Electronics Mkt', icon: Tv, slug: 'electronics-mkt' },
+  { label: 'Fitness', icon: Dumbbell, slug: 'fitness' },
+  { label: 'Finance', icon: Landmark, slug: 'finance' },
 ]
 
 interface BusinessCategoriesNavProps {
@@ -54,7 +67,11 @@ export function BusinessCategoriesNav({
   return (
     <div
       className="w-full border-b"
-      style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)' }}
+      style={{
+        borderColor: 'rgba(255,255,255,0.08)',
+        background: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(12px)',
+      }}
     >
       <div className="relative max-w-screen-xl mx-auto px-4">
         {/* Left arrow */}
@@ -88,7 +105,10 @@ export function BusinessCategoriesNav({
                   <motion.div
                     layoutId="category-active"
                     className="absolute inset-0 rounded-xl"
-                    style={{ background: 'rgba(63,154,245,0.12)', border: '1px solid rgba(63,154,245,0.30)' }}
+                    style={{
+                      background: 'rgba(63,154,245,0.12)',
+                      border: '1px solid rgba(63,154,245,0.30)',
+                    }}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -96,11 +116,12 @@ export function BusinessCategoriesNav({
                 {/* Icon */}
                 <div
                   className={`relative z-10 flex items-center justify-center w-9 h-9 rounded-lg transition-all
-                    ${isActive
-                      ? 'text-brand-blue'
-                      : 'text-gray-500 group-hover:text-gray-300'
-                    }`}
-                  style={isActive ? { background: 'rgba(63,154,245,0.15)' } : { background: 'rgba(255,255,255,0.04)' }}
+                    ${isActive ? 'text-brand-blue' : 'text-gray-500 group-hover:text-gray-300'}`}
+                  style={
+                    isActive
+                      ? { background: 'rgba(63,154,245,0.15)' }
+                      : { background: 'rgba(255,255,255,0.04)' }
+                  }
                 >
                   <Icon className="w-4 h-4" />
                 </div>

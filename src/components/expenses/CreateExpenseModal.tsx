@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { createExpense } from '@/lib/api/finance'
-import { X, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { CreateExpenseRequest } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useMutation } from '@tanstack/react-query'
+import { Loader2, X } from 'lucide-react'
+import { useState } from 'react'
 
 interface Props {
   open: boolean
@@ -36,19 +36,10 @@ function toIsoUtcMidnight(dateString: string): string {
 }
 
 function getErrorMessage(error: any, fallback: string): string {
-  return (
-    error?.message ||
-    error?.response?.data?.message ||
-    error?.data?.message ||
-    fallback
-  )
+  return error?.message || error?.response?.data?.message || error?.data?.message || fallback
 }
 
-export default function CreateExpenseModal({
-  open,
-  onOpenChange,
-  onSuccess,
-}: Props) {
+export default function CreateExpenseModal({ open, onOpenChange, onSuccess }: Props) {
   const [expenseType, setExpenseType] = useState<'opex' | 'capex'>('opex')
   const [category, setCategory] = useState('Other')
   const [description, setDescription] = useState('')
@@ -116,9 +107,7 @@ export default function CreateExpenseModal({
       vat_inclusive: vatInclusive,
       is_tax_deductible: isTaxDeductible,
       asset_life_years:
-        expenseType === 'capex' && assetLifeYears
-          ? parseInt(assetLifeYears, 10)
-          : undefined,
+        expenseType === 'capex' && assetLifeYears ? parseInt(assetLifeYears, 10) : undefined,
       asset_start_date: expenseType === 'capex' ? isoExpenseDate : undefined,
     })
   }
@@ -166,7 +155,7 @@ export default function CreateExpenseModal({
                       ? type === 'opex'
                         ? 'border-blue-500/40 bg-blue-500/20 text-blue-400'
                         : 'border-purple-500/40 bg-purple-500/20 text-purple-400'
-                      : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20'
+                      : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20',
                   )}
                 >
                   {type}
@@ -254,9 +243,7 @@ export default function CreateExpenseModal({
                 min="0"
                 max="100"
                 value={vatRate}
-                onChange={(e) =>
-                  setVatRate(e.target.value === '' ? '' : Number(e.target.value))
-                }
+                onChange={(e) => setVatRate(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="e.g. 7.5"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
               />
@@ -268,13 +255,13 @@ export default function CreateExpenseModal({
                 onClick={() => setVatInclusive((value) => !value)}
                 className={cn(
                   'relative h-6 w-10 rounded-full border transition-all',
-                  vatInclusive ? 'border-primary bg-primary' : 'border-white/20 bg-white/5'
+                  vatInclusive ? 'border-primary bg-primary' : 'border-white/20 bg-white/5',
                 )}
               >
                 <div
                   className={cn(
                     'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
-                    vatInclusive ? 'left-4' : 'left-0.5'
+                    vatInclusive ? 'left-4' : 'left-0.5',
                   )}
                 />
               </button>
@@ -308,13 +295,13 @@ export default function CreateExpenseModal({
                 'relative h-6 w-10 shrink-0 rounded-full border transition-all',
                 isTaxDeductible
                   ? 'border-emerald-500 bg-emerald-500'
-                  : 'border-white/20 bg-white/5'
+                  : 'border-white/20 bg-white/5',
               )}
             >
               <div
                 className={cn(
                   'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
-                  isTaxDeductible ? 'left-4' : 'left-0.5'
+                  isTaxDeductible ? 'left-4' : 'left-0.5',
                 )}
               />
             </button>

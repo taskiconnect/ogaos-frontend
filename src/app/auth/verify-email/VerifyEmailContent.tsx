@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useMutation } from '@tanstack/react-query'
-import { verifyEmail } from '@/lib/api/auth'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
-import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle2, XCircle, Loader2, Mail, ArrowRight, RefreshCw } from 'lucide-react'
+import { LandingHeader } from '@/components/shared/LandingHeader'
+import { Button } from '@/components/ui/button'
+import { verifyEmail } from '@/lib/api/auth'
+import { useMutation } from '@tanstack/react-query'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowRight, CheckCircle2, Loader2, Mail, RefreshCw, XCircle } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 type State = 'verifying' | 'success' | 'expired' | 'invalid'
 
@@ -37,6 +37,7 @@ export default function VerifyEmailContent() {
 
   useEffect(() => {
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize editable form with the selected external record
       setState('invalid')
       return
     }

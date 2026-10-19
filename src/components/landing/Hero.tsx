@@ -1,19 +1,19 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
-import { BackgroundGrid } from '@/components/shared/BackgroundGrid'
 import { DashboardShowcase } from '@/components/landing/DashboardShowcase'
+import { BackgroundGrid } from '@/components/shared/BackgroundGrid'
+import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
-  Wallet,
-  Users,
-  MessageCircle,
-  TrendingUp,
-  Search,
-  MapPin,
-  X,
   Loader2,
+  MapPin,
+  MessageCircle,
+  Search,
+  TrendingUp,
+  Users,
+  Wallet,
+  X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -27,7 +27,14 @@ const item = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] } },
 } as const
 
-const SUGGESTED_TAGS = ['Electronics', 'Fashion', 'Food & Drinks', 'Pharmacy', 'Groceries', 'Beauty']
+const SUGGESTED_TAGS = [
+  'Electronics',
+  'Fashion',
+  'Food & Drinks',
+  'Pharmacy',
+  'Groceries',
+  'Beauty',
+]
 
 function StoreSearchBar() {
   const [query, setQuery] = useState('')
@@ -71,7 +78,7 @@ function StoreSearchBar() {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 300000,
-      }
+      },
     )
   }
 
@@ -133,8 +140,14 @@ function StoreSearchBar() {
             disabled={isLocating}
             className="m-1.5 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-70"
           >
-            {isLocating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline">{isLocating ? 'Searching...' : 'Search nearby'}</span>
+            {isLocating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <MapPin className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">
+              {isLocating ? 'Searching...' : 'Search nearby'}
+            </span>
           </button>
         </div>
 
@@ -142,7 +155,8 @@ function StoreSearchBar() {
           <p className="mt-3 text-xs font-medium text-red-500">{error}</p>
         ) : (
           <p className="mt-3 text-xs text-muted-foreground/75">
-            We’ll ask for your current location. If you deny permission, we’ll still show matching businesses from all available results.
+            We’ll ask for your current location. If you deny permission, we’ll still show matching
+            businesses from all available results.
           </p>
         )}
 
@@ -183,7 +197,7 @@ function StoreSearchBar() {
                     enableHighAccuracy: true,
                     timeout: 10000,
                     maximumAge: 300000,
-                  }
+                  },
                 )
               }}
               className="rounded-full border border-border/50 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/8 hover:text-primary"
@@ -244,8 +258,7 @@ export function Hero() {
                 variants={item}
                 className="mb-6 text-[2.75rem] leading-[1.08] font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem] xl:text-[4rem]"
               >
-                Run your business{' '}
-                like a{' '}
+                Run your business like a{' '}
                 <span className="relative inline-block">
                   <span className="relative z-10 bg-linear-to-r from-primary via-primary/85 to-emerald-500 bg-clip-text text-transparent">
                     proper Oga
@@ -311,7 +324,7 @@ export function Hero() {
                   className="h-13 rounded-full bg-linear-to-r from-primary to-primary/80 px-8 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:from-primary/90 hover:to-primary"
                   asChild
                 >
-                  <a href="/auth/signup">Get started — it's free</a>
+                  <a href="/auth/signup">Get started — it&apos;s free</a>
                 </Button>
                 <Button
                   size="lg"
@@ -347,7 +360,12 @@ export function Hero() {
               <motion.div
                 initial={{ rotateX: 4, scale: 1.01 }}
                 animate={{ rotateX: [4, 3.5, 4] }}
-                transition={{ duration: 4, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                  ease: 'easeInOut',
+                }}
                 style={{ transformOrigin: 'top center', transformStyle: 'preserve-3d' }}
               >
                 <motion.div

@@ -1,9 +1,9 @@
-import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { BriefcaseBusiness, Clock3, MapPin, Wallet } from 'lucide-react'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import type { PublicJobItem } from '@/lib/api/types'
+import { BriefcaseBusiness, Clock3, MapPin, Wallet } from 'lucide-react'
+import Link from 'next/link'
 
 function formatJobType(type: string) {
   return type.replaceAll('_', ' ').replace(/\b\w/g, (m) => m.toUpperCase())

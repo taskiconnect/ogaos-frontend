@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
 import { getMySubscription } from '@/lib/api/subscription'
 import type { Subscription, SubscriptionPlan } from '@/lib/api/types'
+import { useQuery } from '@tanstack/react-query'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useMemo } from 'react'
 
 type RequireSubscriptionOptions = {
   redirectIfMissing?: boolean
@@ -27,7 +27,7 @@ function isSubscriptionUsable(sub: Subscription | null): boolean {
 
 function hasRequiredPlan(
   currentPlan: SubscriptionPlan | undefined,
-  requiredPlan?: Exclude<SubscriptionPlan, 'free'>
+  requiredPlan?: Exclude<SubscriptionPlan, 'free'>,
 ): boolean {
   if (!requiredPlan) return true
   if (!currentPlan) return false
@@ -98,18 +98,8 @@ export function useSubscription(options: RequireSubscriptionOptions = {}) {
       params.set('required_plan', requiredPlan)
     }
 
-    router.replace(
-      `${redirectTo}${params.toString() ? `?${params.toString()}` : ''}`
-    )
-  }, [
-    shouldRedirect,
-    subscription,
-    isActive,
-    hasPlanAccess,
-    requiredPlan,
-    redirectTo,
-    router,
-  ])
+    router.replace(`${redirectTo}${params.toString() ? `?${params.toString()}` : ''}`)
+  }, [shouldRedirect, subscription, isActive, hasPlanAccess, requiredPlan, redirectTo, router])
 
   return {
     subscription,

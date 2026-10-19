@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation'
 import { getPublicDigitalProduct } from '@/lib/api/public'
+import { notFound } from 'next/navigation'
 import ProductExperience from './ProductExperience'
 
 type PageProps = {
@@ -17,7 +17,10 @@ export default async function DigitalProductPage({ params }: PageProps) {
     const message =
       error instanceof Error ? error.message.toLowerCase() : 'failed to fetch digital product'
 
-    if (message.includes('product not found') || message.includes('failed to fetch digital product')) {
+    if (
+      message.includes('product not found') ||
+      message.includes('failed to fetch digital product')
+    ) {
       notFound()
     }
 

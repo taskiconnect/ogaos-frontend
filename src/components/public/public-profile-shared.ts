@@ -65,8 +65,7 @@ export function slugAccent(slug: string): string {
     '#2540FF',
   ]
 
-  const i =
-    slug.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % ACCENTS.length
+  const i = slug.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % ACCENTS.length
 
   return ACCENTS[i]
 }
@@ -94,15 +93,7 @@ export function fmtSize(b: number | null): string | null {
 }
 
 export function fullAddress(b: PublicBusiness): string {
-  return [
-    b.street,
-    b.city_town,
-    b.local_government,
-    b.state,
-    b.country,
-  ]
-    .filter(Boolean)
-    .join(', ')
+  return [b.street, b.city_town, b.local_government, b.state, b.country].filter(Boolean).join(', ')
 }
 
 export function mapsEmbed(b: PublicBusiness): string {
@@ -111,15 +102,13 @@ export function mapsEmbed(b: PublicBusiness): string {
 }
 
 export function mapsLink(b: PublicBusiness): string {
-  return `https://maps.google.com/?q=${encodeURIComponent(
-    fullAddress(b) || b.name
-  )}`
+  return `https://maps.google.com/?q=${encodeURIComponent(fullAddress(b) || b.name)}`
 }
 
 export function waLink(phone: string, name: string): string {
   const n = phone.replace(/\D/g, '').replace(/^0/, '234')
   return `https://wa.me/${n}?text=${encodeURIComponent(
-    `Hi ${name}, I found your business on OgaOS`
+    `Hi ${name}, I found your business on OgaOS`,
   )}`
 }
 

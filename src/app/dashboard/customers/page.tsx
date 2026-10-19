@@ -2,25 +2,27 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useMemo } from 'react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listCustomers, deleteCustomer } from '@/lib/api/business'
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import { Plus, Search, Users, Trash2, ChevronDown, Phone, Mail, TrendingUp } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { Customer } from '@/lib/api/types'
-import CustomerModal from '@/components/customers/CustomerModal'
 import CustomerDrawer from '@/components/customers/CustomerDrawer'
+import CustomerModal from '@/components/customers/CustomerModal'
+import { deleteCustomer, listCustomers } from '@/lib/api/business'
+import type { Customer } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown, Mail, Phone, Plus, Search, Trash2, Users } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 function fmt(kobo: number) {
   const n = kobo / 100
-  if (n >= 1_000_000) return `₦${(n/1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `₦${(n/1_000).toFixed(0)}k`
+  if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `₦${(n / 1_000).toFixed(0)}k`
   return `₦${n.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
 }
 function fmtDate(iso: string) {
-  return new Intl.DateTimeFormat('en-NG', { day:'numeric', month:'short', year:'numeric' }).format(new Date(iso))
+  return new Intl.DateTimeFormat('en-NG', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(iso))
 }
 function initials(c: Customer) {
   return `${c.first_name[0] ?? ''}${c.last_name[0] ?? ''}`.toUpperCase()
@@ -44,7 +46,9 @@ function avatarColor(id: string) {
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl p-5">
-      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+        {label}
+      </p>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
     </div>
   )
@@ -52,65 +56,85 @@ function MiniStat({ label, value, color }: { label: string; value: string; color
 
 export default function CustomersPage() {
   const qc = useQueryClient()
-  const [search, setSearch]         = useState('')
+  const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
-  const [selected, setSelected]     = useState<Customer | null>(null)
-  const [deleting, setDeleting]     = useState<string | null>(null)
+  const [selected, setSelected] = useState<Customer | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ['customers', search],
-    queryFn: ({ pageParam }) => listCustomers({
-      limit: 30, cursor: pageParam as string | undefined,
-      search: search || undefined,
-    }),
+    queryFn: ({ pageParam }) =>
+      listCustomers({
+        limit: 30,
+        cursor: pageParam as string | undefined,
+        search: search || undefined,
+      }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: any) => last.next_cursor ?? undefined,
   })
 
   const allCustomers: Customer[] = useMemo(
-    () => (data?.pages ?? []).flatMap((p: any) => p.data ?? []), [data]
+    () => (data?.pages ?? []).flatMap((p: any) => p.data ?? []),
+    [data],
   )
 
-  const totalRevenue  = allCustomers.reduce((s, c) => s + c.total_purchases, 0)
-  const totalOrders   = allCustomers.reduce((s, c) => s + c.total_orders, 0)
-  const withDebt      = allCustomers.filter(c => c.outstanding_debt > 0).length
+  const totalRevenue = allCustomers.reduce((s, c) => s + c.total_purchases, 0)
+  const totalOrders = allCustomers.reduce((s, c) => s + c.total_orders, 0)
+  const withDebt = allCustomers.filter((c) => c.outstanding_debt > 0).length
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteCustomer(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['customers'] }); setDeleting(null) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['customers'] })
+      setDeleting(null)
+    },
   })
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-      <div className="lg:pl-72">
-        <DashboardHeader />
+      <div className="">
         <main className="p-6 lg:p-10 space-y-8 pb-20">
+          <p className="text-xs text-muted-foreground">
+            List figures reflect the records currently loaded and selected filters.
+          </p>
 
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
               <p className="text-gray-400 mt-1 text-sm">Manage your customer relationships</p>
             </div>
-            <button onClick={() => setShowCreate(true)}
+            <button
+              onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0"
-              style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}>
+              style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
+            >
               <Plus className="w-4 h-4" /> Add Customer
             </button>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <MiniStat label="Total Customers" value={String(allCustomers.length)} color="text-white" />
-            <MiniStat label="Total Revenue"   value={fmt(totalRevenue)}           color="text-emerald-400" />
-            <MiniStat label="Total Orders"    value={String(totalOrders)}         color="text-blue-400" />
-            <MiniStat label="With Debt"       value={String(withDebt)}            color={withDebt > 0 ? 'text-red-400' : 'text-gray-500'} />
+            <MiniStat
+              label="Total Customers"
+              value={String(allCustomers.length)}
+              color="text-white"
+            />
+            <MiniStat label="Total Revenue" value={fmt(totalRevenue)} color="text-emerald-400" />
+            <MiniStat label="Total Orders" value={String(totalOrders)} color="text-blue-400" />
+            <MiniStat
+              label="With Debt"
+              value={String(withDebt)}
+              color={withDebt > 0 ? 'text-red-400' : 'text-gray-500'}
+            />
           </div>
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or phone..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25" />
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25"
+            />
           </div>
 
           <div className="bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl overflow-hidden">
@@ -124,26 +148,39 @@ export default function CustomersPage() {
               </div>
             ) : (
               <div className="divide-y divide-white/5">
-                {allCustomers.map(customer => (
-                  <div key={customer.id} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
+                {allCustomers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors"
+                  >
                     {/* Avatar */}
-                    <button onClick={() => setSelected(customer)}
-                      className={cn('w-10 h-10 rounded-xl border font-bold text-sm flex items-center justify-center shrink-0', avatarColor(customer.id))}>
+                    <button
+                      onClick={() => setSelected(customer)}
+                      className={cn(
+                        'w-10 h-10 rounded-xl border font-bold text-sm flex items-center justify-center shrink-0',
+                        avatarColor(customer.id),
+                      )}
+                    >
                       {initials(customer)}
                     </button>
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelected(customer)}>
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => setSelected(customer)}
+                    >
                       <p className="text-sm font-semibold text-white">{fullName(customer)}</p>
                       <div className="flex items-center gap-3 mt-0.5">
                         {customer.phone_number && (
                           <span className="flex items-center gap-1 text-xs text-gray-500">
-                            <Phone className="w-3 h-3" />{customer.phone_number}
+                            <Phone className="w-3 h-3" />
+                            {customer.phone_number}
                           </span>
                         )}
                         {customer.email && (
                           <span className="flex items-center gap-1 text-xs text-gray-500">
-                            <Mail className="w-3 h-3" />{customer.email}
+                            <Mail className="w-3 h-3" />
+                            {customer.email}
                           </span>
                         )}
                       </div>
@@ -153,7 +190,9 @@ export default function CustomersPage() {
                     <div className="hidden sm:flex items-center gap-6 shrink-0">
                       <div className="text-right">
                         <p className="text-xs text-gray-500">Revenue</p>
-                        <p className="text-sm font-semibold text-emerald-400">{fmt(customer.total_purchases)}</p>
+                        <p className="text-sm font-semibold text-emerald-400">
+                          {fmt(customer.total_purchases)}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">Orders</p>
@@ -162,7 +201,9 @@ export default function CustomersPage() {
                       {customer.outstanding_debt > 0 && (
                         <div className="text-right">
                           <p className="text-xs text-gray-500">Debt</p>
-                          <p className="text-sm font-semibold text-red-400">{fmt(customer.outstanding_debt)}</p>
+                          <p className="text-sm font-semibold text-red-400">
+                            {fmt(customer.outstanding_debt)}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -176,18 +217,27 @@ export default function CustomersPage() {
                     {/* Delete */}
                     {deleting === customer.id ? (
                       <div className="flex items-center gap-1 shrink-0">
-                        <button onClick={() => deleteMut.mutate(customer.id)}
-                          className="px-2 py-1 rounded-lg bg-red-500/20 border border-red-500/30 text-xs text-red-400 font-semibold hover:bg-red-500/30">
+                        <button
+                          onClick={() => deleteMut.mutate(customer.id)}
+                          className="px-2 py-1 rounded-lg bg-red-500/20 border border-red-500/30 text-xs text-red-400 font-semibold hover:bg-red-500/30"
+                        >
                           Confirm
                         </button>
-                        <button onClick={() => setDeleting(null)}
-                          className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400 hover:bg-white/10">
+                        <button
+                          onClick={() => setDeleting(null)}
+                          className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400 hover:bg-white/10"
+                        >
                           Cancel
                         </button>
                       </div>
                     ) : (
-                      <button onClick={e => { e.stopPropagation(); setDeleting(customer.id) }}
-                        className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 flex items-center justify-center shrink-0 transition-colors">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleting(customer.id)
+                        }}
+                        className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 flex items-center justify-center shrink-0 transition-colors"
+                      >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
@@ -199,21 +249,33 @@ export default function CustomersPage() {
 
           {hasNextPage && (
             <div className="text-center">
-              <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10">
-                <ChevronDown className="w-4 h-4" />{isFetchingNextPage ? 'Loading...' : 'Load more'}
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10"
+              >
+                <ChevronDown className="w-4 h-4" />
+                {isFetchingNextPage ? 'Loading...' : 'Load more'}
               </button>
             </div>
           )}
-
         </main>
       </div>
 
-      <CustomerModal open={showCreate} onOpenChange={setShowCreate}
-        onSuccess={() => qc.invalidateQueries({ queryKey: ['customers'] })} />
+      <CustomerModal
+        open={showCreate}
+        onOpenChange={setShowCreate}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['customers'] })}
+      />
       {selected && (
-        <CustomerDrawer customer={selected} onClose={() => setSelected(null)}
-          onSuccess={() => { qc.invalidateQueries({ queryKey: ['customers'] }); setSelected(null) }} />
+        <CustomerDrawer
+          customer={selected}
+          onClose={() => setSelected(null)}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ['customers'] })
+            setSelected(null)
+          }}
+        />
       )}
     </div>
   )

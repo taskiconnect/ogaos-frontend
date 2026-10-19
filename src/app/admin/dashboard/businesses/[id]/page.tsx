@@ -2,30 +2,44 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import {
-  Building2, MapPin, Globe, BadgeCheck, ArrowLeft, Mail, Phone,
-  Users, CreditCard, Calendar, Clock, CheckCircle2, XCircle, Loader2,
-  Gift, TimerReset, Ban,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import AdminSidebar from '@/components/admin/AdminSidebar'
-import AdminDashboardHeader from '@/components/admin/AdminDashboardHeader'
-import { useAdminAuthStore } from '@/stores/adminAuthStore'
-import { useAdminBusinessDetail } from '@/lib/hooks/useAdminBusinesses'
-import { setAdminBusinessVerified, cancelAdminBusinessSubscription } from '@/lib/api/admin'
-import VerifyBusinessModal from '@/components/admin/business/VerifyBusinessModal'
+import CancelSubscriptionModal from '@/components/admin/business/CancelSubscriptionModal'
 import CompSubscriptionModal from '@/components/admin/business/CompSubscriptionModal'
 import ExtendSubscriptionModal from '@/components/admin/business/ExtendSubscriptionModal'
-import CancelSubscriptionModal from '@/components/admin/business/CancelSubscriptionModal'
+import VerifyBusinessModal from '@/components/admin/business/VerifyBusinessModal'
+import { cancelAdminBusinessSubscription, setAdminBusinessVerified } from '@/lib/api/admin'
+import { useAdminBusinessDetail } from '@/lib/hooks/useAdminBusinesses'
+import { cn } from '@/lib/utils'
+import { useAdminAuthStore } from '@/stores/adminAuthStore'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Ban,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  Gift,
+  Globe,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  TimerReset,
+  Users,
+  XCircle,
+} from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 function fmtDate(iso: string | null) {
   if (!iso) return '—'
   return new Intl.DateTimeFormat('en-NG', {
-    day: 'numeric', month: 'short', year: 'numeric',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   }).format(new Date(iso))
 }
 
@@ -99,11 +113,7 @@ export default function AdminBusinessDetailPage() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <AdminSidebar admin={user} />
-
-      <div className="lg:pl-72">
-        <AdminDashboardHeader admin={user} />
-
+      <div className="">
         <main className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 pb-20">
           <button
             onClick={() => router.push('/admin/dashboard/businesses')}
@@ -120,7 +130,7 @@ export default function AdminBusinessDetailPage() {
 
           {isError && !isLoading && (
             <div className="p-10 text-center text-sm text-red-400">
-              Couldn't load this business. It may not exist, or something went wrong.
+              Couldn&apos;t load this business. It may not exist, or something went wrong.
             </div>
           )}
 
@@ -130,13 +140,17 @@ export default function AdminBusinessDetailPage() {
               <div className="rounded-2xl border border-white/8 bg-white/2 overflow-hidden">
                 <div
                   className="h-24 sm:h-28 w-full"
-                  style={{ background: 'linear-gradient(135deg, #001a6e 0%, #0a2a8a 50%, #1a4fc4 100%)' }}
+                  style={{
+                    background: 'linear-gradient(135deg, #001a6e 0%, #0a2a8a 50%, #1a4fc4 100%)',
+                  }}
                 />
                 <div className="px-6 pb-6 -mt-10 sm:-mt-12 flex flex-col sm:flex-row sm:items-end gap-4">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-background bg-white/5 flex items-center justify-center shrink-0 overflow-hidden">
-                    {business.logo_url
-                      ? <img src={business.logo_url} alt="" className="w-full h-full object-cover" />
-                      : <Building2 className="w-8 h-8 text-gray-500" />}
+                    {business.logo_url ? (
+                      <img src={business.logo_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 className="w-8 h-8 text-gray-500" />
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0 pb-1">
@@ -148,7 +162,9 @@ export default function AdminBusinessDetailPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-400 text-sm mt-0.5">{business.category} · /{business.slug}</p>
+                    <p className="text-gray-400 text-sm mt-0.5">
+                      {business.category} · /{business.slug}
+                    </p>
                   </div>
 
                   <button
@@ -157,7 +173,7 @@ export default function AdminBusinessDetailPage() {
                       'self-start sm:self-auto px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all',
                       business.is_verified
                         ? 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'
-                        : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/15'
+                        : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/15',
                     )}
                   >
                     <BadgeCheck className="w-3.5 h-3.5" />
@@ -183,7 +199,13 @@ export default function AdminBusinessDetailPage() {
                         icon={MapPin}
                         label="Location"
                         value={
-                          [business.street, business.city_town, business.local_government, business.state, business.country]
+                          [
+                            business.street,
+                            business.city_town,
+                            business.local_government,
+                            business.state,
+                            business.country,
+                          ]
                             .filter(Boolean)
                             .join(', ') || '—'
                         }
@@ -192,19 +214,39 @@ export default function AdminBusinessDetailPage() {
                         icon={Globe}
                         label="Website"
                         value={
-                          business.website_url
-                            ? <a href={business.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{business.website_url}</a>
-                            : '—'
+                          business.website_url ? (
+                            <a
+                              href={business.website_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {business.website_url}
+                            </a>
+                          ) : (
+                            '—'
+                          )
                         }
                       />
                       <DetailRow
                         icon={CheckCircle2}
                         label="Public profile"
                         value={business.is_profile_public ? 'Public' : 'Private'}
-                        valueClass={business.is_profile_public ? 'text-emerald-400' : 'text-gray-500'}
+                        valueClass={
+                          business.is_profile_public ? 'text-emerald-400' : 'text-gray-500'
+                        }
                       />
-                      <DetailRow icon={Users} label="Profile views" value={String(business.profile_views)} />
-                      <DetailRow icon={Calendar} label="Created" value={fmtDate(business.created_at)} valueClass="text-gray-300" />
+                      <DetailRow
+                        icon={Users}
+                        label="Profile views"
+                        value={String(business.profile_views)}
+                      />
+                      <DetailRow
+                        icon={Calendar}
+                        label="Created"
+                        value={fmtDate(business.created_at)}
+                        valueClass="text-gray-300"
+                      />
                     </div>
                   </div>
 
@@ -220,7 +262,11 @@ export default function AdminBusinessDetailPage() {
                       <div className="space-y-0">
                         <DetailRow icon={Users} label="Name" value={business.owner.name} />
                         <DetailRow icon={Mail} label="Email" value={business.owner.email} />
-                        <DetailRow icon={Phone} label="Phone" value={business.owner.phone_number || '—'} />
+                        <DetailRow
+                          icon={Phone}
+                          label="Phone"
+                          value={business.owner.phone_number || '—'}
+                        />
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">No owner on record for this business.</p>
@@ -233,21 +279,30 @@ export default function AdminBusinessDetailPage() {
                       <div className="w-8 h-8 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
                         <Users className="w-4 h-4 text-yellow-400" />
                       </div>
-                      <h3 className="text-sm font-semibold text-white">Staff ({business.staff?.length ?? 0})</h3>
+                      <h3 className="text-sm font-semibold text-white">
+                        Staff ({business.staff?.length ?? 0})
+                      </h3>
                     </div>
                     {business.staff && business.staff.length > 0 ? (
                       <div className="space-y-2">
                         {business.staff.map((s) => (
-                          <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-black/10 px-4 py-3">
+                          <div
+                            key={s.id}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-black/10 px-4 py-3"
+                          >
                             <div className="min-w-0">
                               <p className="text-sm text-white truncate">{s.name}</p>
                               <p className="text-xs text-gray-500 truncate">{s.email}</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] font-semibold uppercase text-gray-500">{s.role}</span>
-                              {s.is_active
-                                ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                                : <XCircle className="w-3.5 h-3.5 text-red-400" />}
+                              <span className="text-[10px] font-semibold uppercase text-gray-500">
+                                {s.role}
+                              </span>
+                              {s.is_active ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5 text-red-400" />
+                              )}
                             </div>
                           </div>
                         ))}
@@ -270,15 +325,31 @@ export default function AdminBusinessDetailPage() {
 
                     {business.subscription ? (
                       <div className="space-y-0 mb-4">
-                        <DetailRow icon={CreditCard} label="Plan" value={business.subscription.plan} />
+                        <DetailRow
+                          icon={CreditCard}
+                          label="Plan"
+                          value={business.subscription.plan}
+                        />
                         <DetailRow
                           icon={CheckCircle2}
                           label="Status"
                           value={business.subscription.status}
-                          valueClass={business.subscription.status === 'active' ? 'text-emerald-400' : 'text-yellow-400'}
+                          valueClass={
+                            business.subscription.status === 'active'
+                              ? 'text-emerald-400'
+                              : 'text-yellow-400'
+                          }
                         />
-                        <DetailRow icon={Calendar} label="Period start" value={fmtDate(business.subscription.current_period_start)} />
-                        <DetailRow icon={Calendar} label="Period end" value={fmtDate(business.subscription.current_period_end)} />
+                        <DetailRow
+                          icon={Calendar}
+                          label="Period start"
+                          value={fmtDate(business.subscription.current_period_start)}
+                        />
+                        <DetailRow
+                          icon={Calendar}
+                          label="Period end"
+                          value={fmtDate(business.subscription.current_period_end)}
+                        />
                         {business.subscription.grace_period_ends_at && (
                           <DetailRow
                             icon={Clock}
@@ -290,12 +361,20 @@ export default function AdminBusinessDetailPage() {
                         <DetailRow
                           icon={Users}
                           label="Staff limit"
-                          value={business.subscription.max_staff === -1 ? 'Unlimited' : business.subscription.max_staff}
+                          value={
+                            business.subscription.max_staff === -1
+                              ? 'Unlimited'
+                              : business.subscription.max_staff
+                          }
                         />
                         <DetailRow
                           icon={Building2}
                           label="Store limit"
-                          value={business.subscription.max_stores === -1 ? 'Unlimited' : business.subscription.max_stores}
+                          value={
+                            business.subscription.max_stores === -1
+                              ? 'Unlimited'
+                              : business.subscription.max_stores
+                          }
                         />
                       </div>
                     ) : (
@@ -347,7 +426,10 @@ export default function AdminBusinessDetailPage() {
           onOpenChange={(v) => !v && setModal(null)}
           businessId={businessId}
           businessName={business.name}
-          onSuccess={() => { refresh(); setModal(null) }}
+          onSuccess={() => {
+            refresh()
+            setModal(null)
+          }}
         />
       )}
 
@@ -358,7 +440,10 @@ export default function AdminBusinessDetailPage() {
           businessId={businessId}
           businessName={business.name}
           currentPeriodEnd={business.subscription?.current_period_end ?? null}
-          onSuccess={() => { refresh(); setModal(null) }}
+          onSuccess={() => {
+            refresh()
+            setModal(null)
+          }}
         />
       )}
 

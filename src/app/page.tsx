@@ -3,12 +3,12 @@
 export const dynamic = 'force-dynamic'
 
 // app/page.tsx
-import { LandingHeader } from '@/components/shared/LandingHeader'
-import { Hero } from '@/components/landing/Hero'
 import { FeaturesShowcase } from '@/components/landing/Featuresshowcase'
+import { Hero } from '@/components/landing/Hero'
 import { PricingSection } from '@/components/landing/PricingSection'
 import { UpgradeHero } from '@/components/landing/UpgradeHero'
 import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 
 export default function Home() {
   return (

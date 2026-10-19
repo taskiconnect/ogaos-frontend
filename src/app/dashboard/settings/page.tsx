@@ -2,29 +2,22 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  getBusiness,
-  updateBusiness,
-  setBusinessVisibility,
-  listStaff,
-} from '@/lib/api/business'
-import { getStates, getLGAs } from '@/lib/api/location'
 import { deactivateStaff } from '@/lib/api/auth'
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import { Check, Globe, Loader2, MapPinned } from 'lucide-react'
+import { getBusiness, listStaff, setBusinessVisibility, updateBusiness } from '@/lib/api/business'
+import { getLGAs, getStates } from '@/lib/api/location'
 import { cn } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, Globe, Loader2, MapPinned } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import Section from '@/components/settings/Section'
 import BusinessAvatar from '@/components/settings/BusinessAvatar'
-import LocationSelect from '@/components/settings/LocationSelect'
-import StorefrontLink from '@/components/settings/StorefrontLink'
-import StorefrontGallery from '@/components/settings/StorefrontGallery'
-import PayoutAccountSection from '@/components/settings/PayoutAccountSection'
 import BusinessKeywordsSection from '@/components/settings/BusinessKeywordsSection'
-import { StaffRow, AddStaffInline } from '@/components/settings/StaffSection'
+import LocationSelect from '@/components/settings/LocationSelect'
+import PayoutAccountSection from '@/components/settings/PayoutAccountSection'
+import Section from '@/components/settings/Section'
+import { AddStaffInline, StaffRow } from '@/components/settings/StaffSection'
+import StorefrontGallery from '@/components/settings/StorefrontGallery'
+import StorefrontLink from '@/components/settings/StorefrontLink'
 
 export default function SettingsPage() {
   const qc = useQueryClient()
@@ -71,6 +64,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (business && !initialised) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize editable form with the selected external record
       setName(business.name ?? '')
       setCategory(business.category ?? '')
       setDescription(business.description ?? '')
@@ -87,6 +81,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!initialised) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize editable form with the selected external record
     if (previousStateRef.current && previousStateRef.current !== state) setLocalGovt('')
     previousStateRef.current = state
   }, [state, initialised])
@@ -94,6 +89,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!state || !localGovt || lgas.length === 0) return
     const exists = lgas.some((item) => item.toLowerCase() === localGovt.toLowerCase())
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize editable form with the selected external record
     if (!exists) setLocalGovt('')
   }, [lgas, localGovt, state])
 
@@ -144,10 +140,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-      <div className="lg:pl-72">
-        <DashboardHeader />
-
+      <div className="">
         <main className="p-6 lg:p-10 space-y-8 pb-20 max-w-3xl">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -234,7 +227,9 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Street</label>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      Street
+                    </label>
                     <input
                       value={street}
                       onChange={(e) => setStreet(e.target.value)}
@@ -243,7 +238,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">City / Town</label>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      City / Town
+                    </label>
                     <input
                       value={cityTown}
                       onChange={(e) => setCityTown(e.target.value)}
@@ -252,7 +249,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Country</label>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      Country
+                    </label>
                     <input
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
@@ -261,7 +260,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">State</label>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      State
+                    </label>
                     <LocationSelect
                       value={state}
                       onChange={setState}
@@ -272,12 +273,20 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Local Government</label>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      Local Government
+                    </label>
                     <LocationSelect
                       value={localGovt}
                       onChange={setLocalGovt}
                       options={lgaOptions}
-                      placeholder={!state ? 'Select state first' : lgasLoading ? 'Loading LGAs...' : 'Select LGA'}
+                      placeholder={
+                        !state
+                          ? 'Select state first'
+                          : lgasLoading
+                            ? 'Loading LGAs...'
+                            : 'Select LGA'
+                      }
                       disabled={!state || lgasLoading}
                     />
                   </div>
@@ -329,13 +338,15 @@ export default function SettingsPage() {
                 disabled={visibilityMut.isPending}
                 className={cn(
                   'w-12 h-7 rounded-full border transition-all relative shrink-0 disabled:opacity-50',
-                  business?.is_profile_public ? 'bg-primary border-primary' : 'bg-white/5 border-white/20'
+                  business?.is_profile_public
+                    ? 'bg-primary border-primary'
+                    : 'bg-white/5 border-white/20',
                 )}
               >
                 <div
                   className={cn(
                     'absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all',
-                    business?.is_profile_public ? 'left-5' : 'left-0.5'
+                    business?.is_profile_public ? 'left-5' : 'left-0.5',
                   )}
                 />
               </button>
@@ -396,7 +407,9 @@ export default function SettingsPage() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">Business ID</span>
-                <span className="font-mono text-xs text-gray-300">{business?.id?.slice(0, 16)}...</span>
+                <span className="font-mono text-xs text-gray-300">
+                  {business?.id?.slice(0, 16)}...
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Slug</span>
@@ -404,7 +417,12 @@ export default function SettingsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Status</span>
-                <span className={cn('text-xs font-semibold', business?.status === 'active' ? 'text-emerald-400' : 'text-yellow-400')}>
+                <span
+                  className={cn(
+                    'text-xs font-semibold',
+                    business?.status === 'active' ? 'text-emerald-400' : 'text-yellow-400',
+                  )}
+                >
                   {business?.status}
                 </span>
               </div>

@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
-import { applyToPublicJob } from '@/lib/api/recruitment'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { applyToPublicJob } from '@/lib/api/recruitment'
+import { Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 type Props = {
   jobId: string
@@ -51,9 +51,7 @@ export function JobApplicationForm({ jobId, jobTitle }: Props) {
     <Card className="rounded-2xl shadow-sm">
       <CardHeader>
         <CardTitle>Apply for this role</CardTitle>
-        <CardDescription>
-          Fill in your details and upload your CV if available.
-        </CardDescription>
+        <CardDescription>Fill in your details and upload your CV if available.</CardDescription>
       </CardHeader>
 
       <CardContent>

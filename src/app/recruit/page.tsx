@@ -1,11 +1,11 @@
-import type { Metadata } from 'next'
-import { LandingHeader } from '@/components/shared/LandingHeader'
-import { Footer } from '@/components/shared/Footer'
-import { CareersHero } from '@/components/recruit/RecruitHero'
-import { JobFilters } from '@/components/recruit/JobFilters'
 import { JobCard } from '@/components/recruit/JobCard'
+import { JobFilters } from '@/components/recruit/JobFilters'
+import { CareersHero } from '@/components/recruit/RecruitHero'
+import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Button } from '@/components/ui/button'
 import { getPublicJobsSSR } from '@/lib/server/recruitment'
+import type { Metadata } from 'next'
 
 export const revalidate = 300
 
@@ -39,11 +39,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RecruitPage({
-  searchParams,
-}: {
-  searchParams: SearchParams
-}) {
+export default async function RecruitPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
 
   const jobsResponse = await getPublicJobsSSR({

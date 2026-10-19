@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { createDebt } from '@/lib/api/finance'
 import { listCustomers } from '@/lib/api/business'
-import { X, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { createDebt } from '@/lib/api/finance'
 import type { CreateDebtRequest } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { Loader2, X } from 'lucide-react'
+import { useState } from 'react'
 
 interface Props {
   open: boolean
@@ -63,8 +63,7 @@ export default function CreateDebtModal({ open, onOpenChange, onSuccess }: Props
       onOpenChange(false)
       reset()
     },
-    onError: (e: any) =>
-      setError(e?.response?.data?.message ?? 'Failed to record debt'),
+    onError: (e: any) => setError(e?.response?.data?.message ?? 'Failed to record debt'),
   })
 
   function reset() {
@@ -106,10 +105,8 @@ export default function CreateDebtModal({ open, onOpenChange, onSuccess }: Props
     const payload: CreateDebtRequest = {
       direction,
       customer_id: direction === 'receivable' ? customerId : undefined,
-      supplier_name:
-        direction === 'payable' ? supplierName.trim() || undefined : undefined,
-      supplier_phone:
-        direction === 'payable' ? supplierPhone.trim() || undefined : undefined,
+      supplier_name: direction === 'payable' ? supplierName.trim() || undefined : undefined,
+      supplier_phone: direction === 'payable' ? supplierPhone.trim() || undefined : undefined,
       description: description.trim(),
       total_amount: Math.round(parseFloat(totalAmount) * 100),
       due_date: dueDate ? toRFC3339DateStart(dueDate) : undefined,
@@ -151,7 +148,7 @@ export default function CreateDebtModal({ open, onOpenChange, onSuccess }: Props
                   'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-all',
                   direction === 'receivable'
                     ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-400'
-                    : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20'
+                    : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20',
                 )}
               >
                 Money owed to me
@@ -163,7 +160,7 @@ export default function CreateDebtModal({ open, onOpenChange, onSuccess }: Props
                   'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-all',
                   direction === 'payable'
                     ? 'border-red-500/40 bg-red-500/20 text-red-400'
-                    : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20'
+                    : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20',
                 )}
               >
                 Money I owe
@@ -199,9 +196,7 @@ export default function CreateDebtModal({ open, onOpenChange, onSuccess }: Props
                     >
                       {c.first_name} {c.last_name}
                       {c.phone_number && (
-                        <span className="ml-2 text-xs text-gray-500">
-                          {c.phone_number}
-                        </span>
+                        <span className="ml-2 text-xs text-gray-500">{c.phone_number}</span>
                       )}
                     </button>
                   ))}

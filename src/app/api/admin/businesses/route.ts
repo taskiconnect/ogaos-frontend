@@ -1,6 +1,6 @@
 // src/app/api/admin/businesses/route.ts
-import { NextRequest } from 'next/server'
 import { proxyRequest } from '@/lib/api/proxy'
+import { NextRequest } from 'next/server'
 
 // GET /api/admin/businesses → list businesses (cursor-paginated, filterable)
 // Query params (search, status, is_verified, plan, subscription_status,

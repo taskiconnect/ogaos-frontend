@@ -1,10 +1,10 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { ShoppingBag, Package, ArrowRight, Store } from 'lucide-react'
+import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 import { getPublicDigitalStore } from '@/lib/api/public'
 import { formatCurrency } from '@/types/public'
-import { LandingHeader } from '@/components/shared/LandingHeader'
-import { Footer } from '@/components/shared/Footer'
+import { ArrowRight, Package, ShoppingBag, Store } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
 
 type PageProps = {
   params: Promise<{ slug: string }>
@@ -21,8 +21,14 @@ export default async function DigitalStorePage({ params }: PageProps) {
       {/* ── STORE HERO ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-b border-white/8 bg-dash-subtle">
         {/* Brand glow */}
-        <div className="pointer-events-none absolute -top-20 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute top-0 right-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl" aria-hidden />
+        <div
+          className="pointer-events-none absolute -top-20 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute top-0 right-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl"
+          aria-hidden
+        />
 
         <div className="relative mx-auto max-w-6xl px-4 py-12 sm:py-16 sm:px-6 lg:px-8">
           <div className="flex items-start gap-6">

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import Image from 'next/image'
-import { X, Copy, CheckCircle2, MessageCircle } from 'lucide-react'
 import type { PublicBusiness } from '@/types/public'
+import { CheckCircle2, Copy, MessageCircle, X } from 'lucide-react'
+import Image from 'next/image'
+import { useState } from 'react'
 
 interface Props {
   biz: PublicBusiness
@@ -49,10 +49,7 @@ export function ShareModal({ biz, onClose }: Props) {
         >
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-white">Share {biz.name}</h3>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10"
-            >
+            <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10">
               <X className="h-4 w-4" />
             </button>
           </div>

@@ -72,13 +72,13 @@ export interface Coupon {
   id: string
   code: string
   description: string
-  discount_value: number           // integer 1-100 (percentage)
+  discount_value: number // integer 1-100 (percentage)
   applicable_plans: string[]
-  starts_at: string                // ISO 8601
-  expires_at: string               // ISO 8601
-  max_redemptions: number          // 0 = unlimited
-  redemptions: number              // live count from List endpoint
-  remaining: number                // max_redemptions - redemptions (0 if unlimited)
+  starts_at: string // ISO 8601
+  expires_at: string // ISO 8601
+  max_redemptions: number // 0 = unlimited
+  redemptions: number // live count from List endpoint
+  remaining: number // max_redemptions - redemptions (0 if unlimited)
   is_active: boolean
   created_at: string
 }
@@ -88,8 +88,8 @@ export interface CreateCouponPayload {
   description?: string
   discount_value: number
   applicable_plans: string[]
-  starts_at: string                // RFC3339
-  expires_at: string               // RFC3339
+  starts_at: string // RFC3339
+  expires_at: string // RFC3339
   max_redemptions: number
 }
 
@@ -105,8 +105,8 @@ export interface ApiResponse<T = null> {
   data?: T
 }
 
-export interface AdminLoginApiResponse    extends ApiResponse<AdminLoginResponse>  {}
-export interface AdminProfileApiResponse  extends ApiResponse<AdminProfile>        {}
-export interface AdminListApiResponse     extends ApiResponse<AdminProfile[]>      {}
-export interface CouponApiResponse        extends ApiResponse<Coupon>              {}
-export interface CouponListApiResponse    extends ApiResponse<Coupon[]>            {}
+export type AdminLoginApiResponse = ApiResponse<AdminLoginResponse>
+export type AdminProfileApiResponse = ApiResponse<AdminProfile>
+export type AdminListApiResponse = ApiResponse<AdminProfile[]>
+export type CouponApiResponse = ApiResponse<Coupon>
+export type CouponListApiResponse = ApiResponse<Coupon[]>

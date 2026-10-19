@@ -1,39 +1,37 @@
 'use client'
 
-import { useState, useRef, useMemo, useEffect } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import imageCompression from 'browser-image-compression'
+import ProductQRCodePanel from '@/components/digital/ProductQRCodePanel'
 import {
-  updateDigitalProduct,
   addDigitalProductGalleryImage,
   removeDigitalProductGalleryImage,
+  updateDigitalProduct,
   uploadDigitalCover,
   uploadDigitalFile,
 } from '@/lib/api/digital'
-import {
-  X,
-  Loader2,
-  ImagePlus,
-  Trash2,
-  Link,
-  Info,
-  QrCode,
-  Download,
-  ChevronDown,
-  ExternalLink,
-  Copy,
-  Check,
-  Share2,
-  Camera,
-  FileUp,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type {
+  DigitalFulfillmentMode,
   DigitalProduct,
   UpdateDigitalProductRequest,
-  DigitalFulfillmentMode,
 } from '@/lib/api/types'
-import ProductQRCodePanel from '@/components/digital/ProductQRCodePanel'
+import { cn } from '@/lib/utils'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import imageCompression from 'browser-image-compression'
+import {
+  Camera,
+  Check,
+  ChevronDown,
+  Copy,
+  ExternalLink,
+  FileUp,
+  ImagePlus,
+  Link,
+  Loader2,
+  QrCode,
+  Share2,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 interface Props {
   product: DigitalProduct
@@ -60,7 +58,7 @@ function isValidVideoUrl(url: string): boolean {
   try {
     const hostname = new URL(url).hostname
     return ALLOWED_VIDEO_HOSTS.some(
-      (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
     )
   } catch {
     return false
@@ -147,8 +145,7 @@ async function compressImage(file: File): Promise<File> {
     initialQuality: 0.75,
   })
 
-  const ext =
-    outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'
+  const ext = outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'
   const finalName = file.name.includes('.') ? file.name : `${file.name}.${ext}`
 
   return new File([compressedBlob], finalName, {
@@ -174,12 +171,12 @@ export default function EditDigitalDrawer({
   const [promoUrl, setPromoUrl] = useState(p.promo_video_url ?? '')
   const [videoTouched, setVideoTouched] = useState(false)
   const [fulfillmentMode, setFulfillmentMode] = useState<DigitalFulfillmentMode>(
-    p.fulfillment_mode ?? 'file_download'
+    p.fulfillment_mode ?? 'file_download',
   )
   const [redirectURL, setRedirectURL] = useState(p.access_redirect_url ?? '')
   const [deliveryNote, setDeliveryNote] = useState(p.delivery_note ?? '')
   const [accessHours, setAccessHours] = useState(
-    p.access_duration_hours ? String(p.access_duration_hours) : ''
+    p.access_duration_hours ? String(p.access_duration_hours) : '',
   )
   const [saveError, setSaveError] = useState('')
   const [showQR, setShowQR] = useState(false)
@@ -212,7 +209,7 @@ export default function EditDigitalDrawer({
 
   const productURL = useMemo(
     () => buildProductPublicUrl(frontendURL, p.slug),
-    [frontendURL, p.slug]
+    [frontendURL, p.slug],
   )
 
   const saveMut = useMutation({
@@ -354,11 +351,7 @@ export default function EditDigitalDrawer({
       return
     }
 
-    if (
-      fulfillmentMode === 'file_download' &&
-      !p.file_size &&
-      !selectedDigitalFile
-    ) {
+    if (fulfillmentMode === 'file_download' && !p.file_size && !selectedDigitalFile) {
       setSaveError('A digital file is required for file download products')
       return
     }
@@ -419,7 +412,11 @@ export default function EditDigitalDrawer({
                   onClick={handleCopyLink}
                   className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/10"
                 >
-                  {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedLink ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
                   {copiedLink ? 'Copied' : 'Copy Link'}
                 </button>
 
@@ -445,7 +442,8 @@ export default function EditDigitalDrawer({
                 </p>
                 <p className="break-all text-xs leading-6 text-gray-300">{p.slug}</p>
                 <p className="mt-2 text-xs text-gray-500">
-                  This public code is generated automatically and does not change when the title is edited.
+                  This public code is generated automatically and does not change when the title is
+                  edited.
                 </p>
               </div>
 
@@ -500,9 +498,7 @@ export default function EditDigitalDrawer({
                       </div>
 
                       {selectedCover && (
-                        <p className="text-xs text-emerald-400">
-                          Selected: {selectedCover.name}
-                        </p>
+                        <p className="text-xs text-emerald-400">Selected: {selectedCover.name}</p>
                       )}
                     </div>
 
@@ -532,7 +528,9 @@ export default function EditDigitalDrawer({
                         {p.file_size ? 'Current file uploaded' : 'No file uploaded yet'}
                       </p>
                       <p className="mt-1 text-xs text-gray-500">
-                        {p.file_size ? formatFileSize(p.file_size) : 'Upload a downloadable file for file download products'}
+                        {p.file_size
+                          ? formatFileSize(p.file_size)
+                          : 'Upload a downloadable file for file download products'}
                         {p.file_mime_type ? ` • ${p.file_mime_type}` : ''}
                       </p>
                     </div>
@@ -585,7 +583,9 @@ export default function EditDigitalDrawer({
                 </div>
                 <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
                   <p className="mb-0.5 text-gray-500">Mode</p>
-                  <p className="font-bold text-white line-clamp-1">{fulfillmentMode.replace(/_/g, ' ')}</p>
+                  <p className="font-bold text-white line-clamp-1">
+                    {fulfillmentMode.replace(/_/g, ' ')}
+                  </p>
                 </div>
               </div>
 
@@ -633,7 +633,8 @@ export default function EditDigitalDrawer({
 
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                    Access Duration <span className="normal-case font-normal text-gray-600">(optional)</span>
+                    Access Duration{' '}
+                    <span className="normal-case font-normal text-gray-600">(optional)</span>
                   </label>
                   <div className="flex items-center gap-3">
                     <input
@@ -651,7 +652,8 @@ export default function EditDigitalDrawer({
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  Promo Video <span className="normal-case font-normal text-gray-600">(optional)</span>
+                  Promo Video{' '}
+                  <span className="normal-case font-normal text-gray-600">(optional)</span>
                 </label>
                 <div className="relative">
                   <Link className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -667,7 +669,7 @@ export default function EditDigitalDrawer({
                       'w-full rounded-xl border bg-white/5 py-3 pl-9 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none transition-colors',
                       videoTouched && promoUrl && !isValidVideoUrl(promoUrl)
                         ? 'border-red-500/40'
-                        : 'border-white/10 focus:border-white/25'
+                        : 'border-white/10 focus:border-white/25',
                     )}
                   />
                 </div>
@@ -691,9 +693,7 @@ export default function EditDigitalDrawer({
                 <div className="relative">
                   <select
                     value={fulfillmentMode}
-                    onChange={(e) =>
-                      setFulfillmentMode(e.target.value as DigitalFulfillmentMode)
-                    }
+                    onChange={(e) => setFulfillmentMode(e.target.value as DigitalFulfillmentMode)}
                     className="w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-10 text-sm text-white focus:outline-none focus:border-white/25"
                   >
                     {FULFILLMENT_MODES.map((mode) => (
@@ -728,7 +728,8 @@ export default function EditDigitalDrawer({
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  Delivery Note <span className="normal-case font-normal text-gray-600">(optional)</span>
+                  Delivery Note{' '}
+                  <span className="normal-case font-normal text-gray-600">(optional)</span>
                 </label>
                 <textarea
                   value={deliveryNote}

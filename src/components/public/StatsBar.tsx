@@ -1,5 +1,5 @@
-import { ShoppingBag, BriefcaseBusiness, Download, Eye } from 'lucide-react'
 import type { PublicBusiness, PublicStats } from '@/types/public'
+import { BriefcaseBusiness, Download, Eye, ShoppingBag } from 'lucide-react'
 
 interface Props {
   business: PublicBusiness

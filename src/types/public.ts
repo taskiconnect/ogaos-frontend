@@ -234,9 +234,7 @@ export function formatBytes(bytes: number | null): string {
 }
 
 export function fullAddress(b: PublicBusiness): string {
-  return [b.street, b.city_town, b.local_government, b.state, b.country]
-    .filter(Boolean)
-    .join(', ')
+  return [b.street, b.city_town, b.local_government, b.state, b.country].filter(Boolean).join(', ')
 }
 
 export function mapsEmbed(b: PublicBusiness): string {
@@ -251,7 +249,7 @@ export function mapsLink(b: PublicBusiness): string {
 export function waLink(phone: string, name: string): string {
   const n = phone.replace(/\D/g, '').replace(/^0/, '234')
   return `https://wa.me/${n}?text=${encodeURIComponent(
-    `Hi ${name}, I found your business on OgaOS`
+    `Hi ${name}, I found your business on OgaOS`,
   )}`
 }
 

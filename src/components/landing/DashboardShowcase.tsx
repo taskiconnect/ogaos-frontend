@@ -1,15 +1,25 @@
 'use client'
 
-import { BarChart3, TrendingUp, Users, Wallet, MapPin, Star, MessageCircle, Bell, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
-  AreaChart,
+  BarChart3,
+  Bell,
+  MapPin,
+  MessageCircle,
+  Settings,
+  Star,
+  TrendingUp,
+  Users,
+  Wallet,
+} from 'lucide-react'
+import {
   Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from 'recharts'
 
 const container = {
@@ -35,7 +45,7 @@ export function DashboardShowcase() {
       variants={container}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-80px" }}
+      viewport={{ once: true, margin: '-80px' }}
       className="w-full max-w-370 mx-auto rounded-3xl border border-border/40 bg-card shadow-2xl overflow-hidden"
     >
       {/* Browser Header – cleaner */}
@@ -56,9 +66,14 @@ export function DashboardShowcase() {
       {/* Main Dashboard – more breathing room */}
       <div className="p-6 lg:p-10 xl:p-12 space-y-10 xl:space-y-12 bg-linear-to-b from-background to-background/80">
         {/* Welcome + Quick Actions */}
-        <motion.div variants={card} className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <motion.div
+          variants={card}
+          className="flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+        >
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">Good morning, Oga Tunde 👋</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">
+              Good morning, Oga Tunde 👋
+            </h2>
             <p className="text-muted-foreground mt-1.5">Tuesday, February 20, 2026 • Lagos</p>
           </div>
 
@@ -116,11 +131,15 @@ export function DashboardShowcase() {
                   <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
                   <p className="text-3xl font-bold mt-2">{stat.value}</p>
                 </div>
-                <div className={`w-12 h-12 rounded-xl ${stat.color.replace('text-', 'bg-')}/10 flex items-center justify-center`}>
+                <div
+                  className={`w-12 h-12 rounded-xl ${stat.color.replace('text-', 'bg-')}/10 flex items-center justify-center`}
+                >
                   <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
               </div>
-              <p className={`text-sm font-medium ${stat.trend.includes('+') ? 'text-green-600' : 'text-muted-foreground'}`}>
+              <p
+                className={`text-sm font-medium ${stat.trend.includes('+') ? 'text-green-600' : 'text-muted-foreground'}`}
+              >
                 {stat.trend}
               </p>
             </motion.div>
@@ -130,18 +149,26 @@ export function DashboardShowcase() {
         {/* Main Sections – wider layout */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 xl:gap-8">
           {/* Sales Trend – Recharts AreaChart */}
-          <motion.div variants={card} className="xl:col-span-8 bg-card border border-border/60 rounded-3xl p-6 lg:p-8 shadow-sm">
+          <motion.div
+            variants={card}
+            className="xl:col-span-8 bg-card border border-border/60 rounded-3xl p-6 lg:p-8 shadow-sm"
+          >
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-semibold text-foreground">Sales Trend • This Week</h3>
                 <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
                   <TrendingUp className="w-3.5 h-3.5 text-green-500" />
-                  <span className="text-green-600 dark:text-green-400 font-medium">+18%</span> vs last week
+                  <span className="text-green-600 dark:text-green-400 font-medium">+18%</span> vs
+                  last week
                 </p>
               </div>
               <div className="text-sm text-muted-foreground flex items-center gap-1 bg-secondary rounded-xl p-1">
-                <button className="px-3 py-1.5 bg-card rounded-lg font-medium text-foreground shadow-sm transition">Week</button>
-                <button className="px-3 py-1.5 hover:text-foreground transition rounded-lg">Month</button>
+                <button className="px-3 py-1.5 bg-card rounded-lg font-medium text-foreground shadow-sm transition">
+                  Week
+                </button>
+                <button className="px-3 py-1.5 hover:text-foreground transition rounded-lg">
+                  Month
+                </button>
               </div>
             </div>
             <div className="h-72 lg:h-80">
@@ -164,11 +191,19 @@ export function DashboardShowcase() {
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="expensesGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.15} />
+                      <stop
+                        offset="5%"
+                        stopColor="hsl(var(--muted-foreground))"
+                        stopOpacity={0.15}
+                      />
                       <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="day"
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
@@ -190,10 +225,12 @@ export function DashboardShowcase() {
                       boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
                       fontSize: '13px',
                     }}
-                    formatter={((value: number | undefined, name: string | undefined) => [
-                      `₦${(value ?? 0).toLocaleString()}`,
-                      name === 'revenue' ? 'Revenue' : 'Expenses',
-                    ]) as never}
+                    formatter={
+                      ((value: number | undefined, name: string | undefined) => [
+                        `₦${(value ?? 0).toLocaleString()}`,
+                        name === 'revenue' ? 'Revenue' : 'Expenses',
+                      ]) as never
+                    }
                     labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                   />
                   <Area
@@ -211,7 +248,12 @@ export function DashboardShowcase() {
                     stroke="hsl(var(--primary))"
                     strokeWidth={2.5}
                     fill="url(#revenueGrad)"
-                    dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+                    dot={{
+                      r: 4,
+                      fill: 'hsl(var(--primary))',
+                      strokeWidth: 2,
+                      stroke: 'hsl(var(--card))',
+                    }}
                     activeDot={{ r: 6, strokeWidth: 2 }}
                   />
                 </AreaChart>
@@ -230,7 +272,10 @@ export function DashboardShowcase() {
           </motion.div>
 
           {/* Notifications & Quick Settings */}
-          <motion.div variants={card} className="xl:col-span-4 bg-card border border-border/60 rounded-3xl p-6 lg:p-8 shadow-sm flex flex-col">
+          <motion.div
+            variants={card}
+            className="xl:col-span-4 bg-card border border-border/60 rounded-3xl p-6 lg:p-8 shadow-sm flex flex-col"
+          >
             <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <Bell className="w-5 h-5 text-primary" />
               Notifications
@@ -239,7 +284,9 @@ export function DashboardShowcase() {
             <div className="space-y-4 flex-1">
               <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-4 rounded-2xl">
                 <p className="font-medium text-sm">Daily Sales Summary sent</p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">via WhatsApp • 8:32 AM</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  via WhatsApp • 8:32 AM
+                </p>
               </div>
 
               <div className="bg-card border border-border p-4 rounded-2xl">
@@ -270,7 +317,10 @@ export function DashboardShowcase() {
         </div>
 
         {/* Directory Preview – added as requested */}
-        <motion.div variants={card} className="bg-card border border-border/60 rounded-3xl p-6 lg:p-8">
+        <motion.div
+          variants={card}
+          className="bg-card border border-border/60 rounded-3xl p-6 lg:p-8"
+        >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold flex items-center gap-2">
               <MapPin className="w-5 h-5 text-primary" />
@@ -292,9 +342,9 @@ export function DashboardShowcase() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { name: "Mama Aisha Provisions", rating: 4.9, dist: "120m", category: "Groceries" },
-              { name: "Emeka Electronics", rating: 4.7, dist: "450m", category: "Electronics" },
-              { name: "Chioma Hair Salon", rating: 4.8, dist: "280m", category: "Beauty" },
+              { name: 'Mama Aisha Provisions', rating: 4.9, dist: '120m', category: 'Groceries' },
+              { name: 'Emeka Electronics', rating: 4.7, dist: '450m', category: 'Electronics' },
+              { name: 'Chioma Hair Salon', rating: 4.8, dist: '280m', category: 'Beauty' },
             ].map((biz, i) => (
               <motion.div
                 key={biz.name}
@@ -304,8 +354,12 @@ export function DashboardShowcase() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-medium text-foreground group-hover:text-primary transition">{biz.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{biz.category} • {biz.dist}</p>
+                    <p className="font-medium text-foreground group-hover:text-primary transition">
+                      {biz.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {biz.category} • {biz.dist}
+                    </p>
                   </div>
                   <div className="flex items-center gap-1 text-amber-500">
                     <Star className="w-4 h-4 fill-current" />

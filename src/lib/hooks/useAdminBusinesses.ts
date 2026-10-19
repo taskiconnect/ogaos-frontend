@@ -1,8 +1,8 @@
 'use client'
 
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { listAdminBusinesses, getAdminBusiness } from '@/lib/api/admin'
+import { getAdminBusiness, listAdminBusinesses } from '@/lib/api/admin'
 import type { AdminBusinessListParams } from '@/types/admin-business'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 export function useAdminBusinessList(filters: Omit<AdminBusinessListParams, 'cursor'>) {
   const query = useInfiniteQuery({

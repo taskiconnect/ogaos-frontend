@@ -25,9 +25,21 @@ export default function SalesRecordPage() {
         'Works offline — syncs when you reconnect',
       ]}
       howItWorks={[
-        { step: 1, title: 'Add your items', body: 'Search your product catalogue or type a quick item name and price. Add as many line items as needed to a single sale.' },
-        { step: 2, title: 'Select payment method', body: 'Choose Cash, Transfer, POS, Card, Cheque, or Credit. If the customer pays partially, the balance is automatically logged as a debt.' },
-        { step: 3, title: 'Record & relax', body: "Hit Record Sale. The transaction is saved, the customer gets a receipt, and your daily summary updates. That's it." },
+        {
+          step: 1,
+          title: 'Add your items',
+          body: 'Search your product catalogue or type a quick item name and price. Add as many line items as needed to a single sale.',
+        },
+        {
+          step: 2,
+          title: 'Select payment method',
+          body: 'Choose Cash, Transfer, POS, Card, Cheque, or Credit. If the customer pays partially, the balance is automatically logged as a debt.',
+        },
+        {
+          step: 3,
+          title: 'Record & relax',
+          body: "Hit Record Sale. The transaction is saved, the customer gets a receipt, and your daily summary updates. That's it.",
+        },
       ]}
       prevFeature={{ label: 'Digital Store', href: '/features/store' }}
       nextFeature={{ label: 'Debt Tracking', href: '/features/debt' }}

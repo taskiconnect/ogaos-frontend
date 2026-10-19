@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server'
 import { proxyRequest } from '@/lib/api/proxy'
+import { NextRequest } from 'next/server'
 
 type Context = {
   params: Promise<{ id: string }>

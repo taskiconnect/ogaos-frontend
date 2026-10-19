@@ -1,18 +1,15 @@
 // src/app/public/digital-orders/[orderId]/complete/page.tsx
 
-import Link from 'next/link'
-import { CheckCircle, Download, ExternalLink, Clock, CreditCard, Package } from 'lucide-react'
 import { getOrderFulfillment, getTokenDownloadUrl } from '@/lib/api/public'
+import { CheckCircle, Clock, CreditCard, Download, ExternalLink, Package } from 'lucide-react'
+import Link from 'next/link'
 
 type PageProps = {
   params: Promise<{ orderId: string }>
   searchParams: Promise<{ token?: string }>
 }
 
-export default async function DigitalOrderCompletePage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function DigitalOrderCompletePage({ params, searchParams }: PageProps) {
   const { orderId } = await params
   const { token } = await searchParams
 
@@ -42,14 +39,11 @@ export default async function DigitalOrderCompletePage({
     throw new Error(res.message || 'No fulfillment data returned')
   }
 
-  const downloadUrl = data.download_token
-    ? getTokenDownloadUrl(data.download_token)
-    : null
+  const downloadUrl = data.download_token ? getTokenDownloadUrl(data.download_token) : null
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-2xl">
-
         {/* Header */}
         <div className="mb-6 flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
@@ -68,19 +62,14 @@ export default async function DigitalOrderCompletePage({
 
         {/* Main card */}
         <div className="rounded-2xl border border-white/8 bg-dash-surface p-6 shadow-lg">
-
           {/* Status grid */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
               <div className="flex items-center gap-2 text-gray-500 mb-2">
                 <CreditCard className="h-3.5 w-3.5" />
-                <p className="text-[10px] font-semibold uppercase tracking-wide">
-                  Payment status
-                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide">Payment status</p>
               </div>
-              <p className="text-base font-semibold capitalize text-white">
-                {data.payment_status}
-              </p>
+              <p className="text-base font-semibold capitalize text-white">{data.payment_status}</p>
             </div>
 
             <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
@@ -98,9 +87,7 @@ export default async function DigitalOrderCompletePage({
             <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
               <div className="flex items-center gap-2 text-gray-500 mb-2">
                 <CheckCircle className="h-3.5 w-3.5" />
-                <p className="text-[10px] font-semibold uppercase tracking-wide">
-                  Access granted
-                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide">Access granted</p>
               </div>
               <p className="text-base font-semibold text-white">
                 {data.access_granted ? (
@@ -114,9 +101,7 @@ export default async function DigitalOrderCompletePage({
             <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
               <div className="flex items-center gap-2 text-gray-500 mb-2">
                 <Clock className="h-3.5 w-3.5" />
-                <p className="text-[10px] font-semibold uppercase tracking-wide">
-                  Access expires
-                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide">Access expires</p>
               </div>
               <p className="text-base font-semibold text-white">
                 {data.access_expires_at
@@ -132,9 +117,7 @@ export default async function DigitalOrderCompletePage({
               <p className="text-[10px] font-semibold uppercase tracking-wide text-yellow-400">
                 Delivery note
               </p>
-              <p className="mt-1.5 text-sm leading-6 text-yellow-300/80">
-                {data.delivery_note}
-              </p>
+              <p className="mt-1.5 text-sm leading-6 text-yellow-300/80">{data.delivery_note}</p>
             </div>
           )}
 

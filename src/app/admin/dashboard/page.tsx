@@ -2,18 +2,9 @@
 
 export const dynamic = 'force-dynamic'
 
-import {
-  ShieldCheck,
-  Users,
-  Building2,
-  TicketPercent,
-  TrendingUp,
-  Activity,
-} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import AdminSidebar from '@/components/admin/AdminSidebar'
-import AdminDashboardHeader from '@/components/admin/AdminDashboardHeader'
 import { useAdminAuthStore } from '@/stores/adminAuthStore'
+import { Activity, Building2, ShieldCheck, TicketPercent, TrendingUp, Users } from 'lucide-react'
 
 function getTimeBasedGreeting(): string {
   const hour = new Date().getHours()
@@ -41,7 +32,12 @@ function KPICard({
         <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
           {title}
         </p>
-        <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center border', color)}>
+        <div
+          className={cn(
+            'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center border',
+            color,
+          )}
+        >
           <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       </div>
@@ -51,15 +47,7 @@ function KPICard({
   )
 }
 
-function MiniStat({
-  label,
-  value,
-  sub,
-}: {
-  label: string
-  value: string
-  sub?: string
-}) {
+function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="bg-white/2 border border-white/8 rounded-xl p-3 sm:p-4 text-center">
       <p className="text-[10px] sm:text-xs text-gray-500 mb-1">{label}</p>
@@ -76,11 +64,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <AdminSidebar admin={user} />
-
-      <div className="lg:pl-72">
-        <AdminDashboardHeader admin={user} />
-
+      <div className="">
         <main className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 pb-20">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
@@ -128,7 +112,9 @@ export default function AdminDashboardPage() {
             <MiniStat label="Role" value={user.role} />
             <MiniStat
               label="Last Login"
-              value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'No record'}
+              value={
+                user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'No record'
+              }
             />
           </div>
 
@@ -147,12 +133,24 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 space-y-3">
-                <p><span className="text-gray-400">ID:</span> {user.id}</p>
-                <p><span className="text-gray-400">Name:</span> {user.first_name} {user.last_name}</p>
-                <p><span className="text-gray-400">Email:</span> {user.email}</p>
-                <p><span className="text-gray-400">Role:</span> {user.role}</p>
-                <p><span className="text-gray-400">Active:</span> {String(user.is_active)}</p>
-                <p><span className="text-gray-400">Password Set:</span> {String(user.password_set)}</p>
+                <p>
+                  <span className="text-gray-400">ID:</span> {user.id}
+                </p>
+                <p>
+                  <span className="text-gray-400">Name:</span> {user.first_name} {user.last_name}
+                </p>
+                <p>
+                  <span className="text-gray-400">Email:</span> {user.email}
+                </p>
+                <p>
+                  <span className="text-gray-400">Role:</span> {user.role}
+                </p>
+                <p>
+                  <span className="text-gray-400">Active:</span> {String(user.is_active)}
+                </p>
+                <p>
+                  <span className="text-gray-400">Password Set:</span> {String(user.password_set)}
+                </p>
               </div>
             </div>
 
@@ -178,7 +176,10 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="rounded-xl border border-white/8 bg-black/10 px-4 py-3">
                   <p className="text-sm text-white">
-                    Last login: {user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'No record'}
+                    Last login:{' '}
+                    {user.last_login_at
+                      ? new Date(user.last_login_at).toLocaleString()
+                      : 'No record'}
                   </p>
                 </div>
               </div>

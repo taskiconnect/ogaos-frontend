@@ -1,11 +1,11 @@
 // src/components/settings/BusinessAvatar.tsx
 'use client'
 
-import { useRef } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Camera, Loader2 } from 'lucide-react'
 import { uploadBusinessLogo } from '@/lib/api/business'
 import type { Business } from '@/lib/api/types'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Camera, Loader2 } from 'lucide-react'
+import { useRef } from 'react'
 
 export default function BusinessAvatar({ business }: { business: Business }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -34,9 +34,7 @@ export default function BusinessAvatar({ business }: { business: Business }) {
         />
       ) : (
         <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-          <span className="text-3xl font-bold text-primary">
-            {business.name[0]?.toUpperCase()}
-          </span>
+          <span className="text-3xl font-bold text-primary">{business.name[0]?.toUpperCase()}</span>
         </div>
       )}
 

@@ -1,8 +1,8 @@
 'use client'
 
-import { Crown, CalendarClock, ShieldCheck } from 'lucide-react'
 import type { Subscription } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
+import { CalendarClock, Crown, ShieldCheck } from 'lucide-react'
 
 function fmtDate(value: string | null) {
   if (!value) return '—'
@@ -13,7 +13,11 @@ function fmtDate(value: string | null) {
   })
 }
 
-export default function SubscriptionSummaryCard({ subscription }: { subscription: Subscription | null }) {
+export default function SubscriptionSummaryCard({
+  subscription,
+}: {
+  subscription: Subscription | null
+}) {
   const plan = subscription?.plan ?? 'free'
   const status = subscription?.status ?? 'active'
 
@@ -21,7 +25,9 @@ export default function SubscriptionSummaryCard({ subscription }: { subscription
     <div className="rounded-3xl border border-white/10 bg-white/2 p-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Current Subscription</p>
+          <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+            Current Subscription
+          </p>
           <h2 className="mt-2 text-2xl font-bold text-white capitalize">{plan}</h2>
           <p className="mt-1 text-sm text-gray-400">
             Manage your plan, billing access, and locked features.
@@ -33,7 +39,7 @@ export default function SubscriptionSummaryCard({ subscription }: { subscription
             'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase',
             status === 'active' || status === 'grace_period'
               ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-              : 'border-red-500/20 bg-red-500/10 text-red-400'
+              : 'border-red-500/20 bg-red-500/10 text-red-400',
           )}
         >
           <ShieldCheck className="w-3.5 h-3.5" />
@@ -55,7 +61,9 @@ export default function SubscriptionSummaryCard({ subscription }: { subscription
             <CalendarClock className="w-4 h-4" />
             Started
           </div>
-          <p className="mt-2 text-lg font-bold text-white">{fmtDate(subscription?.current_period_start ?? null)}</p>
+          <p className="mt-2 text-lg font-bold text-white">
+            {fmtDate(subscription?.current_period_start ?? null)}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
@@ -63,7 +71,9 @@ export default function SubscriptionSummaryCard({ subscription }: { subscription
             <CalendarClock className="w-4 h-4" />
             Renews / Ends
           </div>
-          <p className="mt-2 text-lg font-bold text-white">{fmtDate(subscription?.current_period_end ?? null)}</p>
+          <p className="mt-2 text-lg font-bold text-white">
+            {fmtDate(subscription?.current_period_end ?? null)}
+          </p>
         </div>
       </div>
     </div>

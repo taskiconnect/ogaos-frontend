@@ -1,15 +1,9 @@
 'use client'
 
+import { formatBytes, formatCurrency } from '@/types/public'
+import { ArrowRight, BriefcaseBusiness, Download, Package, Star } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import {
-  Download,
-  Package,
-  BriefcaseBusiness,
-  Star,
-  ArrowRight,
-} from 'lucide-react'
-import { formatBytes, formatCurrency } from '@/types/public'
 
 interface Props {
   id: string
@@ -45,13 +39,18 @@ export function ProductCard({
   description,
   salesCount,
   fileSize,
+  slug,
   itemKind,
   inStock = true,
   bizSlug,
 }: Props) {
   return (
     <Link
-      href={`/public/${bizSlug}/product/${id}`}
+      href={
+        itemKind === 'digital' && slug
+          ? `/public/digital-store/product/${encodeURIComponent(slug)}`
+          : `/public/${bizSlug}/product/${id}`
+      }
       className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/6 bg-[#0e0e1a] transition-all duration-300 hover:border-brand-blue/40 hover:shadow-[0_8px_32px_rgba(28,53,234,0.12)]"
     >
       <div className="relative h-44 shrink-0 overflow-hidden bg-[#141420]">

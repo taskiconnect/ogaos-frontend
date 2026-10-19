@@ -1,26 +1,19 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { createDigitalProduct, uploadDigitalCover, uploadDigitalFile } from '@/lib/api/digital'
+import type { CreateDigitalProductRequest, DigitalFulfillmentMode } from '@/lib/api/types'
 import { useMutation } from '@tanstack/react-query'
 import imageCompression from 'browser-image-compression'
 import {
-  createDigitalProduct,
-  uploadDigitalCover,
-  uploadDigitalFile,
-} from '@/lib/api/digital'
-import {
-  X,
-  Loader2,
-  ChevronDown,
-  Link as LinkIcon,
-  ImagePlus,
-  FileUp,
   CheckCircle2,
+  ChevronDown,
+  FileUp,
+  ImagePlus,
+  Link as LinkIcon,
+  Loader2,
+  X,
 } from 'lucide-react'
-import type {
-  CreateDigitalProductRequest,
-  DigitalFulfillmentMode,
-} from '@/lib/api/types'
+import { useEffect, useMemo, useState } from 'react'
 
 interface CreateProps {
   open: boolean
@@ -73,7 +66,7 @@ function isValidVideoUrl(url: string): boolean {
   try {
     const hostname = new URL(url).hostname
     return ALLOWED_VIDEO_HOSTS.some(
-      (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
     )
   } catch {
     return false
@@ -100,8 +93,7 @@ async function compressImage(file: File): Promise<File> {
     initialQuality: 0.75,
   })
 
-  const ext =
-    outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'
+  const ext = outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'
   const finalName = file.name.includes('.') ? file.name : `${file.name}.${ext}`
 
   return new File([compressedBlob], finalName, {
@@ -122,8 +114,7 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
   const [type, setType] = useState('E-book')
   const [price, setPrice] = useState('')
   const [promoUrl, setPromoUrl] = useState('')
-  const [fulfillmentMode, setFulfillmentMode] =
-    useState<DigitalFulfillmentMode>('file_download')
+  const [fulfillmentMode, setFulfillmentMode] = useState<DigitalFulfillmentMode>('file_download')
   const [redirectURL, setRedirectURL] = useState('')
   const [deliveryNote, setDeliveryNote] = useState('')
   const [accessHours, setAccessHours] = useState('')
@@ -298,7 +289,8 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
           <div className="space-y-4 p-6">
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Cover Image <span className="normal-case font-normal text-gray-600">(optional)</span>
+                Cover Image{' '}
+                <span className="normal-case font-normal text-gray-600">(optional)</span>
               </label>
 
               <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-4">
@@ -352,9 +344,7 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
                     </div>
 
                     {selectedCover && (
-                      <p className="text-xs text-emerald-400">
-                        Selected: {selectedCover.name}
-                      </p>
+                      <p className="text-xs text-emerald-400">Selected: {selectedCover.name}</p>
                     )}
                   </div>
                 </div>
@@ -424,9 +414,7 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
               <div className="relative">
                 <select
                   value={fulfillmentMode}
-                  onChange={(e) =>
-                    setFulfillmentMode(e.target.value as DigitalFulfillmentMode)
-                  }
+                  onChange={(e) => setFulfillmentMode(e.target.value as DigitalFulfillmentMode)}
                   className={`${selectClassName} appearance-none pr-10`}
                 >
                   {FULFILLMENT_MODES.map((mode) => (
@@ -525,7 +513,8 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
 
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Delivery Note <span className="normal-case font-normal text-gray-600">(optional)</span>
+                Delivery Note{' '}
+                <span className="normal-case font-normal text-gray-600">(optional)</span>
               </label>
               <textarea
                 value={deliveryNote}
@@ -545,7 +534,8 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
 
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Access Duration <span className="normal-case font-normal text-gray-600">(optional)</span>
+                Access Duration{' '}
+                <span className="normal-case font-normal text-gray-600">(optional)</span>
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -565,7 +555,8 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
 
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Promo Video URL <span className="normal-case font-normal text-gray-600">(optional)</span>
+                Promo Video URL{' '}
+                <span className="normal-case font-normal text-gray-600">(optional)</span>
               </label>
               <div className="relative">
                 <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -592,8 +583,8 @@ export function CreateDigitalModal({ open, onOpenChange, onSuccess }: CreateProp
             </div>
 
             <p className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-gray-500">
-              The product will be created first, then selected cover image and digital file will be uploaded automatically.
-              OgaOS takes a 5% platform fee on each sale.
+              The product will be created first, then selected cover image and digital file will be
+              uploaded automatically. OgaOS takes a 5% platform fee on each sale.
             </p>
 
             {uploadStage && (

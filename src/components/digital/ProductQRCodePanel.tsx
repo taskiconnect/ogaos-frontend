@@ -1,15 +1,7 @@
 'use client'
 
+import { Check, Copy, Download, ExternalLink, Loader2, QrCode, X } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import {
-  X,
-  QrCode,
-  Loader2,
-  Download,
-  ExternalLink,
-  Copy,
-  Check,
-} from 'lucide-react'
 
 interface ProductQRCodePanelProps {
   open: boolean
@@ -27,7 +19,7 @@ function roundedRect(
   y: number,
   width: number,
   height: number,
-  radius: number
+  radius: number,
 ) {
   const r = Math.min(radius, width / 2, height / 2)
   ctx.beginPath()
@@ -45,7 +37,7 @@ function fitText(
   maxWidth: number,
   initialSize: number,
   minSize: number,
-  weight = 800
+  weight = 800,
 ) {
   let size = initialSize
   while (size > minSize) {
@@ -63,7 +55,7 @@ function drawWrappedCenteredText(
   startY: number,
   maxWidth: number,
   lineHeight: number,
-  maxLines: number
+  maxLines: number,
 ) {
   const words = text.trim().split(/\s+/).filter(Boolean)
   const lines: string[] = []
@@ -126,7 +118,7 @@ function drawLogo(
   logo: HTMLImageElement,
   x: number,
   y: number,
-  size: number
+  size: number,
 ) {
   ctx.save()
   ctx.beginPath()
@@ -157,15 +149,9 @@ export default function ProductQRCodePanel({
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const safeBusinessName = useMemo(
-    () => businessName?.trim() || 'OgaOS Store',
-    [businessName]
-  )
+  const safeBusinessName = useMemo(() => businessName?.trim() || 'OgaOS Store', [businessName])
 
-  const safeProductTitle = useMemo(
-    () => productTitle?.trim() || 'Digital Product',
-    [productTitle]
-  )
+  const safeProductTitle = useMemo(() => productTitle?.trim() || 'Digital Product', [productTitle])
 
   const generateQR = useCallback(async () => {
     setGenerating(true)
@@ -260,11 +246,7 @@ export default function ProductQRCodePanel({
         ctx.font = `800 ${fontSize}px Inter, Arial, sans-serif`
         ctx.textAlign = 'left'
         ctx.textBaseline = 'middle'
-        ctx.fillText(
-          safeBusinessName,
-          startX + logoSize + gap,
-          logoY + logoSize / 2 + 2
-        )
+        ctx.fillText(safeBusinessName, startX + logoSize + gap, logoY + logoSize / 2 + 2)
       } else {
         ctx.fillStyle = WHITE
         const titleSize = fitText(ctx, safeBusinessName, cardWidth - 250, 42, 24, 800)
@@ -278,7 +260,7 @@ export default function ProductQRCodePanel({
           142,
           cardWidth - 250,
           Math.max(titleSize + 6, 32),
-          2
+          2,
         )
       }
 
@@ -324,7 +306,15 @@ export default function ProductQRCodePanel({
 
       ctx.fillStyle = MUTED_TEXT
       ctx.font = '600 20px Inter, Arial, sans-serif'
-      drawWrappedCenteredText(ctx, safeDomain(productURL), cardWidth / 2, 1208, cardWidth - 220, 26, 2)
+      drawWrappedCenteredText(
+        ctx,
+        safeDomain(productURL),
+        cardWidth / 2,
+        1208,
+        cardWidth - 220,
+        26,
+        2,
+      )
 
       ctx.fillStyle = SUBTLE_TEXT
       ctx.font = '500 18px Inter, Arial, sans-serif'
@@ -335,7 +325,7 @@ export default function ProductQRCodePanel({
         1274,
         cardWidth - 260,
         24,
-        2
+        2,
       )
 
       ctx.fillStyle = BRAND_BLUE
@@ -403,7 +393,10 @@ export default function ProductQRCodePanel({
           <div className="flex h-72 flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/5">
             <div
               className="flex h-16 w-16 items-center justify-center rounded-2xl border"
-              style={{ borderColor: 'rgba(28,53,234,0.25)', backgroundColor: 'rgba(28,53,234,0.08)' }}
+              style={{
+                borderColor: 'rgba(28,53,234,0.25)',
+                backgroundColor: 'rgba(28,53,234,0.08)',
+              }}
             >
               <QrCode className="h-8 w-8" style={{ color: '#1C35EA' }} />
             </div>
@@ -457,7 +450,11 @@ export default function ProductQRCodePanel({
                 disabled={generating}
                 className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-gray-300 hover:bg-white/10"
               >
-                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
+                {generating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <QrCode className="h-4 w-4" />
+                )}
                 Refresh
               </button>
 

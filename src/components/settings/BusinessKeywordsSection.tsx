@@ -1,12 +1,12 @@
 // src/components/settings/BusinessKeywordsSection.tsx
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Loader2, Plus, Tags, X } from 'lucide-react'
+import Section from '@/components/settings/Section'
 import { getMyBusinessKeywords, setMyBusinessKeywords } from '@/lib/api/keyword'
 import { cn } from '@/lib/utils'
-import Section from '@/components/settings/Section'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, Loader2, Plus, Tags, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function BusinessKeywordsSection() {
   const qc = useQueryClient()
@@ -26,7 +26,11 @@ export default function BusinessKeywordsSection() {
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
-  const { data: fetchedKeywords = [], isLoading, isSuccess } = useQuery({
+  const {
+    data: fetchedKeywords = [],
+    isLoading,
+    isSuccess,
+  } = useQuery({
     queryKey: ['business-keywords'],
     queryFn: getMyBusinessKeywords,
   })
@@ -39,8 +43,14 @@ export default function BusinessKeywordsSection() {
   }, [fetchedKeywords, isSuccess, isDirty])
 
   function toTitleCase(value: string) {
-    return value.trim().replace(/\s+/g, ' ').toLowerCase().split(' ').filter(Boolean)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    return value
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toLowerCase()
+      .split(' ')
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
   }
 
   function keywordExists(value: string) {
@@ -50,21 +60,35 @@ export default function BusinessKeywordsSection() {
   async function loadSuggestions(query: string) {
     const trimmed = query.trim()
     if (!trimmed) {
-      setSuggestions([]); setSuggestionsOpen(false); setActiveSuggestionIndex(-1)
+      setSuggestions([])
+      setSuggestionsOpen(false)
+      setActiveSuggestionIndex(-1)
       return
     }
     setIsSuggesting(true)
     try {
-      const res = await fetch(`/api/public/keywords/suggestions?q=${encodeURIComponent(trimmed)}`, { cache: 'no-store' })
+      const res = await fetch(`/api/public/keywords/suggestions?q=${encodeURIComponent(trimmed)}`, {
+        cache: 'no-store',
+      })
       const json = await res.json().catch(() => null)
-      const raw: unknown = json?.data?.keywords ?? json?.data?.results ?? json?.data ?? json?.keywords ?? json?.results ?? json
-      const list: string[] = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []
+      const raw: unknown =
+        json?.data?.keywords ??
+        json?.data?.results ??
+        json?.data ??
+        json?.keywords ??
+        json?.results ??
+        json
+      const list: string[] = Array.isArray(raw)
+        ? raw.filter((x): x is string => typeof x === 'string')
+        : []
       const filtered = list.filter((item) => !keywordExists(item))
       setSuggestions(filtered)
       setSuggestionsOpen(filtered.length > 0)
       setActiveSuggestionIndex(filtered.length > 0 ? 0 : -1)
     } catch {
-      setSuggestions([]); setSuggestionsOpen(false); setActiveSuggestionIndex(-1)
+      setSuggestions([])
+      setSuggestionsOpen(false)
+      setActiveSuggestionIndex(-1)
     } finally {
       setIsSuggesting(false)
     }
@@ -87,15 +111,26 @@ export default function BusinessKeywordsSection() {
   }, [])
 
   function resetSuggestions() {
-    setSuggestions([]); setSuggestionsOpen(false); setActiveSuggestionIndex(-1)
+    setSuggestions([])
+    setSuggestionsOpen(false)
+    setActiveSuggestionIndex(-1)
   }
 
   function addKeyword(raw?: string) {
     const value = toTitleCase(raw ?? keywordInput)
     if (!value) return
-    if (value.length > 80) { setError('Each keyword must be 80 characters or less.'); return }
-    if (keywordExists(value)) { setError('That keyword has already been added.'); return }
-    if (keywords.length >= 15) { setError('You can add up to 15 keywords.'); return }
+    if (value.length > 80) {
+      setError('Each keyword must be 80 characters or less.')
+      return
+    }
+    if (keywordExists(value)) {
+      setError('That keyword has already been added.')
+      return
+    }
+    if (keywords.length >= 15) {
+      setError('You can add up to 15 keywords.')
+      return
+    }
     setKeywords((prev) => [...prev, value])
     setKeywordInput('')
     setError('')
@@ -114,7 +149,9 @@ export default function BusinessKeywordsSection() {
     onSuccess: (data) => {
       const next = Array.isArray(data) ? data : []
       setKeywords(next)
-      setSaved(true); setError(''); setIsDirty(false)
+      setSaved(true)
+      setError('')
+      setIsDirty(false)
       qc.invalidateQueries({ queryKey: ['business-keywords'] })
       setTimeout(() => setSaved(false), 3000)
     },
@@ -156,33 +193,50 @@ export default function BusinessKeywordsSection() {
               <input
                 ref={inputRef}
                 value={keywordInput}
-                onChange={(e) => { setKeywordInput(e.target.value); setError('') }}
-                onFocus={() => { if (suggestions.length > 0) setSuggestionsOpen(true) }}
+                onChange={(e) => {
+                  setKeywordInput(e.target.value)
+                  setError('')
+                }}
+                onFocus={() => {
+                  if (suggestions.length > 0) setSuggestionsOpen(true)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') {
                     e.preventDefault()
                     if (!suggestions.length) return
                     setSuggestionsOpen(true)
-                    setActiveSuggestionIndex((prev) => prev < suggestions.length - 1 ? prev + 1 : 0)
+                    setActiveSuggestionIndex((prev) =>
+                      prev < suggestions.length - 1 ? prev + 1 : 0,
+                    )
                     return
                   }
                   if (e.key === 'ArrowUp') {
                     e.preventDefault()
                     if (!suggestions.length) return
                     setSuggestionsOpen(true)
-                    setActiveSuggestionIndex((prev) => prev > 0 ? prev - 1 : suggestions.length - 1)
+                    setActiveSuggestionIndex((prev) =>
+                      prev > 0 ? prev - 1 : suggestions.length - 1,
+                    )
                     return
                   }
                   if (e.key === 'Enter') {
                     e.preventDefault()
-                    if (suggestionsOpen && activeSuggestionIndex >= 0 && suggestions[activeSuggestionIndex]) {
+                    if (
+                      suggestionsOpen &&
+                      activeSuggestionIndex >= 0 &&
+                      suggestions[activeSuggestionIndex]
+                    ) {
                       addKeyword(suggestions[activeSuggestionIndex])
                       return
                     }
                     addKeyword()
                     return
                   }
-                  if (e.key === ',') { e.preventDefault(); addKeyword(); return }
+                  if (e.key === ',') {
+                    e.preventDefault()
+                    addKeyword()
+                    return
+                  }
                   if (e.key === 'Escape') setSuggestionsOpen(false)
                 }}
                 placeholder="e.g. Fashion, Tailoring, Cakes…"
@@ -202,7 +256,9 @@ export default function BusinessKeywordsSection() {
                   style={{ backgroundColor: '#0d1526' }}
                 >
                   <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/6">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Suggestions</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+                      Suggestions
+                    </span>
                     <span className="text-[10px] text-gray-600">↑↓ to navigate · Enter to add</span>
                   </div>
                   <div className="max-h-52 overflow-y-auto overscroll-contain">
@@ -217,12 +273,21 @@ export default function BusinessKeywordsSection() {
                           onMouseEnter={() => setActiveSuggestionIndex(index)}
                           className={cn(
                             'w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors border-b border-white/4 last:border-b-0',
-                            active ? 'bg-primary/20 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                            active
+                              ? 'bg-primary/20 text-white'
+                              : 'text-gray-300 hover:bg-white/5 hover:text-white',
                           )}
                         >
-                          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0 transition-colors', active ? 'bg-primary' : 'bg-white/10')} />
+                          <span
+                            className={cn(
+                              'w-1.5 h-1.5 rounded-full shrink-0 transition-colors',
+                              active ? 'bg-primary' : 'bg-white/10',
+                            )}
+                          />
                           {suggestion}
-                          {active && <Plus className="w-3.5 h-3.5 ml-auto text-primary opacity-70" />}
+                          {active && (
+                            <Plus className="w-3.5 h-3.5 ml-auto text-primary opacity-70" />
+                          )}
                         </button>
                       )
                     })}
@@ -250,14 +315,19 @@ export default function BusinessKeywordsSection() {
             <span className="text-gray-400">
               <span className="text-white font-medium">{keywords.length}</span> / 15 keywords
             </span>
-            <span className={cn('font-medium', remaining <= 3 ? 'text-yellow-400' : 'text-gray-500')}>
+            <span
+              className={cn('font-medium', remaining <= 3 ? 'text-yellow-400' : 'text-gray-500')}
+            >
               {remaining} remaining
             </span>
           </div>
           <div className="h-1 w-full rounded-full bg-white/5 overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-300"
-              style={{ width: `${(keywords.length / 15) * 100}%`, background: 'linear-gradient(90deg, #002b9d, #3f9af5)' }}
+              style={{
+                width: `${(keywords.length / 15) * 100}%`,
+                background: 'linear-gradient(90deg, #002b9d, #3f9af5)',
+              }}
             />
           </div>
         </div>
@@ -265,8 +335,12 @@ export default function BusinessKeywordsSection() {
         {/* Keywords box */}
         <div className="rounded-2xl border border-white/8 bg-white/2 p-4 min-h-25">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Added Keywords</p>
-            {keywords.length > 0 && <span className="text-[11px] text-gray-600">click tag to remove</span>}
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Added Keywords
+            </p>
+            {keywords.length > 0 && (
+              <span className="text-[11px] text-gray-600">click tag to remove</span>
+            )}
           </div>
 
           {keywords.length === 0 ? (
@@ -295,16 +369,24 @@ export default function BusinessKeywordsSection() {
 
         <p className="text-xs text-gray-600">
           Press{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono text-[10px]">Enter</kbd>{' '}
+          <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono text-[10px]">
+            Enter
+          </kbd>{' '}
           or{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono text-[10px]">,</kbd>{' '}
+          <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono text-[10px]">
+            ,
+          </kbd>{' '}
           to add ·{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono text-[10px]">↑↓</kbd>{' '}
+          <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-mono text-[10px]">
+            ↑↓
+          </kbd>{' '}
           to navigate suggestions · click a tag to remove it
         </p>
 
         {error && (
-          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+            {error}
+          </p>
         )}
 
         <div className="flex items-center gap-3">

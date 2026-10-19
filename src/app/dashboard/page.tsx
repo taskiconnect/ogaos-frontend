@@ -1,220 +1,274 @@
 'use client'
-
-export const dynamic = 'force-dynamic'
-
-// src/app/dashboard/page.tsx
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import RevenueChart from '@/components/dashboard/RevenueChart'
-import OutstandingDebts from '@/components/dashboard/OutstandingDebts'
-import RecentTransactions from '@/components/dashboard/RecentTransactions'
+import { useBusinessOverview } from '@/features/dashboard/useBusinessOverview'
+import { money } from '@/lib/domain/money'
 import { useAuthStore } from '@/stores/authStore'
-import { useDashboard } from '@/lib/hooks/useDashboard'
-import { DollarSign, AlertTriangle, TrendingUp, Users } from 'lucide-react'
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CircleHelp,
+  Package,
+  Plus,
+  Receipt,
+  RefreshCw,
+  ShoppingBag,
+  Wallet,
+} from 'lucide-react'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
-
-// ─── Helper: Time-based greeting ─────────────────────────────────────────────
-
-function getTimeBasedGreeting(): string {
-  const hour = new Date().getHours()
-
-  if (hour < 12) {
-    return 'Good morning'
-  } else if (hour < 17) {
-    return 'Good afternoon'
-  } else {
-    return 'Good evening'
-  }
-}
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KPICard({
-  title,
-  value,
-  sub,
-  icon: Icon,
-  color,
-  loading,
-  href,
-}: {
-  title: string
-  value: string
-  sub?: string
-  icon: React.ElementType
-  color: string
-  loading: boolean
-  href?: string
-}) {
-  const inner = (
-    <div
-      className={cn(
-        'rounded-2xl border border-white/8 bg-white/2 p-4 sm:p-5 flex flex-col gap-3',
-        href && 'hover:bg-white/4 transition-colors cursor-pointer'
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-          {title}
-        </p>
-        <div className={cn('w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center border', color)}>
-          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="space-y-2">
-          <div className="h-6 sm:h-8 w-20 sm:w-28 bg-white/5 rounded-lg animate-pulse" />
-          <div className="h-2 sm:h-3 w-16 sm:w-20 bg-white/5 rounded animate-pulse" />
-        </div>
-      ) : (
-        <>
-          <p className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{value}</p>
-          {sub && <p className="text-[10px] sm:text-xs text-gray-500 truncate">{sub}</p>}
-        </>
-      )}
-    </div>
-  )
-
-  if (href) return <Link href={href}>{inner}</Link>
-  return inner
-}
-
-// ─── Sales mini stats ─────────────────────────────────────────────────────────
-
-function SalesMini({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="bg-white/2 border border-white/8 rounded-xl p-3 sm:p-4 text-center">
-      <p className="text-[10px] sm:text-xs text-gray-500 mb-1">{label}</p>
-      <p className="text-base sm:text-lg font-bold text-white truncate">{value}</p>
-      {sub && <p className="text-[9px] sm:text-[10px] text-gray-600 mt-0.5 truncate">{sub}</p>}
-    </div>
-  )
-}
-
-// ─── Money formatting ─────────────────────────────────────────────────────────
-
-function formatMoney(value: number, options?: { decimals?: number }) {
-  const decimals = options?.decimals ?? 0
-
-  // Only shorten billions and above
-  if (value >= 1_000_000_000) {
-    return `₦${(value / 1_000_000_000).toFixed(1)}B`
-  }
-
-  return `₦${value.toLocaleString('en-NG', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })}`
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 export default function DashboardPage() {
-  const { user } = useAuthStore()
-  const dash = useDashboard()
-  const firstName = user?.first_name || 'Oga'
-
+  const user = useAuthStore((s) => s.user)
+  const overview = useBusinessOverview()
+  const grouped = new Map<string, number>()
+  for (const sale of overview.sales) {
+    const day = new Date(sale.created_at).toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' })
+    grouped.set(day, (grouped.get(day) ?? 0) + sale.amount_paid)
+  }
+  const chart = [...grouped]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, paid]) => ({ day: day.slice(8), paid: paid / 100 }))
+  const stats = [
+    {
+      label: 'Paid on this month’s sales',
+      value: money(overview.paid),
+      hint: 'Payments attached to sales created this month',
+      icon: Wallet,
+      color: 'text-blue-400',
+      bg: 'bg-blue-500/10',
+    },
+    {
+      label: 'This month’s sales value',
+      value: money(overview.billed),
+      hint: `${overview.sales.length} recorded transactions`,
+      icon: ShoppingBag,
+      color: 'text-violet-400',
+      bg: 'bg-violet-500/10',
+    },
+    {
+      label: 'Outstanding sales balances',
+      value: money(overview.outstanding),
+      hint: `${overview.pending.length} sales awaiting full payment`,
+      icon: Receipt,
+      color: 'text-amber-400',
+      bg: 'bg-amber-500/10',
+    },
+  ]
   return (
-    <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-
-      <div className="lg:pl-72">
-        <DashboardHeader />
-
-        <main className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 pb-20">
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-              {getTimeBasedGreeting()}, Oga {firstName} 👋
-            </h1>
-            <p className="text-gray-400 mt-1 text-xs sm:text-sm">
-              Here&apos;s what&apos;s happening with your business today ·{' '}
-              {new Date().toLocaleDateString('en-NG', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
+    <main className="mx-auto max-w-[1600px] space-y-7 p-5 pb-24 sm:p-8 lg:p-10">
+      <header className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[.2em] text-blue-400">
+            Your business, at a glance
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            Welcome back, {user?.first_name || 'Oga'}.
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            A clearer view of your sales and the work ahead.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            aria-label="Refresh overview"
+            onClick={() => {
+              void overview.monthly.refetch()
+              void overview.partial.refetch()
+            }}
+            className="rounded-xl border border-border p-3 hover:bg-muted"
+          >
+            <RefreshCw className="size-4" />
+          </button>
+          <Link
+            href="/dashboard/sales?new=1"
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-500"
+          >
+            <Plus className="size-4" />
+            Record a sale
+          </Link>
+        </div>
+      </header>
+      {overview.error && (
+        <div
+          role="alert"
+          className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300"
+        >
+          Some records could not be loaded. Figures are unavailable until the connection is
+          restored. Use refresh to try again.
+        </div>
+      )}
+      {!overview.complete && (
+        <p role="status" className="rounded-xl bg-amber-500/10 p-4 text-sm text-amber-300">
+          This overview reached its record limit. The figures below are partial; a backend summary
+          endpoint is needed for larger datasets.
+        </p>
+      )}
+      <section aria-label="Business overview" className="grid gap-4 xl:grid-cols-3">
+        {stats.map(({ label, value, hint, icon: Icon, color, bg }) => (
+          <article key={label} className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{label}</p>
+              <span className={`rounded-xl p-2.5 ${bg} ${color}`}>
+                <Icon className="size-5" />
+              </span>
+            </div>
+            <p className="mt-6 text-3xl font-semibold tracking-tight">
+              {overview.loading
+                ? '—'
+                : overview.error
+                  ? 'Unavailable'
+                  : `${!overview.complete ? '≥ ' : ''}${value}`}
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <KPICard
-              title="TODAY'S SALES"
-              value={formatMoney(dash.todaySalesTotal, { decimals: 2 })}
-              sub={`${dash.todaySalesCount} transaction${dash.todaySalesCount !== 1 ? 's' : ''}`}
-              icon={DollarSign}
-              color="bg-primary/10 border-primary/20 text-primary"
-              loading={dash.isLoading}
-              href="/dashboard/sales"
-            />
-            <KPICard
-              title="CUSTOMERS OWE YOU"
-              value={formatMoney(dash.outstandingDebtTotal, { decimals: 2 })}
-              sub={dash.outstandingDebtTotal === 0 ? 'All paid up' : `${dash.outstandingDebtCount} unpaid`}
-              icon={AlertTriangle}
-              color="bg-yellow-500/10 border-yellow-500/20 text-yellow-400"
-              loading={dash.isLoading}
-              href="/dashboard/debts"
-            />
-            <KPICard
-              title="TOTAL CUSTOMERS"
-              value={String(dash.totalCustomers)}
-              sub="active customers"
-              icon={Users}
-              color="bg-blue-500/10 border-blue-500/20 text-blue-400"
-              loading={dash.isLoading}
-              href="/dashboard/customers"
-            />
-            <KPICard
-              title="REVENUE COLLECTED"
-              value={formatMoney(dash.todayRevenue, { decimals: 2 })}
-              sub="today (amount paid)"
-              icon={TrendingUp}
-              color="bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-              loading={dash.isLoading}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            <SalesMini
-              label="Today's Revenue"
-              value={formatMoney(dash.todayRevenue, { decimals: 2 })}
-            />
-            <SalesMini
-              label="Today's Transactions"
-              value={String(dash.todaySalesCount)}
-            />
-            <SalesMini
-              label="Today's Fully Paid"
-              value={String(dash.todayFullyPaid)}
-            />
-            <SalesMini
-              label="Today's Partial / Unpaid"
-              value={String(dash.todayPartial)}
-              sub={
-                dash.todayPartial > 0 && dash.todayOutstanding > 0
-                  ? `${formatMoney(dash.todayOutstanding, { decimals: 2 })} outstanding`
-                  : undefined
-              }
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-5">
-            <div className="lg:col-span-4 min-h-80">
-              <RevenueChart />
+            <p className="mt-3 text-xs text-muted-foreground">{hint}</p>
+          </article>
+        ))}
+      </section>
+      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+        <section className="min-w-0 rounded-2xl border border-border bg-card p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Sales payment overview</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Current month · grouped by sale date
+              </p>
             </div>
-            <div className="lg:col-span-3">
-              <OutstandingDebts debts={dash.overdueDebts} isLoading={dash.isLoading} />
-            </div>
+            <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-400">NGN</span>
           </div>
-
-          <div>
-            <RecentTransactions />
+          <div className="mt-7 h-64">
+            {!overview.loading && !overview.error && chart.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chart}>
+                  <defs>
+                    <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="day" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={65} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                    }}
+                    formatter={(v) => [money(Number(v) * 100), 'Paid']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="paid"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    fill="url(#revenueFill)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                {overview.loading
+                  ? 'Loading sales…'
+                  : overview.error
+                    ? 'Chart unavailable'
+                    : 'Your sales will appear here.'}
+              </div>
+            )}
           </div>
-        </main>
+          <p className="mt-4 flex gap-2 text-xs leading-5 text-muted-foreground">
+            <CircleHelp className="mt-0.5 size-4 shrink-0" />
+            Repayments stay attached to their original sale. This is a sales snapshot, not a
+            cash-receipts ledger.
+          </p>
+        </section>
+        <aside className="rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-600/20 via-card to-violet-600/10 p-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-400">
+            Move your business forward
+          </p>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight">
+            Everything starts with one good record.
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Keep sales up to date, share professional documents, and stay on top of outstanding
+            payments.
+          </p>
+          <div className="mt-7 space-y-2">
+            {[
+              { href: '/dashboard/products', label: 'Manage products', icon: Package },
+              { href: '/dashboard/invoices', label: 'Prepare an invoice', icon: Receipt },
+              { href: '/dashboard/subscription', label: 'Explore your plan', icon: ArrowUpRight },
+            ].map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center justify-between rounded-xl border border-border bg-background/40 px-4 py-3 text-sm hover:bg-muted"
+              >
+                <span className="flex gap-2">
+                  <Icon className="size-4 text-blue-400" />
+                  {label}
+                </span>
+                <ArrowRight className="size-4" />
+              </Link>
+            ))}
+          </div>
+          <p className="mt-6 text-xs text-muted-foreground">
+            Your dashboard is available on every plan.
+          </p>
+        </aside>
       </div>
-    </div>
+      <section className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border px-6 py-5">
+          <h2 className="font-semibold">Recent sales this month</h2>
+          <Link href="/dashboard/sales" className="text-sm font-medium text-blue-400">
+            View all sales →
+          </Link>
+        </div>
+        <div className="overflow-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs text-muted-foreground">
+              <tr>
+                {['Sale', 'Customer', 'Status', 'Sale value', 'Balance'].map((t) => (
+                  <th key={t} className="whitespace-nowrap px-6 py-4 font-medium">
+                    {t}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {!overview.error &&
+                overview.sales.slice(0, 8).map((s) => (
+                  <tr key={s.id} className="border-t border-border">
+                    <td className="px-6 py-4 font-medium">{s.sale_number}</td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {s.customer
+                        ? `${s.customer.first_name} ${s.customer.last_name}`
+                        : 'Walk-in customer'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs ${s.balance_due ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'}`}
+                      >
+                        {s.balance_due ? 'Partial' : 'Paid'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">{money(s.total_amount)}</td>
+                    <td className="px-6 py-4">{money(s.balance_due)}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+        {!overview.loading && !overview.sales.length && (
+          <p className="px-6 py-10 text-center text-sm text-muted-foreground">
+            {overview.error ? 'Sales could not be loaded.' : 'No sales recorded this month.'}
+          </p>
+        )}
+      </section>
+    </main>
   )
 }

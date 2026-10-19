@@ -2,46 +2,97 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import {
-  Building2, Search, BadgeCheck, Loader2, ChevronRight,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import AdminSidebar from '@/components/admin/AdminSidebar'
-import AdminDashboardHeader from '@/components/admin/AdminDashboardHeader'
-import { useAdminAuthStore } from '@/stores/adminAuthStore'
 import { useAdminBusinessList } from '@/lib/hooks/useAdminBusinesses'
+import { cn } from '@/lib/utils'
+import { useAdminAuthStore } from '@/stores/adminAuthStore'
+import { BadgeCheck, Building2, ChevronRight, Loader2, Search } from 'lucide-react'
+import Link from 'next/link'
+import { useState } from 'react'
 
 // ─── Badge meta ───────────────────────────────────────────────────────────────
 
 const PLAN_META: Record<string, { label: string; text: string; bg: string; border: string }> = {
-  free:   { label: 'Free',   text: 'text-gray-400',   bg: 'bg-white/5',       border: 'border-white/10' },
-  growth: { label: 'Growth', text: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20' },
-  pro:    { label: 'Pro',    text: 'text-primary',    bg: 'bg-primary/10',    border: 'border-primary/20' },
-  custom: { label: 'Custom', text: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
+  free: { label: 'Free', text: 'text-gray-400', bg: 'bg-white/5', border: 'border-white/10' },
+  growth: {
+    label: 'Growth',
+    text: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
+  },
+  pro: { label: 'Pro', text: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
+  custom: {
+    label: 'Custom',
+    text: 'text-yellow-400',
+    bg: 'bg-yellow-500/10',
+    border: 'border-yellow-500/20',
+  },
 }
 
-const SUB_STATUS_META: Record<string, { label: string; text: string; bg: string; border: string }> = {
-  active:       { label: 'Active',       text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-  grace_period: { label: 'Grace period', text: 'text-yellow-400',  bg: 'bg-yellow-500/10',  border: 'border-yellow-500/20' },
-  expired:      { label: 'Expired',      text: 'text-red-400',     bg: 'bg-red-500/10',     border: 'border-red-500/20' },
-  cancelled:    { label: 'Cancelled',    text: 'text-gray-500',    bg: 'bg-white/5',        border: 'border-white/10' },
-}
+const SUB_STATUS_META: Record<string, { label: string; text: string; bg: string; border: string }> =
+  {
+    active: {
+      label: 'Active',
+      text: 'text-emerald-400',
+      bg: 'bg-emerald-500/10',
+      border: 'border-emerald-500/20',
+    },
+    grace_period: {
+      label: 'Grace period',
+      text: 'text-yellow-400',
+      bg: 'bg-yellow-500/10',
+      border: 'border-yellow-500/20',
+    },
+    expired: {
+      label: 'Expired',
+      text: 'text-red-400',
+      bg: 'bg-red-500/10',
+      border: 'border-red-500/20',
+    },
+    cancelled: {
+      label: 'Cancelled',
+      text: 'text-gray-500',
+      bg: 'bg-white/5',
+      border: 'border-white/10',
+    },
+  }
 
 function PlanBadge({ plan }: { plan?: string }) {
-  const meta = PLAN_META[plan ?? ''] ?? { label: plan ?? '—', text: 'text-gray-500', bg: 'bg-white/5', border: 'border-white/10' }
+  const meta = PLAN_META[plan ?? ''] ?? {
+    label: plan ?? '—',
+    text: 'text-gray-500',
+    bg: 'bg-white/5',
+    border: 'border-white/10',
+  }
   return (
-    <span className={cn('inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap', meta.bg, meta.border, meta.text)}>
+    <span
+      className={cn(
+        'inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap',
+        meta.bg,
+        meta.border,
+        meta.text,
+      )}
+    >
       {meta.label}
     </span>
   )
 }
 
 function SubStatusBadge({ status }: { status?: string }) {
-  const meta = SUB_STATUS_META[status ?? ''] ?? { label: status ?? 'No subscription', text: 'text-gray-500', bg: 'bg-white/5', border: 'border-white/10' }
+  const meta = SUB_STATUS_META[status ?? ''] ?? {
+    label: status ?? 'No subscription',
+    text: 'text-gray-500',
+    bg: 'bg-white/5',
+    border: 'border-white/10',
+  }
   return (
-    <span className={cn('inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap', meta.bg, meta.border, meta.text)}>
+    <span
+      className={cn(
+        'inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap',
+        meta.bg,
+        meta.border,
+        meta.text,
+      )}
+    >
       {meta.label}
     </span>
   )
@@ -57,30 +108,20 @@ export default function AdminBusinessesPage() {
   const [plan, setPlan] = useState('')
   const [subStatus, setSubStatus] = useState('')
 
-  const {
-    businesses,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    isError,
-  } = useAdminBusinessList({
-    search: search || undefined,
-    is_verified: verified === '' ? undefined : verified === 'true',
-    plan: plan || undefined,
-    subscription_status: subStatus || undefined,
-    limit: 20,
-  })
+  const { businesses, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, isError } =
+    useAdminBusinessList({
+      search: search || undefined,
+      is_verified: verified === '' ? undefined : verified === 'true',
+      plan: plan || undefined,
+      subscription_status: subStatus || undefined,
+      limit: 20,
+    })
 
   if (!user) return null
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <AdminSidebar admin={user} />
-
-      <div className="lg:pl-72">
-        <AdminDashboardHeader admin={user} />
-
+      <div className="">
         <main className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 pb-20">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Businesses</h1>
@@ -148,7 +189,7 @@ export default function AdminBusinessesPage() {
 
             {isError && !isLoading && (
               <div className="p-10 text-center text-sm text-red-400">
-                Couldn't load businesses. Try refreshing the page.
+                Couldn&apos;t load businesses. Try refreshing the page.
               </div>
             )}
 
@@ -167,15 +208,19 @@ export default function AdminBusinessesPage() {
                     className="flex items-center gap-4 px-4 sm:px-5 py-4 hover:bg-white/3 transition-colors"
                   >
                     <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
-                      {b.logo_url
-                        ? <img src={b.logo_url} alt="" className="w-full h-full object-cover" />
-                        : <Building2 className="w-4 h-4 text-gray-500" />}
+                      {b.logo_url ? (
+                        <img src={b.logo_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Building2 className="w-4 h-4 text-gray-500" />
+                      )}
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-white truncate">{b.name}</p>
-                        {b.is_verified && <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" />}
+                        {b.is_verified && (
+                          <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                        )}
                       </div>
                       <p className="text-xs text-gray-500 truncate">
                         {b.owner ? `${b.owner.name} · ${b.owner.email}` : 'No owner on record'}

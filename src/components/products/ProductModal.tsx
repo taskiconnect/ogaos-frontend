@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import imageCompression from 'browser-image-compression'
-import { createProduct, updateProduct, uploadProductImage } from '@/lib/api/business'
-import { X, Loader2, ImagePlus, ScanLine } from 'lucide-react'
-import { cn, isUpgradeRequiredError, getSubscriptionToastMessage } from '@/lib/utils'
-import type { Product, CreateProductRequest, UpdateProductRequest } from '@/lib/api/types'
 import BarcodeScannerModal from '@/components/products/BarcodeScannerModal'
+import { createProduct, updateProduct, uploadProductImage } from '@/lib/api/business'
+import type { CreateProductRequest, Product, UpdateProductRequest } from '@/lib/api/types'
+import { cn, getSubscriptionToastMessage, isUpgradeRequiredError } from '@/lib/utils'
+import { useMutation } from '@tanstack/react-query'
+import imageCompression from 'browser-image-compression'
+import { ImagePlus, Loader2, ScanLine, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 
 interface Props {
   open: boolean
@@ -16,7 +16,6 @@ interface Props {
   onSuccess: () => void
   editing?: Product | null
 }
-
 
 export default function ProductModal({ open, onOpenChange, onSuccess, editing }: Props) {
   const router = useRouter()
@@ -42,10 +41,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
 
   useEffect(() => {
     if (open && !editing) {
-      setIdempotencyKey(
-        globalThis.crypto?.randomUUID?.() ??
-          `product_${Date.now()}_${Math.random().toString(36).slice(2)}`
-      )
+      setIdempotencyKey(crypto.randomUUID())
     }
   }, [open, editing])
 
@@ -106,8 +102,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       initialQuality: 0.7,
     })
 
-    const ext =
-      outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'
+    const ext = outputType === 'image/png' ? 'png' : outputType === 'image/webp' ? 'webp' : 'jpg'
     const finalName = file.name.includes('.') ? file.name : `${file.name}.${ext}`
 
     return new File([compressedBlob], finalName, {
@@ -138,7 +133,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       if (isUpgradeRequiredError(e)) {
         setError(getSubscriptionToastMessage(e))
         onOpenChange(false)
-        router.push('/subscription')
+        router.push('/dashboard/subscription')
         return
       }
 
@@ -177,7 +172,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
       if (isUpgradeRequiredError(e)) {
         setError(getSubscriptionToastMessage(e))
         onOpenChange(false)
-        router.push('/subscription')
+        router.push('/dashboard/subscription')
         return
       }
 
@@ -272,7 +267,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
         <div
           className={cn(
             'absolute inset-0 bg-black/70 backdrop-blur-[2px] transition-opacity',
-            scannerOpen && 'pointer-events-none opacity-20'
+            scannerOpen && 'pointer-events-none opacity-20',
           )}
           onClick={() => {
             if (!scannerOpen) onOpenChange(false)
@@ -282,12 +277,14 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
         <div
           className={cn(
             'relative max-h-[95vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0f0f14] shadow-2xl sm:max-w-lg sm:rounded-3xl',
-            scannerOpen && 'pointer-events-none select-none'
+            scannerOpen && 'pointer-events-none select-none',
           )}
           aria-hidden={scannerOpen}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#0f0f14] px-6 py-4">
-            <h2 className="text-lg font-bold text-white">{editing ? 'Edit Product' : 'New Product'}</h2>
+            <h2 className="text-lg font-bold text-white">
+              {editing ? 'Edit Product' : 'New Product'}
+            </h2>
             <button
               onClick={() => onOpenChange(false)}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 hover:bg-white/10"
@@ -319,7 +316,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                         'flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-all',
                         type === t
                           ? 'border-primary bg-primary text-white'
-                          : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20'
+                          : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20',
                       )}
                     >
                       {t}
@@ -361,7 +358,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                           'inline-flex cursor-pointer items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-white transition',
                           isBusy
                             ? 'cursor-not-allowed border-white/10 bg-white/5 opacity-60'
-                            : 'border-white/10 bg-white/10 hover:bg-white/15'
+                            : 'border-white/10 bg-white/10 hover:bg-white/15',
                         )}
                       >
                         Choose Image
@@ -392,9 +389,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                     </div>
 
                     {selectedImage && (
-                      <p className="text-xs text-emerald-400">
-                        Selected: {selectedImage.name}
-                      </p>
+                      <p className="text-xs text-emerald-400">Selected: {selectedImage.name}</p>
                     )}
                   </div>
                 </div>
@@ -512,13 +507,13 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                     onClick={() => setTrackInv((v) => !v)}
                     className={cn(
                       'relative h-6 w-10 shrink-0 rounded-full border transition-all',
-                      trackInv ? 'border-primary bg-primary' : 'border-white/20 bg-white/5'
+                      trackInv ? 'border-primary bg-primary' : 'border-white/20 bg-white/5',
                     )}
                   >
                     <div
                       className={cn(
                         'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
-                        trackInv ? 'left-4' : 'left-0.5'
+                        trackInv ? 'left-4' : 'left-0.5',
                       )}
                     />
                   </button>
@@ -563,13 +558,13 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
                   onClick={() => setIsActive((v) => !v)}
                   className={cn(
                     'relative h-6 w-10 shrink-0 rounded-full border transition-all',
-                    isActive ? 'border-primary bg-primary' : 'border-white/20 bg-white/5'
+                    isActive ? 'border-primary bg-primary' : 'border-white/20 bg-white/5',
                   )}
                 >
                   <div
                     className={cn(
                       'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
-                      isActive ? 'left-4' : 'left-0.5'
+                      isActive ? 'left-4' : 'left-0.5',
                     )}
                   />
                 </button>

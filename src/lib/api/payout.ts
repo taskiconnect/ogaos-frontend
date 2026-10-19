@@ -1,30 +1,16 @@
 import api from './client'
-import type { ApiSuccess } from './types'
+import { handleApiError } from './errors'
 import type {
+  ApiSuccess,
+  ConfirmVerificationRequest,
   ListBanksResponse,
+  PayoutAccountResponse,
+  ResendVerificationRequest,
   ResolveAccountRequest,
   ResolveAccountResponse,
   StartVerificationRequest,
-  ConfirmVerificationRequest,
-  ResendVerificationRequest,
   VerificationResponse,
-  PayoutAccountResponse,
 } from './types'
-
-function handleApiError(error: any): never {
-  const status = error?.response?.status
-  const data = error?.response?.data
-
-  if (status === 402 && data?.upgrade_required) {
-    throw { type: 'subscription', status, ...data }
-  }
-
-  throw {
-    type: 'api',
-    status,
-    message: data?.message ?? error?.message ?? 'Something went wrong',
-  }
-}
 
 export const listBanks = async (): Promise<ListBanksResponse> => {
   try {
@@ -36,12 +22,12 @@ export const listBanks = async (): Promise<ListBanksResponse> => {
 }
 
 export const resolveAccount = async (
-  data: ResolveAccountRequest
+  data: ResolveAccountRequest,
 ): Promise<ResolveAccountResponse['data']> => {
   try {
     const res = await api.post<ApiSuccess<ResolveAccountResponse>>(
       '/business/me/payout/resolve',
-      data
+      data,
     )
 
     return res.data.data.data
@@ -51,12 +37,12 @@ export const resolveAccount = async (
 }
 
 export const startPayoutVerification = async (
-  data: StartVerificationRequest
+  data: StartVerificationRequest,
 ): Promise<VerificationResponse> => {
   try {
     const res = await api.post<ApiSuccess<VerificationResponse>>(
       '/business/me/payout/verify/start',
-      data
+      data,
     )
     return res.data.data
   } catch (error) {
@@ -65,12 +51,12 @@ export const startPayoutVerification = async (
 }
 
 export const resendPayoutVerification = async (
-  data: ResendVerificationRequest
+  data: ResendVerificationRequest,
 ): Promise<VerificationResponse> => {
   try {
     const res = await api.post<ApiSuccess<VerificationResponse>>(
       '/business/me/payout/verify/resend',
-      data
+      data,
     )
     return res.data.data
   } catch (error) {
@@ -79,12 +65,12 @@ export const resendPayoutVerification = async (
 }
 
 export const confirmPayoutVerification = async (
-  data: ConfirmVerificationRequest
+  data: ConfirmVerificationRequest,
 ): Promise<PayoutAccountResponse> => {
   try {
     const res = await api.post<ApiSuccess<PayoutAccountResponse>>(
       '/business/me/payout/verify/confirm',
-      data
+      data,
     )
     return res.data.data
   } catch (error) {
@@ -95,7 +81,7 @@ export const confirmPayoutVerification = async (
 export const getPendingPayoutVerification = async (): Promise<VerificationResponse> => {
   try {
     const res = await api.get<ApiSuccess<VerificationResponse>>(
-      '/business/me/payout/verify/pending'
+      '/business/me/payout/verify/pending',
     )
     return res.data.data
   } catch (error) {
@@ -105,9 +91,7 @@ export const getPendingPayoutVerification = async (): Promise<VerificationRespon
 
 export const getDefaultPayoutAccount = async (): Promise<PayoutAccountResponse> => {
   try {
-    const res = await api.get<ApiSuccess<PayoutAccountResponse>>(
-      '/business/me/payout/account'
-    )
+    const res = await api.get<ApiSuccess<PayoutAccountResponse>>('/business/me/payout/account')
     return res.data.data
   } catch (error) {
     handleApiError(error)

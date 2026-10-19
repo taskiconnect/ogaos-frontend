@@ -1,33 +1,33 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import {
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
-  Download,
-  Store,
-  CheckCircle2,
-  Globe,
   Clock3,
-  Lock,
-  ShoppingBag,
+  Download,
   FileText,
-  Video,
+  Globe,
+  ImageIcon,
+  Lock,
+  Maximize,
   PackageCheck,
-  Play,
   Pause,
+  Play,
+  RotateCcw,
+  ShieldCheck,
+  ShoppingBag,
+  Store,
+  Video,
   Volume2,
   VolumeX,
-  Maximize,
-  RotateCcw,
   X,
-  ImageIcon,
 } from 'lucide-react'
+import Link from 'next/link'
+import { useMemo, useRef, useState } from 'react'
 
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 import { cn } from '@/lib/utils'
 import type { PublicDigitalProductResponse } from '@/types/public'
 import { formatBytes, formatCurrency, parseGallery } from '@/types/public'
@@ -235,14 +235,17 @@ function PromoVideoPlayer({ src, poster }: { src: string; poster?: string | null
         <div
           className={cn(
             'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-4 pb-3 pt-10 transition-opacity duration-200',
-            showControls || !playing ? 'opacity-100' : 'opacity-0'
+            showControls || !playing ? 'opacity-100' : 'opacity-0',
           )}
         >
           <div
             className="mb-3 h-1 w-full cursor-pointer rounded-full bg-white/20 transition-[height] hover:h-1.5"
             onClick={handleSeek}
           >
-            <div className="relative h-full rounded-full bg-primary" style={{ width: `${progress}%` }}>
+            <div
+              className="relative h-full rounded-full bg-primary"
+              style={{ width: `${progress}%` }}
+            >
               <div className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-white shadow" />
             </div>
           </div>
@@ -254,7 +257,11 @@ function PromoVideoPlayer({ src, poster }: { src: string; poster?: string | null
                 onClick={togglePlay}
                 className="flex h-7 w-7 items-center justify-center rounded-md bg-white/10 text-white transition hover:bg-primary"
               >
-                {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 translate-x-px" />}
+                {playing ? (
+                  <Pause className="h-3.5 w-3.5" />
+                ) : (
+                  <Play className="h-3.5 w-3.5 translate-x-px" />
+                )}
               </button>
 
               <button
@@ -339,9 +346,7 @@ function GalleryViewer({
           <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/15">
             <ImageIcon className="h-3 w-3 text-primary" />
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">
-            Gallery
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Gallery</p>
         </div>
 
         {images.length > 1 && (
@@ -351,7 +356,10 @@ function GalleryViewer({
         )}
       </div>
 
-      <div className="relative w-full overflow-hidden rounded-xl bg-dash-subtle" style={{ aspectRatio: '4/3' }}>
+      <div
+        className="relative w-full overflow-hidden rounded-xl bg-dash-subtle"
+        style={{ aspectRatio: '4/3' }}
+      >
         {current ? (
           <img
             src={current}
@@ -415,7 +423,7 @@ function GalleryViewer({
                 'relative shrink-0 overflow-hidden rounded-lg border transition-all duration-150',
                 i === index
                   ? 'border-primary opacity-100 ring-2 ring-primary/30'
-                  : 'border-white/10 opacity-50 hover:border-white/20 hover:opacity-80'
+                  : 'border-white/10 opacity-50 hover:border-white/20 hover:opacity-80',
               )}
               style={{ width: 72, height: 48 }}
             >
@@ -434,7 +442,7 @@ function GalleryViewer({
               onClick={() => setIndex(i)}
               className={cn(
                 'h-1 rounded-full transition-all duration-200',
-                i === index ? 'w-6 bg-primary' : 'w-1.5 bg-white/20 hover:bg-white/40'
+                i === index ? 'w-6 bg-primary' : 'w-1.5 bg-white/20 hover:bg-white/40',
               )}
             />
           ))}
@@ -445,7 +453,10 @@ function GalleryViewer({
 }
 
 export default function ProductExperience({ product }: Props) {
-  const gallery = useMemo(() => parseGallery(product.gallery_image_urls), [product.gallery_image_urls])
+  const gallery = useMemo(
+    () => parseGallery(product.gallery_image_urls),
+    [product.gallery_image_urls],
+  )
 
   const galleryImages = useMemo(() => {
     const seen = new Set<string>()
@@ -463,7 +474,6 @@ export default function ProductExperience({ product }: Props) {
 
   const [lightboxImg, setLightboxImg] = useState<string | null>(null)
 
-  const TypeIcon = getTypeIcon(product.type)
   const sellerName = product.business.name
   const sellerSlug = product.business.slug
   const sellerLogo = product.business.logo_url
@@ -504,7 +514,11 @@ export default function ProductExperience({ product }: Props) {
 
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent px-4 pb-4 pt-12">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/20 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary backdrop-blur-md">
-                    <TypeIcon className="h-3 w-3" />
+                    {product.type === 'course' ? (
+                      <ShoppingBag className="h-3 w-3" />
+                    ) : (
+                      <ShoppingBag className="h-3 w-3" />
+                    )}
                     {product.type}
                   </span>
                 </div>
@@ -530,26 +544,31 @@ export default function ProductExperience({ product }: Props) {
 
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-black tracking-tight text-white">
-                  {formatCurrency(product.price / 100, product.currency)}
+                  {formatCurrency(product.price, product.currency)}
                 </span>
                 <span className="text-sm font-medium text-gray-500">one-time</span>
               </div>
 
-              <p className="max-w-2xl text-sm leading-7 text-gray-400">
-                {product.description}
-              </p>
+              <p className="max-w-2xl text-sm leading-7 text-gray-400">{product.description}</p>
 
               <div className="flex flex-wrap gap-2.5">
                 {[
                   { label: 'Delivery', value: getFulfillmentLabel(product.fulfillment_mode) },
                   {
                     label: 'Access',
-                    value: product.access_duration_hours ? `${product.access_duration_hours}h` : 'Lifetime',
+                    value: product.access_duration_hours
+                      ? `${product.access_duration_hours}h`
+                      : 'Lifetime',
                   },
-                  ...(product.file_size ? [{ label: 'File size', value: formatBytes(product.file_size) }] : []),
+                  ...(product.file_size
+                    ? [{ label: 'File size', value: formatBytes(product.file_size) }]
+                    : []),
                   { label: 'Account needed', value: product.requires_account ? 'Yes' : 'No' },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-xl border border-white/8 bg-dash-surface px-4 py-3">
+                  <div
+                    key={s.label}
+                    className="rounded-xl border border-white/8 bg-dash-surface px-4 py-3"
+                  >
                     <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
                       {s.label}
                     </p>
@@ -628,10 +647,7 @@ export default function ProductExperience({ product }: Props) {
                 <div className="flex min-h-0 flex-col lg:flex-row lg:items-stretch">
                   {hasVideo && (
                     <div
-                      className={cn(
-                        'flex flex-col bg-black',
-                        hasGallery ? 'lg:w-[60%]' : 'w-full'
-                      )}
+                      className={cn('flex flex-col bg-black', hasGallery ? 'lg:w-[60%]' : 'w-full')}
                     >
                       <ProductPromoMedia
                         url={product.promo_video_url!}
@@ -641,15 +657,12 @@ export default function ProductExperience({ product }: Props) {
                     </div>
                   )}
 
-                  {hasVideo && hasGallery && <div className="hidden w-px shrink-0 bg-white/6 lg:block" />}
+                  {hasVideo && hasGallery && (
+                    <div className="hidden w-px shrink-0 bg-white/6 lg:block" />
+                  )}
 
                   {hasGallery && (
-                    <div
-                      className={cn(
-                        'flex flex-col p-4',
-                        hasVideo ? 'lg:w-[40%]' : 'w-full'
-                      )}
-                    >
+                    <div className={cn('flex flex-col p-4', hasVideo ? 'lg:w-[40%]' : 'w-full')}>
                       <GalleryViewer
                         images={galleryImages}
                         title={product.title}
@@ -689,7 +702,9 @@ export default function ProductExperience({ product }: Props) {
                     {
                       icon: Clock3,
                       label: 'Access duration',
-                      value: product.access_duration_hours ? `${product.access_duration_hours}h` : 'Lifetime',
+                      value: product.access_duration_hours
+                        ? `${product.access_duration_hours}h`
+                        : 'Lifetime',
                     },
                     {
                       icon: Lock,
@@ -697,15 +712,22 @@ export default function ProductExperience({ product }: Props) {
                       value: product.requires_account ? 'Yes' : 'No',
                     },
                     ...(product.file_size
-                      ? [{ icon: Download, label: 'File size', value: formatBytes(product.file_size) }]
+                      ? [
+                          {
+                            icon: Download,
+                            label: 'File size',
+                            value: formatBytes(product.file_size),
+                          },
+                        ]
                       : []),
                   ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
+                    <div
+                      key={label}
+                      className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5"
+                    >
                       <div className="mb-1.5 flex items-center gap-1.5 text-gray-500">
                         <Icon className="h-3.5 w-3.5" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider">
-                          {label}
-                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider">{label}</p>
                       </div>
                       <p className="text-sm font-bold text-white">{value}</p>
                     </div>
@@ -717,9 +739,7 @@ export default function ProductExperience({ product }: Props) {
                     <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-yellow-500">
                       Note from seller
                     </p>
-                    <p className="text-sm leading-6 text-yellow-200/80">
-                      {product.delivery_note}
-                    </p>
+                    <p className="text-sm leading-6 text-yellow-200/80">{product.delivery_note}</p>
                   </div>
                 )}
               </div>

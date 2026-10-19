@@ -1,10 +1,10 @@
 // src/components/settings/BankSelect.tsx
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { PaystackBank } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { ChevronDown } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 interface BankSelectProps {
   value: string
@@ -18,9 +18,7 @@ export default function BankSelect({ value, onChange, banks, disabled = false }:
   const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
-  const filtered = banks.filter((b) =>
-    b.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = banks.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
 
   const selected = banks.find((b) => b.code === value)
 
@@ -44,11 +42,16 @@ export default function BankSelect({ value, onChange, banks, disabled = false }:
         className={cn(
           'w-full flex items-center justify-between gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-left transition-colors focus:outline-none',
           disabled ? 'opacity-60 cursor-not-allowed' : 'hover:border-white/25 cursor-pointer',
-          selected ? 'text-white' : 'text-gray-400'
+          selected ? 'text-white' : 'text-gray-400',
         )}
       >
         <span className="truncate">{selected?.name ?? 'Select bank'}</span>
-        <ChevronDown className={cn('w-4 h-4 text-gray-500 shrink-0 transition-transform', open && 'rotate-180')} />
+        <ChevronDown
+          className={cn(
+            'w-4 h-4 text-gray-500 shrink-0 transition-transform',
+            open && 'rotate-180',
+          )}
+        />
       </button>
 
       {open && (
@@ -73,12 +76,16 @@ export default function BankSelect({ value, onChange, banks, disabled = false }:
                 <button
                   key={b.code}
                   type="button"
-                  onClick={() => { onChange(b.code, b.name); setOpen(false); setSearch('') }}
+                  onClick={() => {
+                    onChange(b.code, b.name)
+                    setOpen(false)
+                    setSearch('')
+                  }}
                   className={cn(
                     'w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-white/4 last:border-b-0',
                     value === b.code
                       ? 'bg-primary/20 text-white font-medium'
-                      : 'text-gray-300 hover:bg-white/6 hover:text-white'
+                      : 'text-gray-300 hover:bg-white/6 hover:text-white',
                   )}
                 >
                   {b.name}

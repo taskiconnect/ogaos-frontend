@@ -2,13 +2,13 @@
 import api from './client'
 import type {
   ApiSuccess,
-  Subscription,
   CouponValidationData,
-  ValidateSubscriptionCouponRequest,
-  InitiateSubscriptionRequest,
   InitiateSubscriptionData,
-  VerifySubscriptionRequest,
+  InitiateSubscriptionRequest,
+  Subscription,
+  ValidateSubscriptionCouponRequest,
   VerifySubscriptionData,
+  VerifySubscriptionRequest,
 } from './types'
 
 export const getMySubscription = async (): Promise<ApiSuccess<Subscription> | null> => {
@@ -24,21 +24,21 @@ export const getMySubscription = async (): Promise<ApiSuccess<Subscription> | nu
 }
 
 export const validateSubscriptionCoupon = async (
-  payload: ValidateSubscriptionCouponRequest
+  payload: ValidateSubscriptionCouponRequest,
 ): Promise<ApiSuccess<CouponValidationData>> => {
   const { data } = await api.post<ApiSuccess<CouponValidationData>>(
     '/subscriptions/validate-coupon',
-    payload
+    payload,
   )
   return data
 }
 
 export const initiateSubscription = async (
-  payload: InitiateSubscriptionRequest
+  payload: InitiateSubscriptionRequest,
 ): Promise<ApiSuccess<InitiateSubscriptionData>> => {
   const { data } = await api.post<ApiSuccess<InitiateSubscriptionData>>(
     '/subscriptions/initiate',
-    payload
+    payload,
   )
   return data
 }
@@ -54,11 +54,11 @@ export const initiateSubscription = async (
  * completed on Paystack's side — caller should fall back to polling.
  */
 export const verifyPaymentReference = async (
-  payload: VerifySubscriptionRequest
+  payload: VerifySubscriptionRequest,
 ): Promise<ApiSuccess<VerifySubscriptionData>> => {
   const { data } = await api.post<ApiSuccess<VerifySubscriptionData>>(
     '/subscriptions/verify',
-    payload
+    payload,
   )
   return data
 }

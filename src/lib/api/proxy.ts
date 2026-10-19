@@ -1,86 +1,86 @@
-// src/lib/api/proxy.ts
-// Server-side proxy used by all Next.js API routes.
-//
-// Security model:
-//  - API_URL is a server-only env var (no NEXT_PUBLIC_ prefix).
-//    The browser never sees the real backend address.
-//  - The access token travels in the Authorization header, which this proxy
-//    reads on the server and forwards — the browser sends it to /api/*, not
-//    directly to the Go backend.
-//  - HttpOnly refresh_token cookies are forwarded and returned intact so the
-//    browser never touches the raw token value.
-//
-// Env var resolution order:
-//  1. API_URL          — server-only, preferred (never exposed to browser)
-//  2. NEXT_PUBLIC_API_URL — fallback if API_URL is not set (already in Vercel)
-//  3. http://localhost:8080/api/v1 — local development fallback
-
 import { NextRequest, NextResponse } from 'next/server'
-
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-
-const BACKEND =
-  process.env.API_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  'http://localhost:8080/api/v1'
-
+export function backendBase() {
+  const value = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
+  if (!value && process.env.NODE_ENV === 'production') throw new Error('API_URL must be configured')
+  return (value ?? 'http://127.0.0.1:8080/api/v1').replace(/\/+$/, '')
+}
+export function frontendCookie(cookie: string) {
+  // Cookie paths belong to this application's public route space.
+  return cookie.replace(/Path=\/api\/v1\/admin(?=;|$)/gi, 'Path=/api/admin')
+}
 export async function proxyRequest(
   req: NextRequest,
-  backendPath: string,
+  path: string,
   method: HttpMethod = 'POST',
-  { multipart = false }: { multipart?: boolean } = {}
+  { multipart = false }: { multipart?: boolean } = {},
 ) {
   try {
-    // Build target URL and forward query string (?page=1&limit=20&search=...)
-    const target = new URL(BACKEND + backendPath)
-    req.nextUrl.searchParams.forEach((v, k) => target.searchParams.set(k, v))
-
-    // Build outbound headers
+    const target = new URL(backendBase() + path)
+    target.search = req.nextUrl.search
     const headers = new Headers()
-
-    // Forward auth token (set by client.ts interceptor)
-    const auth = req.headers.get('authorization')
-    if (auth) headers.set('authorization', auth)
-
-    // Forward httpOnly cookie (contains refresh_token)
-    const cookie = req.headers.get('cookie')
-    if (cookie) headers.set('cookie', cookie)
-
-    // Build body
+    for (const name of ['authorization', 'cookie', 'accept', 'x-idempotency-key']) {
+      const value = req.headers.get(name)
+      if (value) headers.set(name, value)
+    }
     let body: BodyInit | undefined
-
     if (method !== 'GET' && method !== 'DELETE') {
+      if (Number(req.headers.get('content-length') ?? 0) > 30 * 1024 * 1024)
+        return NextResponse.json(
+          { success: false, message: 'Upload exceeds 30 MB' },
+          { status: 413 },
+        )
       if (multipart) {
-        // File upload — forward FormData as-is; do NOT set Content-Type
-        // (browser boundary is set automatically by the fetch runtime)
-        body = await req.formData()
+        const form = await req.formData()
+        let size = 0
+        for (const value of form.values())
+          size += typeof value === 'string' ? value.length : value.size
+        if (size > 30 * 1024 * 1024)
+          return NextResponse.json(
+            { success: false, message: 'Upload exceeds 30 MB' },
+            { status: 413 },
+          )
+        body = form
       } else {
         headers.set('content-type', 'application/json')
-        const text = await req.text()
-        if (text) body = text
+        body = (await req.text()) || undefined
       }
     }
-
-    const response = await fetch(target.toString(), {
+    const signal = AbortSignal.any([req.signal, AbortSignal.timeout(multipart ? 65_000 : 25_000)])
+    const upstream = await fetch(target, {
       method,
       headers,
       body,
+      signal,
       cache: 'no-store',
+      redirect: 'manual',
     })
-
-    const data = await response.json().catch(() => ({}))
-    const nextRes = NextResponse.json(data, { status: response.status })
-
-    // Propagate Set-Cookie so the browser stores the rotated refresh token
-    const setCookie = response.headers.get('set-cookie')
-    if (setCookie) nextRes.headers.set('set-cookie', setCookie)
-
-    return nextRes
-  } catch (err) {
-    console.error(`[PROXY] ${method} ${backendPath} —`, err)
+    const output = new Headers({ 'cache-control': 'no-store' })
+    for (const name of [
+      'content-type',
+      'content-disposition',
+      'retry-after',
+      'x-ratelimit-limit',
+      'x-ratelimit-remaining',
+      'x-ratelimit-reset',
+      'location',
+    ]) {
+      const value = upstream.headers.get(name)
+      if (value) output.set(name, value)
+    }
+    for (const cookie of upstream.headers.getSetCookie())
+      output.append('set-cookie', frontendCookie(cookie))
+    return new NextResponse(upstream.body, { status: upstream.status, headers: output })
+  } catch (error) {
+    const timedOut = error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
+      {
+        success: false,
+        message: timedOut
+          ? 'Request timed out. Check the transaction before retrying.'
+          : 'The service is temporarily unavailable.',
+      },
+      { status: timedOut ? 504 : 502 },
     )
   }
 }

@@ -1,15 +1,17 @@
 import api from './client'
-import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
 import type {
-  JobOpening,
+  ApiCursorList,
+  ApiMessage,
+  ApiSuccess,
+  ApplicationListParams,
   CreateJobRequest,
   JobListParams,
-  RecruitmentApplication,
-  ReviewApplicationRequest,
-  ApplicationListParams,
+  JobOpening,
+  PublicJobApplicationRequest,
   PublicJobItem,
   PublicJobListParams,
-  PublicJobApplicationRequest,
+  RecruitmentApplication,
+  ReviewApplicationRequest,
 } from './types'
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
@@ -34,10 +36,7 @@ export const listPublicJobs = (params?: PublicJobListParams) =>
 export const getPublicJob = (slug: string) =>
   api.get<ApiSuccess<JobOpening>>(`/public/jobs/${slug}`).then((r) => r.data.data)
 
-export const applyToPublicJob = async (
-  id: string,
-  data: PublicJobApplicationRequest
-) => {
+export const applyToPublicJob = async (id: string, data: PublicJobApplicationRequest) => {
   const form = new FormData()
   form.append('first_name', data.first_name)
   form.append('last_name', data.last_name)

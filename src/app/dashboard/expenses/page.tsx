@@ -2,16 +2,14 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useMemo } from 'react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listExpenses, deleteExpense } from '@/lib/api/finance'
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import { Plus, Search, Receipt, Trash2, ChevronDown, TrendingDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { Expense } from '@/lib/api/types'
 import CreateExpenseModal from '@/components/expenses/CreateExpenseModal'
 import EditExpenseDrawer from '@/components/expenses/EditExpenseDrawer'
+import { deleteExpense, listExpenses } from '@/lib/api/finance'
+import type { Expense } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown, Plus, Receipt, Search, Trash2, TrendingDown } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 function fmt(kobo: number) {
   const n = kobo / 100
@@ -109,33 +107,30 @@ export default function ExpensesPage() {
     return {}
   }
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ['expenses', typeFilter, catFilter, dateOpt],
-      queryFn: ({ pageParam }) =>
-        listExpenses({
-          limit: 30,
-          cursor: pageParam as string | undefined,
-          expense_type: (typeFilter as 'opex' | 'capex') || undefined,
-          category: catFilter || undefined,
-          ...dateRange(dateOpt),
-        }),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (last: any) => last.next_cursor ?? undefined,
-    })
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ['expenses', typeFilter, catFilter, dateOpt],
+    queryFn: ({ pageParam }) =>
+      listExpenses({
+        limit: 30,
+        cursor: pageParam as string | undefined,
+        expense_type: (typeFilter as 'opex' | 'capex') || undefined,
+        category: catFilter || undefined,
+        ...dateRange(dateOpt),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last: any) => last.next_cursor ?? undefined,
+  })
 
   const allExpenses: Expense[] = useMemo(
     () => (data?.pages ?? []).flatMap((p: any) => p.data ?? []),
-    [data]
+    [data],
   )
 
   const filtered = useMemo(() => {
     if (!search.trim()) return allExpenses
     const q = search.toLowerCase()
     return allExpenses.filter(
-      (e) =>
-        e.description.toLowerCase().includes(q) ||
-        e.category.toLowerCase().includes(q)
+      (e) => e.description.toLowerCase().includes(q) || e.category.toLowerCase().includes(q),
     )
   }, [allExpenses, search])
 
@@ -180,10 +175,11 @@ export default function ExpensesPage() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-      <div className="lg:pl-72">
-        <DashboardHeader />
+      <div className="">
         <main className="p-6 lg:p-10 space-y-8 pb-20">
+          <p className="text-xs text-muted-foreground">
+            List figures reflect the records currently loaded and selected filters.
+          </p>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Expenses</h1>
@@ -245,7 +241,7 @@ export default function ExpensesPage() {
                     'px-3 py-2 rounded-xl text-xs font-semibold border uppercase transition-all',
                     typeFilter === t
                       ? 'bg-primary border-primary text-white'
-                      : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                      : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20',
                   )}
                 >
                   {t || 'All'}
@@ -306,7 +302,7 @@ export default function ExpensesPage() {
                         <span
                           className={cn(
                             'text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border',
-                            TYPE_CLS[exp.expense_type] ?? TYPE_CLS.opex
+                            TYPE_CLS[exp.expense_type] ?? TYPE_CLS.opex,
                           )}
                         >
                           {exp.expense_type}

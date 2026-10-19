@@ -1,22 +1,18 @@
 'use client'
 
+import { extendAdminBusinessSubscription } from '@/lib/api/admin'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation } from '@tanstack/react-query'
+import { TimerReset, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
-import { X, TimerReset } from 'lucide-react'
 import { toast } from 'sonner'
-import { extendAdminBusinessSubscription } from '@/lib/api/admin'
+import { z } from 'zod'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const formSchema = z.object({
-  days: z.coerce
-    .number()
-    .int()
-    .min(1, 'Must be at least 1 day')
-    .max(3650, 'Too many days'),
+  days: z.coerce.number().int().min(1, 'Must be at least 1 day').max(3650, 'Too many days'),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -80,7 +76,6 @@ export default function ExtendSubscriptionModal({
       />
 
       <div className="relative w-full max-w-md mx-4 bg-dash-surface border border-dash-border rounded-3xl shadow-2xl p-6 space-y-5">
-
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
@@ -103,12 +98,16 @@ export default function ExtendSubscriptionModal({
           Pushes the current period end forward. Plan and limits stay the same.
           {currentPeriodEnd && (
             <>
-              {' '}Current period ends{' '}
+              {' '}
+              Current period ends{' '}
               <span className="font-semibold text-white">
-                {new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-                  new Date(currentPeriodEnd)
-                )}
-              </span>.
+                {new Intl.DateTimeFormat('en-NG', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                }).format(new Date(currentPeriodEnd))}
+              </span>
+              .
             </>
           )}
         </p>
@@ -117,7 +116,13 @@ export default function ExtendSubscriptionModal({
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
             Extend by (days)
           </label>
-          <input type="number" min={1} {...register('days')} placeholder="14" className={inputCls} />
+          <input
+            type="number"
+            min={1}
+            {...register('days')}
+            placeholder="14"
+            className={inputCls}
+          />
           {errors.days && <p className="text-xs text-red-500 mt-1">{errors.days.message}</p>}
         </div>
 
@@ -129,7 +134,7 @@ export default function ExtendSubscriptionModal({
             Cancel
           </button>
           <button
-            onClick={() => handleSubmit(d => mutation.mutate(d))()}
+            onClick={() => handleSubmit((d) => mutation.mutate(d))()}
             disabled={mutation.isPending}
             className="flex-1 h-10 rounded-xl font-semibold text-white text-sm disabled:opacity-50 transition-all active:scale-95 shadow-lg"
             style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
@@ -137,7 +142,6 @@ export default function ExtendSubscriptionModal({
             {mutation.isPending ? 'Extending…' : 'Extend'}
           </button>
         </div>
-
       </div>
     </div>
   )

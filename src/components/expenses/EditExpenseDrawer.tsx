@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { updateExpense } from '@/lib/api/finance'
-import { X, Loader2, Calendar, Tag } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { Expense, UpdateExpenseRequest } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useMutation } from '@tanstack/react-query'
+import { Calendar, Loader2, Tag, X } from 'lucide-react'
+import { useState } from 'react'
 
 interface Props {
   expense: Expense
@@ -40,12 +40,7 @@ function toIsoUtcMidnight(dateString: string): string {
 }
 
 function getErrorMessage(error: any, fallback: string): string {
-  return (
-    error?.message ||
-    error?.response?.data?.message ||
-    error?.data?.message ||
-    fallback
-  )
+  return error?.message || error?.response?.data?.message || error?.data?.message || fallback
 }
 
 const CATEGORIES = [
@@ -66,11 +61,7 @@ const TYPE_CLS: Record<string, string> = {
   capex: 'border-purple-500/20 bg-purple-500/10 text-purple-400',
 }
 
-export default function EditExpenseDrawer({
-  expense,
-  onClose,
-  onSuccess,
-}: Props) {
+export default function EditExpenseDrawer({ expense, onClose, onSuccess }: Props) {
   const [category, setCategory] = useState(expense.category)
   const [description, setDescription] = useState(expense.description)
   const [amount, setAmount] = useState(String(expense.amount / 100))
@@ -136,15 +127,13 @@ export default function EditExpenseDrawer({
               <span
                 className={cn(
                   'rounded-full border px-2.5 py-1 text-xs font-bold uppercase',
-                  TYPE_CLS[expense.expense_type] ?? TYPE_CLS.opex
+                  TYPE_CLS[expense.expense_type] ?? TYPE_CLS.opex,
                 )}
               >
                 {expense.expense_type}
               </span>
 
-              <span className="text-xl font-bold text-white">
-                {formatCurrency(expense.amount)}
-              </span>
+              <span className="text-xl font-bold text-white">{formatCurrency(expense.amount)}</span>
             </div>
 
             <div className="flex items-center gap-2 text-xs text-gray-400">

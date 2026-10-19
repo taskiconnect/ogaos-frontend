@@ -1,32 +1,32 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Receipt,
-  TrendingDown,
-  Landmark,
-  Package,
-  Users,
-  Briefcase,
-  ShoppingBag,
-  Store,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Menu,
-  UserCog,
-  CreditCard,
-} from 'lucide-react'
+import { logoutUser } from '@/lib/api/auth'
 import { cn, getInitials } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
-import { logoutUser } from '@/lib/api/auth'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Package,
+  Receipt,
+  Settings,
+  ShoppingBag,
+  ShoppingCart,
+  Store,
+  TrendingDown,
+  UserCog,
+  Users,
+  X,
+} from 'lucide-react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 const NAV_GROUPS = [
@@ -85,7 +85,7 @@ function NavItem({ href, icon: Icon, label, collapsed, active }: NavItemProps) {
         'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group',
         active
           ? 'bg-primary/15 text-primary border border-primary/25'
-          : 'text-gray-400 hover:text-white hover:bg-white/5'
+          : 'text-gray-400 hover:text-white hover:bg-white/5',
       )}
     >
       {active && (
@@ -117,13 +117,7 @@ function NavItem({ href, icon: Icon, label, collapsed, active }: NavItemProps) {
   )
 }
 
-function SidebarInner({
-  collapsed,
-  onCollapse,
-}: {
-  collapsed: boolean
-  onCollapse?: () => void
-}) {
+function SidebarInner({ collapsed, onCollapse }: { collapsed: boolean; onCollapse?: () => void }) {
   const pathname = usePathname()
   const { user, clearAuth } = useAuthStore()
   const router = useRouter()
@@ -140,9 +134,7 @@ function SidebarInner({
     router.push('/auth/login')
   }
 
-  const displayName = user
-    ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()
-    : 'User'
+  const displayName = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : 'User'
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -150,25 +142,21 @@ function SidebarInner({
       <div
         className={cn(
           'flex items-center h-16 px-4 border-b border-white/8 shrink-0',
-          collapsed ? 'justify-center' : 'justify-between'
+          collapsed ? 'justify-center' : 'justify-between',
         )}
       >
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <img
-              src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/OgaOS%20logo.png?updatedAt=1773595227330"
-              alt="OgaOS"
-              className="h-8 w-auto object-contain"
-            />
+            <span className="text-2xl font-bold tracking-tight text-white">
+              Oga<span className="text-blue-400">OS</span>
+            </span>
           </Link>
         )}
 
         {collapsed && (
-          <img
-            src="https://ik.imagekit.io/jwrqb9lqx/TaskiConnect%20Website/OgaOS%20logo.png?updatedAt=1773595227330"
-            alt="OgaOS"
-            className="w-8 h-8 object-contain"
-          />
+          <span className="grid size-9 place-items-center rounded-xl bg-blue-600 font-bold text-white">
+            O
+          </span>
         )}
 
         {onCollapse && (
@@ -203,16 +191,24 @@ function SidebarInner({
             </AnimatePresence>
 
             <div className="space-y-0.5">
-              {group.items.map((item) => (
-                <NavItem
-                  key={item.href}
-                  href={item.href}
-                  icon={item.icon}
-                  label={item.label}
-                  collapsed={collapsed}
-                  active={isActive(item.href)}
-                />
-              ))}
+              {group.items
+                .filter(
+                  (item) =>
+                    user?.role === 'owner' ||
+                    !['/dashboard/settings', '/dashboard/staff', '/dashboard/digital'].includes(
+                      item.href,
+                    ),
+                )
+                .map((item) => (
+                  <NavItem
+                    key={item.href}
+                    href={item.href}
+                    icon={item.icon}
+                    label={item.label}
+                    collapsed={collapsed}
+                    active={isActive(item.href)}
+                  />
+                ))}
             </div>
           </div>
         ))}
@@ -230,9 +226,7 @@ function SidebarInner({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-white truncate">{displayName}</p>
-              <p className="text-xs text-gray-500 truncate capitalize">
-                {user?.role ?? 'owner'}
-              </p>
+              <p className="text-xs text-gray-500 truncate capitalize">{user?.role ?? 'owner'}</p>
             </div>
           </div>
         )}
@@ -241,7 +235,7 @@ function SidebarInner({
           onClick={handleLogout}
           className={cn(
             'flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/8 transition-all',
-            collapsed ? 'justify-center' : ''
+            collapsed ? 'justify-center' : '',
           )}
           title={collapsed ? 'Log out' : undefined}
         >
@@ -287,10 +281,7 @@ export default function Sidebar() {
         transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
         className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 z-20 bg-[#0a0a0f] border-r border-white/8 overflow-hidden"
       >
-        <SidebarInner
-          collapsed={collapsed}
-          onCollapse={() => setCollapsed((c) => !c)}
-        />
+        <SidebarInner collapsed={collapsed} onCollapse={() => setCollapsed((c) => !c)} />
       </motion.aside>
 
       {/* Mobile drawer */}

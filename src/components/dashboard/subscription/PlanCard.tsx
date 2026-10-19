@@ -1,9 +1,9 @@
 'use client'
 
-import { Check } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { SubscriptionPlan } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
 import { PLAN_META, formatNaira } from '@/lib/utils/Utils'
+import { Check } from 'lucide-react'
 
 interface Props {
   plan: SubscriptionPlan
@@ -23,7 +23,7 @@ export default function PlanCard({ plan, selected, currentPlan, onSelect }: Prop
         selected
           ? 'border-primary/50 shadow-lg shadow-primary/10'
           : 'border-white/10 hover:border-white/20 hover:bg-white/4',
-        meta.popular && 'ring-1 ring-primary/30'
+        meta.popular && 'ring-1 ring-primary/30',
       )}
     >
       {meta.popular && (
@@ -61,8 +61,8 @@ export default function PlanCard({ plan, selected, currentPlan, onSelect }: Prop
           isCurrent
             ? 'bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed'
             : selected
-            ? 'text-white'
-            : 'bg-white/5 border border-white/10 text-gray-200 hover:bg-white/10'
+              ? 'text-white'
+              : 'bg-white/5 border border-white/10 text-gray-200 hover:bg-white/10',
         )}
         style={
           !isCurrent && selected

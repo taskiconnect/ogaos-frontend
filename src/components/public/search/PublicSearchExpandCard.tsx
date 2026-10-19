@@ -1,6 +1,6 @@
 'use client'
 
-import { Compass, ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowRight, Compass, Loader2 } from 'lucide-react'
 
 interface PublicSearchExpandCardProps {
   radiusKM: number
@@ -32,8 +32,7 @@ export default function PublicSearchExpandCard({
               No businesses found within {radiusKM} km
             </h3>
             <p className="mt-0.5 text-sm text-amber-400/70">
-              Expand to{' '}
-              <span className="font-semibold text-amber-300">{suggestedRadiusKM} km</span>{' '}
+              Expand to <span className="font-semibold text-amber-300">{suggestedRadiusKM} km</span>{' '}
               to discover more businesses nearby.
             </p>
           </div>

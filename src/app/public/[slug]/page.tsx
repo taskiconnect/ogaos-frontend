@@ -1,10 +1,11 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { HeroBanner } from '@/components/public/HeroBanner'
-import { StickyNav } from '@/components/public/StickyNav'
-import { StatsBar } from '@/components/public/StatsBar'
 import { ProfileContent } from '@/components/public/ProfileContent'
+import { StatsBar } from '@/components/public/StatsBar'
+import { StickyNav } from '@/components/public/StickyNav'
 
 import { getPublicBusinessFull } from '@/lib/api/public'
 import { parseGallery, slugAccent } from '@/types/public'
@@ -140,10 +141,7 @@ export default async function PublicBusinessPage({
         />
 
         <div className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-          <StatsBar
-            stats={pageData.stats}
-            business={biz}
-          />
+          <StatsBar stats={pageData.stats} business={biz} />
 
           <ProfileContent
             biz={biz}
@@ -157,7 +155,7 @@ export default async function PublicBusinessPage({
         </div>
 
         <div className="border-t border-dash-border py-8 text-center">
-          <a
+          <Link
             href="/"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
@@ -165,7 +163,7 @@ export default async function PublicBusinessPage({
             <span className="font-black text-foreground">
               Oga<span className="text-brand-blue">OS</span>
             </span>
-          </a>
+          </Link>
         </div>
       </div>
     </>

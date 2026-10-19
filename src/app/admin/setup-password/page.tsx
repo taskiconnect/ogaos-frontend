@@ -1,32 +1,35 @@
 // src/app/admin/setup-password/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { z } from 'zod'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Lock, ArrowRight, Shield, Eye, EyeOff } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Lock, Shield } from 'lucide-react'
 
-import { adminSetupPassword } from '@/lib/api/auth'
+import { adminSetupPassword } from '@/lib/api/admin'
 
-const setupPasswordSchema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-})
+const setupPasswordSchema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
 
 type SetupPasswordFormInput = z.infer<typeof setupPasswordSchema>
 
-const inputClass = 'pl-10 h-11 bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg transition-all'
+const inputClass =
+  'pl-10 h-11 bg-white/5 border-white/10 text-white placeholder-gray-600 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg transition-all'
 const labelClass = 'text-xs font-medium text-gray-400 uppercase tracking-wide'
 
 const cardStyle = {
@@ -54,6 +57,7 @@ export default function AdminSetupPasswordPage() {
   // We wait until the component has mounted on the client before validating.
   const [hasMounted, setHasMounted] = useState(false)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize editable form with the selected external record
     setHasMounted(true)
   }, [])
 
@@ -105,7 +109,8 @@ export default function AdminSetupPasswordPage() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
         }}
       />
 
@@ -120,12 +125,16 @@ export default function AdminSetupPasswordPage() {
                 <Shield className="w-5 h-5 text-primary" />
               </div>
               <h1 className="text-3xl font-bold tracking-tight mb-1.5">Set Your Password</h1>
-              <p className="text-sm text-gray-400">Create a secure password for your admin account</p>
+              <p className="text-sm text-gray-400">
+                Create a secure password for your admin account
+              </p>
             </div>
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <div className="space-y-1.5">
-                <Label htmlFor="password" className={labelClass}>New Password</Label>
+                <Label htmlFor="password" className={labelClass}>
+                  New Password
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <Input
@@ -144,12 +153,16 @@ export default function AdminSetupPasswordPage() {
                   </button>
                 </div>
                 {form.formState.errors.password && (
-                  <p className="text-xs text-red-400 mt-1">{form.formState.errors.password.message}</p>
+                  <p className="text-xs text-red-400 mt-1">
+                    {form.formState.errors.password.message}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" className={labelClass}>Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className={labelClass}>
+                  Confirm Password
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <Input
@@ -164,11 +177,17 @@ export default function AdminSetupPasswordPage() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                   >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
                 {form.formState.errors.confirmPassword && (
-                  <p className="text-xs text-red-400 mt-1">{form.formState.errors.confirmPassword.message}</p>
+                  <p className="text-xs text-red-400 mt-1">
+                    {form.formState.errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
 
@@ -176,7 +195,10 @@ export default function AdminSetupPasswordPage() {
                 type="submit"
                 disabled={mutation.isPending || !hasMounted || !token}
                 className="w-full h-11 font-semibold rounded-lg text-white transition-all hover:opacity-90 active:scale-[0.99]"
-                style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%)' }}
+                style={{
+                  background:
+                    'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%)',
+                }}
               >
                 {mutation.isPending ? 'Setting Password...' : 'Set Password'}
                 <ArrowRight className="ml-2 w-4 h-4" />

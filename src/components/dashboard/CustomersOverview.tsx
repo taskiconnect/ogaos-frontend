@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
-import { Users2, ArrowRight, Star } from 'lucide-react'
 import type { Customer } from '@/lib/api/types'
+import { ArrowRight, Star, Users2 } from 'lucide-react'
+import Link from 'next/link'
 
 function fmt(kobo: number) {
   return `₦${Math.round(kobo / 100).toLocaleString('en-NG')}`
@@ -40,7 +40,10 @@ export default function CustomersOverview({ customers, isLoading }: Props) {
             </p>
           </div>
         </div>
-        <Link href="/dashboard/customers" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+        <Link
+          href="/dashboard/customers"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
           All <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
@@ -66,7 +69,9 @@ export default function CustomersOverview({ customers, isLoading }: Props) {
       {!isLoading && sorted.length === 0 && (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <p className="text-sm font-medium text-foreground mb-1">No customers yet</p>
-          <p className="text-xs text-muted-foreground mb-4">Add your first customer to track purchases</p>
+          <p className="text-xs text-muted-foreground mb-4">
+            Add your first customer to track purchases
+          </p>
           <Link href="/dashboard/customers" className="text-xs text-primary hover:underline">
             Add a customer →
           </Link>
@@ -80,21 +85,34 @@ export default function CustomersOverview({ customers, isLoading }: Props) {
             const tier = TIER_STYLE[idx] ?? TIER_STYLE[TIER_STYLE.length - 1]
             const name = `${customer.first_name} ${customer.last_name}`.trim()
             return (
-              <div key={customer.id} className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-dash-hover transition-colors">
-                <span className="text-xs font-bold text-muted-foreground w-5 text-center shrink-0">{idx + 1}</span>
+              <div
+                key={customer.id}
+                className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-dash-hover transition-colors"
+              >
+                <span className="text-xs font-bold text-muted-foreground w-5 text-center shrink-0">
+                  {idx + 1}
+                </span>
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
-                  style={{ background: tier.bg, border: `1px solid ${tier.color}40`, color: tier.color }}
+                  style={{
+                    background: tier.bg,
+                    border: `1px solid ${tier.color}40`,
+                    color: tier.color,
+                  }}
                 >
                   {name[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{name}</p>
-                  <p className="text-xs text-muted-foreground">{customer.total_orders} order{customer.total_orders !== 1 ? 's' : ''}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {customer.total_orders} order{customer.total_orders !== 1 ? 's' : ''}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {idx === 0 && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
-                  <span className="text-sm font-semibold text-foreground">{fmt(customer.total_purchases)}</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {fmt(customer.total_purchases)}
+                  </span>
                 </div>
               </div>
             )

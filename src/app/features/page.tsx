@@ -1,25 +1,20 @@
 'use client'
 
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import {
-  Wallet,
   Bell,
-  Receipt,
+  Check,
+  CreditCard,
+  DollarSign,
+  FileText,
+  Lock,
+  MapPin,
   ShieldCheck,
   Users,
-  MapPin,
-  CreditCard,
-  BarChart3,
-  MessageCircle,
-  Calendar,
-  FileText,
-  DollarSign,
-  Smartphone,
-  Lock,
-  Check,
+  Wallet,
 } from 'lucide-react'
 
 const featureGroups = [
@@ -175,19 +170,21 @@ export default function FeaturesPage() {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
-              Everything your business needs,<br />
+              Everything your business needs,
+              <br />
               <span className="text-primary">in one place</span>
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto mb-12">
-              From money tracking to debt recovery, staff management, customer trust, and local discovery — OgaOS is built for Nigerian SMEs.
+              From money tracking to debt recovery, staff management, customer trust, and local
+              discovery — OgaOS is built for Nigerian SMEs.
             </p>
 
             <Button
               size="lg"
               className="min-w-65 h-14 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 text-white shadow-xl shadow-blue-950/30 transition-all hover:scale-105"
             >
-              Get Started – It's free
+              Get Started – It&apos;s free
             </Button>
           </motion.div>
         </div>
@@ -206,7 +203,9 @@ export default function FeaturesPage() {
                 transition={{ delay: index * 0.1, duration: 0.7 }}
                 className="bg-gray-900/40 border border-gray-800 rounded-2xl p-8 hover:border-primary/50 transition-all group"
               >
-                <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-white/5`}>
+                <div
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-white/5`}
+                >
                   <group.icon className={`w-7 h-7 ${group.color}`} />
                 </div>
 
@@ -230,12 +229,12 @@ export default function FeaturesPage() {
       <section className="py-20 md:py-32 bg-linear-to-br from-black to-gray-950 text-center">
         <div className="container mx-auto px-5 sm:px-6 lg:px-8">
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
-            Start running your business like an{' '}
-            <span className="text-primary">Oga</span>
+            Start running your business like an <span className="text-primary">Oga</span>
           </h2>
 
           <p className="text-xl text-gray-300 mb-10 max-w-3xl mx-auto">
-            Join thousands of Nigerian SMEs already using OgaOS to track money, recover debts, manage staff, and build trust.
+            Join thousands of Nigerian SMEs already using OgaOS to track money, recover debts,
+            manage staff, and build trust.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -243,7 +242,7 @@ export default function FeaturesPage() {
               size="lg"
               className="min-w-65 h-14 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 text-white shadow-xl shadow-blue-950/30 transition-all hover:scale-105"
             >
-              Sign Up Now – It's free
+              Sign Up Now – It&apos;s free
             </Button>
 
             <Button

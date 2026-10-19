@@ -23,9 +23,21 @@ export default function DebtTrackingPage() {
         'Export overdue list as PDF or CSV for follow-up',
       ]}
       howItWorks={[
-        { step: 1, title: 'Debt is logged automatically', body: "When you record a sale and the customer doesn't pay in full, OgaOS creates a debt record instantly. No double entry needed." },
-        { step: 2, title: 'Reminders go out automatically', body: 'As the due date approaches, OgaOS sends a polite WhatsApp message to the customer. You can customise the message tone.' },
-        { step: 3, title: 'Mark as paid when settled', body: 'When the customer pays, update the record in seconds. The debt disappears from your dashboard and the payment is recorded.' },
+        {
+          step: 1,
+          title: 'Debt is logged automatically',
+          body: "When you record a sale and the customer doesn't pay in full, OgaOS creates a debt record instantly. No double entry needed.",
+        },
+        {
+          step: 2,
+          title: 'Reminders go out automatically',
+          body: 'As the due date approaches, OgaOS sends a polite WhatsApp message to the customer. You can customise the message tone.',
+        },
+        {
+          step: 3,
+          title: 'Mark as paid when settled',
+          body: 'When the customer pays, update the record in seconds. The debt disappears from your dashboard and the payment is recorded.',
+        },
       ]}
       prevFeature={{ label: 'Sales Record', href: '/features/sales' }}
       nextFeature={{ label: 'Tax Calculation', href: '/features/tax' }}

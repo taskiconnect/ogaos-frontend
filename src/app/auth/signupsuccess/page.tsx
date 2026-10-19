@@ -1,8 +1,8 @@
 ﻿// app/auth/signupsuccess/page.tsx
 'use client'
 
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 import VerifyEmailCard from './VerifyEmailCard'
 
 export default function VerifyEmailPage() {
@@ -26,7 +26,8 @@ export default function VerifyEmailPage() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
         }}
       />
 

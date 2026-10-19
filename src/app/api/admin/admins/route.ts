@@ -1,6 +1,6 @@
 // src/app/api/admin/admins/route.ts
-import { NextRequest } from 'next/server'
 import { proxyRequest } from '@/lib/api/proxy'
+import { NextRequest } from 'next/server'
 
 // GET  /api/admin/admins        → list all admins
 export async function GET(req: NextRequest) {

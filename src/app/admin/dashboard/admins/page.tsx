@@ -2,34 +2,32 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import DeactivateAdminModal from '@/components/admin/admins/DeactivateAdminModal'
+import EditAdminModal from '@/components/admin/admins/EditAdminModal'
+import InviteAdminModal from '@/components/admin/admins/InviteAdminModal'
+import { deactivateAdmin, listAdmins } from '@/lib/api/admin'
+import { useAdminDashboard } from '@/lib/hooks/useAdminDashboard'
+import { cn, getInitials } from '@/lib/utils'
+import { useAdminAuthStore } from '@/stores/adminAuthStore'
+import type { AdminProfile, AdminRole } from '@/types/admin'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  ShieldCheck,
-  UserPlus,
-  Crown,
-  Headphones,
   BadgeDollarSign,
   CheckCircle2,
-  XCircle,
+  Clock,
+  Crown,
+  Headphones,
+  Mail,
   MoreHorizontal,
   Pencil,
-  UserX,
   RefreshCw,
   Search,
-  Clock,
-  Mail,
+  ShieldCheck,
+  UserPlus,
+  UserX,
+  XCircle,
 } from 'lucide-react'
-import { cn, getInitials } from '@/lib/utils'
-import AdminSidebar from '@/components/admin/AdminSidebar'
-import AdminDashboardHeader from '@/components/admin/AdminDashboardHeader'
-import InviteAdminModal from '@/components/admin/admins/InviteAdminModal'
-import EditAdminModal from '@/components/admin/admins/EditAdminModal'
-import DeactivateAdminModal from '@/components/admin/admins/DeactivateAdminModal'
-import { useAdminAuthStore } from '@/stores/adminAuthStore'
-import { useAdminDashboard } from '@/lib/hooks/useAdminDashboard'
-import { listAdmins, deactivateAdmin } from '@/lib/api/admin'
-import type { AdminProfile, AdminRole } from '@/types/admin'
+import { useState } from 'react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,7 +90,7 @@ function RoleBadge({ role }: { role: AdminRole }) {
         'inline-flex items-center gap-1.5 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border',
         meta.bg,
         meta.border,
-        meta.text
+        meta.text,
       )}
     >
       <Icon className="w-3 h-3" />
@@ -110,7 +108,7 @@ function StatusBadge({ active }: { active: boolean }) {
         'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border',
         active
           ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-          : 'bg-red-500/10 border-red-500/20 text-red-400'
+          : 'bg-red-500/10 border-red-500/20 text-red-400',
       )}
     >
       {active ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
@@ -285,18 +283,12 @@ export default function AdminsPage() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <AdminSidebar admin={user} />
-
-      <div className="lg:pl-72">
-        <AdminDashboardHeader admin={user} />
-
+      <div className="">
         <main className="p-4 sm:p-6 lg:p-10 space-y-6 pb-20">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Admins</h1>
-              <p className="text-gray-400 mt-1 text-sm">
-                Manage platform admin accounts and roles
-              </p>
+              <p className="text-gray-400 mt-1 text-sm">Manage platform admin accounts and roles</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -341,10 +333,7 @@ export default function AdminsPage() {
                 color: 'text-primary',
               },
             ].map((s) => (
-              <div
-                key={s.label}
-                className="rounded-2xl border border-white/8 bg-white/2 px-4 py-3"
-              >
+              <div key={s.label} className="rounded-2xl border border-white/8 bg-white/2 px-4 py-3">
                 <p className="text-xs text-gray-500 mb-1">{s.label}</p>
                 <p className={cn('text-2xl font-bold', s.color)}>{s.value}</p>
               </div>
@@ -416,7 +405,9 @@ export default function AdminsPage() {
                                   </span>
                                 )}
                               </p>
-                              <p className="text-xs text-gray-500 font-mono">{admin.id.slice(0, 8)}…</p>
+                              <p className="text-xs text-gray-500 font-mono">
+                                {admin.id.slice(0, 8)}…
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -472,11 +463,7 @@ export default function AdminsPage() {
         </main>
       </div>
 
-      <InviteAdminModal
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        onSuccess={onSuccess}
-      />
+      <InviteAdminModal open={inviteOpen} onOpenChange={setInviteOpen} onSuccess={onSuccess} />
 
       {editTarget && (
         <EditAdminModal

@@ -1,24 +1,25 @@
 'use client'
 
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { DocumentPreview } from '@/features/documents/DocumentPreview'
+import { invoiceDocument } from '@/features/documents/model'
+import { getBusiness } from '@/lib/api/business'
+import { getInvoice, recordInvoicePayment } from '@/lib/api/finance'
+import type { Invoice } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
-  recordInvoicePayment,
-  downloadInvoicePdf,
-} from '@/lib/api/finance'
-import {
-  X,
-  Send,
-  XCircle,
-  DollarSign,
-  Loader2,
-  User,
   Calendar,
+  DollarSign,
   Download,
   GitBranchPlus,
+  Loader2,
+  Send,
+  User,
+  X,
+  XCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { Invoice } from '@/lib/api/types'
+import { useState } from 'react'
 
 interface Props {
   invoice: Invoice
@@ -26,6 +27,7 @@ interface Props {
   onSend: () => void
   onCancel: () => void
   onPayment: () => void
+  onEdit?: () => void
   onRevise?: () => void
 }
 
@@ -61,6 +63,7 @@ export default function InvoiceDetailDrawer({
   onCancel,
   onPayment,
   onRevise,
+  onEdit,
 }: Props) {
   const [payAmount, setPayAmount] = useState('')
   const [showPayForm, setShowPayForm] = useState(false)
@@ -74,13 +77,29 @@ export default function InvoiceDetailDrawer({
       setPayAmount('')
       onClose()
     },
-    onError: (e: any) => setError(e?.response?.data?.message ?? 'Payment failed'),
+    onError: (e: any) => setError(e?.message ?? 'Payment failed'),
   })
 
-  const pdfMut = useMutation({
-    mutationFn: () => downloadInvoicePdf(inv.id, inv.invoice_number),
-    onError: (e: any) => setError(e?.message ?? 'Failed to download PDF'),
+  const [preview, setPreview] = useState(false)
+  const user = useAuthStore((s) => s.user)
+  const business = useQuery({
+    queryKey: ['business-me'],
+    queryFn: getBusiness,
+    enabled: preview && user?.role === 'owner',
   })
+  const detail = useQuery({
+    queryKey: ['invoice', inv.id],
+    queryFn: () => getInvoice(inv.id),
+    enabled: preview,
+    staleTime: 0,
+  })
+  if (preview && detail.data)
+    return (
+      <DocumentPreview
+        document={invoiceDocument(detail.data, business.data ?? user?.business)}
+        onClose={() => setPreview(false)}
+      />
+    )
 
   const custName = inv.customer
     ? `${inv.customer.first_name} ${inv.customer.last_name}`.trim()
@@ -115,7 +134,7 @@ export default function InvoiceDetailDrawer({
               <span
                 className={cn(
                   'rounded-full border px-2.5 py-1 text-xs font-semibold capitalize',
-                  STATUS_CLS[inv.status] ?? STATUS_CLS.draft
+                  STATUS_CLS[inv.status] ?? STATUS_CLS.draft,
                 )}
               >
                 {inv.status}
@@ -166,20 +185,33 @@ export default function InvoiceDetailDrawer({
 
           <div className="grid grid-cols-1 gap-3">
             <button
-              onClick={() => pdfMut.mutate()}
-              disabled={pdfMut.isPending}
+              onClick={() => setPreview(true)}
+              disabled={detail.isFetching}
               className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
             >
-              {pdfMut.isPending ? (
+              {detail.isFetching ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Download className="h-4 w-4" />
               )}
-              {pdfMut.isPending ? 'Preparing PDF...' : 'Download PDF'}
+              {detail.isFetching ? 'Preparing PDF...' : 'Preview / Save PDF'}
             </button>
           </div>
 
+          {inv.status === 'draft' && onEdit && (
+            <button
+              onClick={onEdit}
+              className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white"
+            >
+              Edit draft
+            </button>
+          )}
           <div className="space-y-3">
+            {detail.isError && (
+              <p role="alert" className="text-sm text-red-300">
+                Invoice details could not be loaded. Please try again.
+              </p>
+            )}
             <div className="flex items-center gap-3">
               <User className="h-4 w-4 text-gray-500" />
               <div>
@@ -206,7 +238,12 @@ export default function InvoiceDetailDrawer({
               <Calendar className="h-4 w-4 text-gray-500" />
               <div>
                 <p className="text-xs text-gray-500">Due Date</p>
-                <p className={cn('text-sm font-medium', inv.status === 'overdue' ? 'text-red-400' : 'text-white')}>
+                <p
+                  className={cn(
+                    'text-sm font-medium',
+                    inv.status === 'overdue' ? 'text-red-400' : 'text-white',
+                  )}
+                >
                   {fmtDate(inv.due_date)}
                 </p>
               </div>
@@ -247,7 +284,9 @@ export default function InvoiceDetailDrawer({
                         {fmt(item.unit_price)} x {item.quantity}
                       </p>
                     </div>
-                    <span className="text-sm font-semibold text-white">{fmt(item.total_price)}</span>
+                    <span className="text-sm font-semibold text-white">
+                      {fmt(item.total_price)}
+                    </span>
                   </div>
                 ))}
               </div>

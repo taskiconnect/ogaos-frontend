@@ -1,6 +1,7 @@
+import type { SubscriptionPlan } from '@/lib/api/types'
+import { PLAN_META } from '@/lib/config/plans'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { SubscriptionPlan } from '@/lib/api/types'
 
 // ─── Class names ──────────────────────────────────────────────────────────────
 
@@ -12,7 +13,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /** Kobo → naira integer (100 kobo = ₦1) */
 export function fromKobo(kobo: number): number {
-  return Math.round(kobo / 100)
+  return kobo / 100
 }
 
 /** Naira → kobo integer */
@@ -89,10 +90,7 @@ export function timeAgo(iso: string): string {
 export function daysOverdue(dueDateIso: string | null): number {
   if (!dueDateIso) return 0
 
-  return Math.max(
-    0,
-    Math.floor((Date.now() - new Date(dueDateIso).getTime()) / 86_400_000)
-  )
+  return Math.max(0, Math.floor((Date.now() - new Date(dueDateIso).getTime()) / 86_400_000))
 }
 
 /** Today's date as yyyy-mm-dd in Africa/Lagos timezone */
@@ -115,88 +113,7 @@ export type UpgradeResponsePayload = {
   message?: string
 }
 
-export const PLAN_META: Record<
-  SubscriptionPlan,
-  {
-    label: string
-    monthlyPrice: number
-    description: string
-    features: string[]
-    cta: string
-    popular?: boolean
-  }
-> = {
-  free: {
-    label: 'Free',
-    monthlyPrice: 0,
-    description: 'For businesses starting out with basic catalogue access and limited monthly usage',
-    features: [
-      'Digital store catalogue',
-      'Up to 5 sales per month',
-      'Up to 5 products per month',
-      'Everything else locked until upgrade',
-    ],
-    cta: 'Current Plan',
-  },
-  growth: {
-    label: 'Growth',
-    monthlyPrice: 1850,
-    description: 'For growing businesses that need day-to-day operations tools',
-    features: [
-      'Unlimited sales',
-      'Unlimited products',
-      'Invoices',
-      'Debt tracking',
-      'Customers',
-      'Ledger',
-      'Up to 2 staff accounts',
-    ],
-    cta: 'Choose Growth',
-    popular: true,
-  },
-  pro: {
-    label: 'Pro',
-    monthlyPrice: 4500,
-    description: 'For advanced businesses that need more power, branches, and admin tools',
-    features: [
-      'Everything in Growth',
-      'Recruitment & job postings',
-      'Multiple store branches',
-      'Expense tracking',
-      'Business identity / KYC',
-      'Public business profile',
-      'Custom domain',
-      'Up to 5 staff accounts',
-      'Priority support',
-    ],
-    cta: 'Choose Pro',
-  },
-  custom: {
-    label: 'Custom',
-    monthlyPrice: 0,
-    description: 'For businesses that need tailored pricing and flexible limits',
-    features: [
-      'Everything in Pro',
-      'Custom pricing',
-      'Custom limits',
-      'Dedicated onboarding',
-    ],
-    cta: 'Contact Sales',
-  },
-}
-
-export const BILLING_OPTIONS = [
-  { label: '1 Month', value: 1 },
-  { label: '3 Months', value: 3 },
-  { label: '6 Months', value: 6 },
-  { label: '12 Months', value: 12 },
-]
-
-/** Total plan price in naira */
-export function getPlanTotal(plan: SubscriptionPlan, periodMonths: number): number {
-  const monthly = PLAN_META[plan]?.monthlyPrice ?? 0
-  return monthly * periodMonths
-}
+export { BILLING_OPTIONS, getPlanTotal, PLAN_META } from '@/lib/config/plans'
 
 export function getPlanLabel(plan: SubscriptionPlan | string): string {
   return PLAN_META[plan as SubscriptionPlan]?.label ?? String(plan)
@@ -314,11 +231,7 @@ export function getUpgradePayload(error: any): UpgradeResponsePayload | null {
 
 export function isLimitReachedError(error: any): boolean {
   const data = getUpgradePayload(error)
-  return Boolean(
-    data &&
-      typeof data.limit === 'number' &&
-      typeof data.current_count === 'number'
-  )
+  return Boolean(data && typeof data.limit === 'number' && typeof data.current_count === 'number')
 }
 
 export function isFeatureBlockedError(error: any): boolean {
@@ -326,7 +239,10 @@ export function isFeatureBlockedError(error: any): boolean {
   return Boolean(data && data.feature && typeof data.limit !== 'number')
 }
 
-export function getUpgradeMessage(error: any, fallback = 'This action requires a higher plan.'): string {
+export function getUpgradeMessage(
+  error: any,
+  fallback = 'This action requires a higher plan.',
+): string {
   const data = getUpgradePayload(error)
   return data?.message || fallback
 }
@@ -378,21 +294,15 @@ export function buildUpgradeSummary(error: any): {
   const requiredPlan = data.required_plan ?? null
   const currentPlan = data.current_plan ?? null
 
-  if (
-    typeof data.limit === 'number' &&
-    typeof data.current_count === 'number'
-  ) {
-    const noun =
-      data.feature === 'sales' || data.feature === 'products'
-        ? data.feature
-        : 'items'
+  if (typeof data.limit === 'number' && typeof data.current_count === 'number') {
+    const noun = data.feature === 'sales' || data.feature === 'products' ? data.feature : 'items'
 
     return {
       title: `${featureLabel} limit reached`,
       description:
         data.message ||
         `You have used ${data.current_count} of ${data.limit} allowed ${noun}. Upgrade to ${getPlanLabel(
-          String(requiredPlan || 'growth')
+          String(requiredPlan || 'growth'),
         )} or wait for your limit to reset.`,
       requiredPlan,
       currentPlan,
@@ -409,7 +319,7 @@ export function buildUpgradeSummary(error: any): {
     description:
       data.message ||
       `${featureLabel} is not available on your current plan. Upgrade to ${getPlanLabel(
-        String(requiredPlan || 'growth')
+        String(requiredPlan || 'growth'),
       )} to continue.`,
     requiredPlan,
     currentPlan,
@@ -428,17 +338,14 @@ export function getSubscriptionToastMessage(error: any): string {
     return 'This action is not available on your current plan.'
   }
 
-  if (
-    typeof data.limit === 'number' &&
-    typeof data.current_count === 'number'
-  ) {
+  if (typeof data.limit === 'number' && typeof data.current_count === 'number') {
     const days = typeof data.days_until_reset === 'number' ? data.days_until_reset : null
     const waitText = days !== null ? ` or wait ${days} day${days === 1 ? '' : 's'} for reset` : ''
 
     return (
       data.message ||
       `You have reached your limit for this month. Upgrade to ${getPlanLabel(
-        String(data.required_plan || 'growth')
+        String(data.required_plan || 'growth'),
       )}${waitText}.`
     )
   }
@@ -446,7 +353,7 @@ export function getSubscriptionToastMessage(error: any): string {
   return (
     data.message ||
     `${getFeatureLabel(data.feature)} is not available on your current plan. Upgrade to ${getPlanLabel(
-      String(data.required_plan || 'growth')
+      String(data.required_plan || 'growth'),
     )}.`
   )
 }

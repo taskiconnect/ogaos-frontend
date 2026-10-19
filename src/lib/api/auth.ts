@@ -6,22 +6,13 @@
 
 import api from './client'
 import type {
-  RegisterRequest,
-  LoginRequest,
   AuthResponse,
-  MeResponse,
-  StatesResponse,
-  LGAsResponse,
   InviteStaffRequest,
-  // Admin types
-  AdminLoginRequest,
-  AdminLoginResponse,
-  AdminOTPVerifyRequest,
-  AdminOTPVerifyResponse,
-  AdminResendOTPRequest,
-  AdminSetupPasswordRequest,
-  AdminSetupPasswordResponse,
-  AdminMeResponse,
+  LGAsResponse,
+  LoginRequest,
+  MeResponse,
+  RegisterRequest,
+  StatesResponse,
 } from './types'
 
 // ─── Auth endpoints (via Next.js proxy — cookie must land on this domain) ────
@@ -93,7 +84,7 @@ export const resendVerification = async (data: { email: string }): Promise<AuthR
 }
 
 export const verifyEmail = async (
-  token: string
+  token: string,
 ): Promise<{ success: boolean; message: string }> => {
   const res = await fetch('/api/auth/verify', {
     method: 'POST',
@@ -136,120 +127,3 @@ export const getNigeriaStates = () =>
 
 export const getNigeriaLGAs = (state: string) =>
   api.get<LGAsResponse>('/locations/lgas', { params: { state } }).then((r) => r.data.data)
-
-// ──────────────────────────────────────────────────────────────────────────────
-// PLATFORM ADMIN AUTHENTICATION
-// ──────────────────────────────────────────────────────────────────────────────
-
-export const adminLogin = async (data: AdminLoginRequest): Promise<AdminLoginResponse> => {
-  const res = await fetch('/api/admin/auth/login', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-
-  const json = await res.json()
-
-  if (!res.ok || json?.success === false) {
-    const message = json?.message || json?.error || 'Admin login failed'
-    const err = new Error(message) as Error & { response: { data: typeof json } }
-    err.response = { data: json }
-    throw err
-  }
-
-  return json as AdminLoginResponse
-}
-
-export const adminVerifyOTP = async (
-  data: AdminOTPVerifyRequest
-): Promise<AdminOTPVerifyResponse> => {
-  const res = await fetch('/api/admin/auth/verify-otp', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-
-  const json = await res.json()
-
-  if (!res.ok || json?.success === false) {
-    const message = json?.message || json?.error || 'OTP verification failed'
-    const err = new Error(message) as Error & { response: { data: typeof json } }
-    err.response = { data: json }
-    throw err
-  }
-
-  return json as AdminOTPVerifyResponse
-}
-
-export const adminResendOTP = async (
-  data: AdminResendOTPRequest
-): Promise<{ success: boolean; message: string }> => {
-  const res = await fetch('/api/admin/auth/resend-otp', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-
-  const json = await res.json()
-
-  if (!res.ok || json?.success === false) {
-    const message = json?.message || json?.error || 'Failed to resend OTP'
-    const err = new Error(message) as Error & { response: { data: typeof json } }
-    err.response = { data: json }
-    throw err
-  }
-
-  return json
-}
-
-export const adminSetupPassword = async (
-  data: AdminSetupPasswordRequest
-): Promise<AdminSetupPasswordResponse> => {
-  const res = await fetch('/api/admin/auth/setup-password', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-
-  const json = await res.json()
-
-  if (!res.ok || json?.success === false) {
-    const message = json?.message || json?.error || 'Password setup failed'
-    const err = new Error(message) as Error & { response: { data: typeof json } }
-    err.response = { data: json }
-    throw err
-  }
-
-  return json
-}
-
-export const getAdminMe = async (): Promise<AdminMeResponse> => {
-  const res = await fetch('/api/admin/me', {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  const json = await res.json()
-
-  if (!res.ok || json?.success === false) {
-    const message = json?.message || json?.error || 'Failed to fetch admin profile'
-    const err = new Error(message) as Error & { response: { data: typeof json } }
-    err.response = { data: json }
-    throw err
-  }
-
-  return json.data as AdminMeResponse
-}
-
-export const adminLogout = () =>
-  fetch('/api/admin/auth/logout', {
-    method: 'POST',
-    credentials: 'include',
-  }).then(() => undefined)

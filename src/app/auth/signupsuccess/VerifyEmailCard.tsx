@@ -1,11 +1,11 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { Mail, ArrowRight, RefreshCw } from 'lucide-react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
 import { resendVerification } from '@/lib/api/auth'
+import { motion } from 'framer-motion'
+import { ArrowRight, Mail, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 export default function VerifyEmailCard() {
@@ -17,7 +17,7 @@ export default function VerifyEmailCard() {
   // We read it here if available, but the feature works without it too.
   const email =
     typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('email') ?? ''
+      ? (new URLSearchParams(window.location.search).get('email') ?? '')
       : ''
 
   const handleResend = async () => {
@@ -33,9 +33,7 @@ export default function VerifyEmailCard() {
     } catch (err: unknown) {
       const anyErr = err as { response?: { data?: { message?: string } }; message?: string }
       toast.error(
-        anyErr?.response?.data?.message ||
-        anyErr?.message ||
-        'Failed to resend. Please try again.'
+        anyErr?.response?.data?.message || anyErr?.message || 'Failed to resend. Please try again.',
       )
     } finally {
       setResending(false)
@@ -63,7 +61,16 @@ export default function VerifyEmailCard() {
 
         <h1 className="text-3xl font-bold tracking-tight mb-3">Check your email</h1>
         <p className="text-gray-400 mb-8 max-w-md mx-auto">
-          We just sent a verification link{email ? <> to <span className="text-white font-medium">{email}</span></> : ' to your email address'}.
+          We just sent a verification link
+          {email ? (
+            <>
+              {' '}
+              to <span className="text-white font-medium">{email}</span>
+            </>
+          ) : (
+            ' to your email address'
+          )}
+          .
           <br />
           Click the link inside to activate your OgaOS account.
           <br />
@@ -88,7 +95,12 @@ export default function VerifyEmailCard() {
               {resent ? 'Email sent!' : resending ? 'Sending…' : 'Resend email'}
             </button>
           ) : (
-            <span>Contact <a href="mailto:support@ogaos.com" className="text-primary hover:underline">support@ogaos.com</a></span>
+            <span>
+              Contact{' '}
+              <a href="mailto:support@ogaos.com" className="text-primary hover:underline">
+                support@ogaos.com
+              </a>
+            </span>
           )}
         </div>
       </div>

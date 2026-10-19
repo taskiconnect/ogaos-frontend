@@ -1,8 +1,8 @@
 'use client'
 
-import { UserX, X } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import type { AdminProfile } from '@/types/admin'
+import { UserX, X } from 'lucide-react'
 
 interface Props {
   admin: AdminProfile
@@ -18,7 +18,6 @@ export default function DeactivateAdminModal({ admin, onConfirm, onClose, isPend
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md mx-4 bg-dash-surface border border-dash-border rounded-2xl shadow-2xl p-6 space-y-4">
-
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
@@ -47,7 +46,9 @@ export default function DeactivateAdminModal({ admin, onConfirm, onClose, isPend
           </div>
           <div>
             <p className="text-sm font-semibold text-white">{displayName}</p>
-            <p className="text-xs text-muted-foreground capitalize">{admin.role.replace('_', ' ')}</p>
+            <p className="text-xs text-muted-foreground capitalize">
+              {admin.role.replace('_', ' ')}
+            </p>
           </div>
         </div>
 
@@ -73,7 +74,6 @@ export default function DeactivateAdminModal({ admin, onConfirm, onClose, isPend
             {isPending ? 'Deactivating…' : 'Yes, Deactivate'}
           </button>
         </div>
-
       </div>
     </div>
   )

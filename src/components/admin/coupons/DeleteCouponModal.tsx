@@ -1,7 +1,7 @@
 'use client'
 
-import { Trash2, X } from 'lucide-react'
 import type { Coupon } from '@/app/admin/dashboard/coupons/page'
+import { Trash2, X } from 'lucide-react'
 
 interface Props {
   coupon: Coupon
@@ -15,7 +15,6 @@ export default function DeleteCouponModal({ coupon, onConfirm, onClose, isPendin
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md mx-4 bg-dash-surface border border-dash-border rounded-2xl shadow-2xl p-6 space-y-4">
-
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
@@ -23,7 +22,9 @@ export default function DeleteCouponModal({ coupon, onConfirm, onClose, isPendin
             </div>
             <div>
               <h3 className="text-base font-semibold text-foreground">Delete Coupon</h3>
-              <p className="text-xs text-muted-foreground font-mono tracking-wider">{coupon.code}</p>
+              <p className="text-xs text-muted-foreground font-mono tracking-wider">
+                {coupon.code}
+              </p>
             </div>
           </div>
           <button
@@ -36,8 +37,9 @@ export default function DeleteCouponModal({ coupon, onConfirm, onClose, isPendin
 
         <p className="text-sm text-muted-foreground">
           This will permanently delete the coupon{' '}
-          <span className="font-semibold text-foreground font-mono">{coupon.code}</span>.
-          It has been redeemed <span className="font-semibold text-foreground">{coupon.redemptions}</span> time
+          <span className="font-semibold text-foreground font-mono">{coupon.code}</span>. It has
+          been redeemed <span className="font-semibold text-foreground">{coupon.redemptions}</span>{' '}
+          time
           {coupon.redemptions !== 1 ? 's' : ''}. This action cannot be undone.
         </p>
 
@@ -56,7 +58,6 @@ export default function DeleteCouponModal({ coupon, onConfirm, onClose, isPendin
             {isPending ? 'Deleting…' : 'Yes, Delete'}
           </button>
         </div>
-
       </div>
     </div>
   )

@@ -2,18 +2,13 @@
 
 export const dynamic = 'force-dynamic'
 
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SubscriptionSuccessPage() {
   return (
     <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-      <div className="lg:pl-72">
-        <DashboardHeader />
-
+      <div className="">
         <main className="p-4 sm:p-6 lg:p-10 pb-20">
           <div className="max-w-2xl mx-auto rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-10 text-center">
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center mx-auto">

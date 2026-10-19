@@ -1,23 +1,22 @@
 'use client'
 
-import { useEffect, useMemo, useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import {
-  MapPin,
-  Search,
-  SlidersHorizontal,
-  ArrowLeft,
-  Sparkles,
-  Compass,
-  Navigation,
-  Loader2,
-} from 'lucide-react'
+import PublicSearchExpandCard from '@/components/public/search/PublicSearchExpandCard'
+import PublicSearchResultsList from '@/components/public/search/PublicSearchResultsList'
+import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 import { searchPublicBusinesses } from '@/lib/api/public'
 import type { PublicBusinessSearchResponse } from '@/types/public'
-import PublicSearchResultsList from '@/components/public/search/PublicSearchResultsList'
-import PublicSearchExpandCard from '@/components/public/search/PublicSearchExpandCard'
-import { LandingHeader } from '@/components/shared/LandingHeader'
-import { Footer } from '@/components/shared/Footer'
+import {
+  ArrowLeft,
+  Compass,
+  Loader2,
+  Navigation,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 
 function SearchContent() {
   const router = useRouter()
@@ -34,10 +33,7 @@ function SearchContent() {
   const radius = rawRadius ? Number(rawRadius) : 10
 
   const hasCoordinates =
-    typeof lat === 'number' &&
-    !Number.isNaN(lat) &&
-    typeof lng === 'number' &&
-    !Number.isNaN(lng)
+    typeof lat === 'number' && !Number.isNaN(lat) && typeof lng === 'number' && !Number.isNaN(lng)
 
   const [data, setData] = useState<PublicBusinessSearchResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -118,7 +114,7 @@ function SearchContent() {
         console.error('Location error:', err)
         setError('Unable to get your location. Please check permissions.')
         setTimeout(() => setError(null), 3000)
-      }
+      },
     )
   }
 
@@ -245,9 +241,7 @@ function SearchContent() {
               <Search className="h-5 w-5 text-destructive" />
             </div>
             <p className="text-sm font-semibold text-destructive">{error}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Please try your search again.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Please try your search again.</p>
           </div>
         ) : totalCount === 0 ? (
           <>
@@ -256,9 +250,7 @@ function SearchContent() {
                 <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/8 bg-white/4">
                   <Sparkles className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-semibold text-foreground">
-                  No results found
-                </h3>
+                <h3 className="text-base font-semibold text-foreground">No results found</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {query.trim()
                     ? `No businesses match "${query}".`
@@ -300,11 +292,13 @@ function SearchContent() {
 
 export default function PublicSearchPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <SearchContent />
     </Suspense>
   )

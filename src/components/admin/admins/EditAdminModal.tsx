@@ -1,15 +1,15 @@
 'use client'
 
+import { updateAdmin } from '@/lib/api/admin'
+import { cn, getInitials } from '@/lib/utils'
+import type { AdminProfile, AdminRole } from '@/types/admin'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation } from '@tanstack/react-query'
+import { BadgeDollarSign, Crown, Headphones, Pencil, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
-import { X, Pencil, Crown, Headphones, BadgeDollarSign } from 'lucide-react'
-import { cn, getInitials } from '@/lib/utils'
 import { toast } from 'sonner'
-import { updateAdmin } from '@/lib/api/admin'
-import type { AdminProfile, AdminRole } from '@/types/admin'
+import { z } from 'zod'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -21,27 +21,33 @@ type FormValues = z.infer<typeof formSchema>
 
 // ─── Role options ─────────────────────────────────────────────────────────────
 
-const ROLES: { value: AdminRole; label: string; description: string; icon: React.ElementType; cls: string }[] = [
+const ROLES: {
+  value: AdminRole
+  label: string
+  description: string
+  icon: React.ElementType
+  cls: string
+}[] = [
   {
-    value:       'super_admin',
-    label:       'Super Admin',
+    value: 'super_admin',
+    label: 'Super Admin',
     description: 'Full access — can invite, edit, and deactivate all admins',
-    icon:        Crown,
-    cls:         'border-primary/30 bg-primary/10 text-primary',
+    icon: Crown,
+    cls: 'border-primary/30 bg-primary/10 text-primary',
   },
   {
-    value:       'support',
-    label:       'Support',
+    value: 'support',
+    label: 'Support',
     description: 'Can view users, businesses, analytics, and coupons',
-    icon:        Headphones,
-    cls:         'border-blue-500/30 bg-blue-500/10 text-blue-400',
+    icon: Headphones,
+    cls: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
   },
   {
-    value:       'finance',
-    label:       'Finance',
+    value: 'finance',
+    label: 'Finance',
     description: 'Can view analytics and revenue reports',
-    icon:        BadgeDollarSign,
-    cls:         'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    icon: BadgeDollarSign,
+    cls: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
   },
 ]
 
@@ -97,7 +103,6 @@ export default function EditAdminModal({ open, onOpenChange, admin, onSuccess }:
       />
 
       <div className="relative w-full max-w-lg mx-4 bg-dash-surface border border-dash-border rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
-
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-5 shrink-0">
           <div className="flex items-center gap-3">
@@ -119,7 +124,6 @@ export default function EditAdminModal({ open, onOpenChange, admin, onSuccess }:
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-6 pb-6 space-y-5">
-
           {/* Admin mini-card */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/3 border border-white/10">
             <div
@@ -140,7 +144,7 @@ export default function EditAdminModal({ open, onOpenChange, admin, onSuccess }:
               New Role
             </label>
             <div className="space-y-2">
-              {ROLES.map(r => {
+              {ROLES.map((r) => {
                 const Icon = r.icon
                 const selected = watchRole === r.value
                 const isCurrent = admin.role === r.value
@@ -151,23 +155,20 @@ export default function EditAdminModal({ open, onOpenChange, admin, onSuccess }:
                     onClick={() => setValue('role', r.value, { shouldValidate: true })}
                     className={cn(
                       'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all',
-                      selected
-                        ? r.cls
-                        : 'bg-white/3 border-white/10 hover:border-white/20'
+                      selected ? r.cls : 'bg-white/3 border-white/10 hover:border-white/20',
                     )}
                   >
-                    <div className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                      selected ? 'bg-white/10' : 'bg-white/5'
-                    )}>
+                    <div
+                      className={cn(
+                        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                        selected ? 'bg-white/10' : 'bg-white/5',
+                      )}
+                    >
                       <Icon className={cn('w-4 h-4', selected ? '' : 'text-gray-400')} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={cn(
-                          'text-sm font-semibold',
-                          selected ? '' : 'text-gray-300'
-                        )}>
+                        <p className={cn('text-sm font-semibold', selected ? '' : 'text-gray-300')}>
                           {r.label}
                         </p>
                         {isCurrent && (
@@ -176,26 +177,25 @@ export default function EditAdminModal({ open, onOpenChange, admin, onSuccess }:
                           </span>
                         )}
                       </div>
-                      <p className={cn(
-                        'text-xs mt-0.5',
-                        selected ? 'opacity-80' : 'text-gray-500'
-                      )}>
+                      <p
+                        className={cn('text-xs mt-0.5', selected ? 'opacity-80' : 'text-gray-500')}
+                      >
                         {r.description}
                       </p>
                     </div>
-                    <div className={cn(
-                      'w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
-                      selected ? 'border-current' : 'border-gray-600'
-                    )}>
+                    <div
+                      className={cn(
+                        'w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
+                        selected ? 'border-current' : 'border-gray-600',
+                      )}
+                    >
                       {selected && <div className="w-2 h-2 rounded-full bg-current" />}
                     </div>
                   </button>
                 )
               })}
             </div>
-            {errors.role && (
-              <p className="text-xs text-red-500 mt-1">{errors.role.message}</p>
-            )}
+            {errors.role && <p className="text-xs text-red-500 mt-1">{errors.role.message}</p>}
           </div>
         </div>
 
@@ -211,7 +211,7 @@ export default function EditAdminModal({ open, onOpenChange, admin, onSuccess }:
             </button>
             <button
               type="button"
-              onClick={() => handleSubmit(d => mutation.mutate(d))()}
+              onClick={() => handleSubmit((d) => mutation.mutate(d))()}
               disabled={mutation.isPending || watchRole === admin.role}
               className="flex-1 h-10 rounded-xl font-semibold text-white text-sm disabled:opacity-50 transition-all active:scale-95 shadow-lg"
               style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
@@ -220,7 +220,6 @@ export default function EditAdminModal({ open, onOpenChange, admin, onSuccess }:
             </button>
           </div>
         </div>
-
       </div>
     </div>
   )

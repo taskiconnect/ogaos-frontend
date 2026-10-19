@@ -1,11 +1,13 @@
 // src/lib/api/digital.ts
 import api from './client'
-import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
 import type {
-  DigitalProduct,
+  ApiCursorList,
+  ApiMessage,
+  ApiSuccess,
   CreateDigitalProductRequest,
-  UpdateDigitalProductRequest,
+  DigitalProduct,
   DigitalProductListParams,
+  UpdateDigitalProductRequest,
 } from './types'
 
 export const createDigitalProduct = (data: CreateDigitalProductRequest) =>

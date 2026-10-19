@@ -1,21 +1,20 @@
 // src/app/admin/auth/login/AdminLoginForm.tsx
 'use client'
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { z } from 'zod'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Mail, Lock, ArrowRight, Shield, KeyRound } from 'lucide-react'
+import { ArrowRight, KeyRound, Lock, Mail, Shield } from 'lucide-react'
 
-import { adminLogin, adminVerifyOTP, adminResendOTP } from '@/lib/api/admin'
-import { getAdminProfile } from '@/lib/api/admin'
+import { adminLogin, adminResendOTP, adminVerifyOTP, getAdminProfile } from '@/lib/api/admin'
 import { useAdminAuthStore } from '@/stores/adminAuthStore'
 
 const loginSchema = z.object({
@@ -24,10 +23,7 @@ const loginSchema = z.object({
 })
 
 const otpSchema = z.object({
-  otp: z
-    .string()
-    .length(6, 'OTP must be 6 digits')
-    .regex(/^\d+$/, 'OTP must contain only numbers'),
+  otp: z.string().length(6, 'OTP must be 6 digits').regex(/^\d+$/, 'OTP must contain only numbers'),
 })
 
 type LoginFormInput = z.infer<typeof loginSchema>
@@ -148,10 +144,7 @@ export default function AdminLoginForm() {
       return
     }
     setIsResending(true)
-    resendOTPMutation.mutate(
-      { temp_token: tempToken },
-      { onSettled: () => setIsResending(false) }
-    )
+    resendOTPMutation.mutate({ temp_token: tempToken }, { onSettled: () => setIsResending(false) })
   }
 
   const handleBackToLogin = () => {
@@ -173,9 +166,7 @@ export default function AdminLoginForm() {
             >
               <Shield className="w-5 h-5 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-1.5">
-              Two-Factor Authentication
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight mb-1.5">Two-Factor Authentication</h1>
             <p className="text-sm text-gray-400">Enter the 6-digit code sent to your email</p>
           </div>
 
@@ -197,9 +188,7 @@ export default function AdminLoginForm() {
                 />
               </div>
               {otpForm.formState.errors.otp && (
-                <p className="text-xs text-red-400 mt-1">
-                  {otpForm.formState.errors.otp.message}
-                </p>
+                <p className="text-xs text-red-400 mt-1">{otpForm.formState.errors.otp.message}</p>
               )}
             </div>
 

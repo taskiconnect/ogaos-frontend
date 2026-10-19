@@ -1,7 +1,7 @@
 'use client'
 
-import { Ban, X } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
+import { Ban, X } from 'lucide-react'
 
 interface Props {
   businessName: string
@@ -10,12 +10,16 @@ interface Props {
   isPending: boolean
 }
 
-export default function CancelSubscriptionModal({ businessName, onConfirm, onClose, isPending }: Props) {
+export default function CancelSubscriptionModal({
+  businessName,
+  onConfirm,
+  onClose,
+  isPending,
+}: Props) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md mx-4 bg-dash-surface border border-dash-border rounded-2xl shadow-2xl p-6 space-y-4">
-
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
@@ -69,7 +73,6 @@ export default function CancelSubscriptionModal({ businessName, onConfirm, onClo
             {isPending ? 'Cancelling…' : 'Yes, Cancel'}
           </button>
         </div>
-
       </div>
     </div>
   )

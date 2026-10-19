@@ -1,22 +1,16 @@
 'use client'
+import { getInvoice } from '@/lib/api/finance'
 
 export const dynamic = 'force-dynamic'
 
-import { useMemo, useState } from 'react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  listInvoices,
-  sendInvoice,
-  cancelInvoice,
-  reviseInvoice,
-} from '@/lib/api/finance'
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import { Plus, Search, FileText, ChevronDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { Invoice } from '@/lib/api/types'
 import CreateInvoiceModal from '@/components/invoices/CreateInvoiceModal'
 import InvoiceDetailDrawer from '@/components/invoices/InvoiceDetailDrawer'
+import { cancelInvoice, listInvoices, reviseInvoice, sendInvoice } from '@/lib/api/finance'
+import type { Invoice } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown, FileText, Plus, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 function fmt(kobo: number) {
   const n = kobo / 100
@@ -48,7 +42,16 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   superseded: { label: 'Superseded', cls: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
 }
 
-const STATUS_FILTERS = ['', 'draft', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'superseded']
+const STATUS_FILTERS = [
+  '',
+  'draft',
+  'sent',
+  'partial',
+  'paid',
+  'overdue',
+  'cancelled',
+  'superseded',
+]
 
 const DATE_OPTS = [
   { label: 'All time', value: '' },
@@ -112,15 +115,11 @@ export default function InvoicesPage() {
   const [status, setStatus] = useState('')
   const [dateOpt, setDateOpt] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
+  const [editError, setEditError] = useState('')
   const [selected, setSelected] = useState<Invoice | null>(null)
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ['invoices', status, dateOpt],
     queryFn: ({ pageParam }) =>
       listInvoices({
@@ -135,7 +134,7 @@ export default function InvoicesPage() {
 
   const allInvoices: Invoice[] = useMemo(
     () => (data?.pages ?? []).flatMap((p: any) => p.data ?? []),
-    [data]
+    [data],
   )
 
   const filtered = useMemo(() => {
@@ -143,8 +142,7 @@ export default function InvoicesPage() {
     const q = search.toLowerCase()
     return allInvoices.filter(
       (inv) =>
-        inv.invoice_number.toLowerCase().includes(q) ||
-        custName(inv).toLowerCase().includes(q)
+        inv.invoice_number.toLowerCase().includes(q) || custName(inv).toLowerCase().includes(q),
     )
   }, [allInvoices, search])
 
@@ -176,17 +174,24 @@ export default function InvoicesPage() {
     mutationFn: (id: string) => reviseInvoice(id),
     onSuccess: async (newInvoice) => {
       await refreshInvoices()
-      setSelected(newInvoice)
+      setSelected(null)
+      setEditingInvoice(newInvoice)
+      setShowCreate(true)
     },
   })
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-      <div className="lg:pl-72">
-        <DashboardHeader />
-
+      <div className="">
         <main className="p-6 lg:p-10 space-y-8 pb-20">
+          <p className="text-xs text-muted-foreground">
+            List figures reflect the records currently loaded and selected filters.
+          </p>
+          {editError && (
+            <p role="alert" className="text-sm text-red-300">
+              {editError}
+            </p>
+          )}
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
@@ -194,7 +199,10 @@ export default function InvoicesPage() {
             </div>
 
             <button
-              onClick={() => setShowCreate(true)}
+              onClick={() => {
+                setEditingInvoice(null)
+                setShowCreate(true)
+              }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0"
               style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
             >
@@ -245,7 +253,7 @@ export default function InvoicesPage() {
                     'px-3 py-2 rounded-xl text-xs font-semibold border capitalize transition-all',
                     status === s
                       ? 'bg-primary border-primary text-white'
-                      : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                      : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20',
                   )}
                 >
                   {s || 'All'}
@@ -273,7 +281,9 @@ export default function InvoicesPage() {
               <div className="p-16 flex flex-col items-center text-center">
                 <FileText className="w-10 h-10 text-gray-600 mb-3" />
                 <p className="text-gray-400 font-medium">No invoices found</p>
-                <p className="text-gray-600 text-sm mt-1">Create your first invoice to get started</p>
+                <p className="text-gray-600 text-sm mt-1">
+                  Create your first invoice to get started
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -323,16 +333,13 @@ export default function InvoicesPage() {
                             <span
                               className={cn(
                                 'text-xs font-semibold px-2.5 py-1 rounded-full border',
-                                st.cls
+                                st.cls,
                               )}
                             >
                               {st.label}
                             </span>
                           </td>
-                          <td
-                            className="px-5 py-4 text-right"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-2">
                               {inv.status === 'draft' && (
                                 <button
@@ -390,6 +397,7 @@ export default function InvoicesPage() {
       </div>
 
       <CreateInvoiceModal
+        editing={editingInvoice}
         open={showCreate}
         onOpenChange={setShowCreate}
         onSuccess={() => qc.invalidateQueries({ queryKey: ['invoices'] })}
@@ -406,6 +414,16 @@ export default function InvoicesPage() {
           onCancel={() => cancelMut.mutate(selected.id)}
           onPayment={() => qc.invalidateQueries({ queryKey: ['invoices'] })}
           onRevise={() => reviseMut.mutate(selected.id)}
+          onEdit={async () => {
+            try {
+              const draft = await getInvoice(selected.id)
+              setEditingInvoice(draft)
+              setShowCreate(true)
+              setSelected(null)
+            } catch {
+              setEditError('Could not load this draft. Please try again.')
+            }
+          }}
         />
       )}
     </div>

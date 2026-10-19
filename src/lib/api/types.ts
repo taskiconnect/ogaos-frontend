@@ -205,11 +205,7 @@ export interface BusinessKeywordsResponse {
 
 export type SubscriptionPlan = 'free' | 'growth' | 'pro' | 'custom'
 
-export type SubscriptionStatus =
-  | 'active'
-  | 'expired'
-  | 'cancelled'
-  | 'grace_period'
+export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'grace_period'
 
 export interface Subscription {
   id: string
@@ -527,15 +523,7 @@ export interface Invoice {
   amount_paid: number
   balance_due: number
   currency: string
-  status:
-    | 'draft'
-    | 'sent'
-    | 'partial'
-    | 'paid'
-    | 'overdue'
-    | 'cancelled'
-    | 'superseded'
-    | string
+  status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'cancelled' | 'superseded' | string
   notes: string | null
   payment_terms: string | null
   sent_at: string | null
@@ -617,15 +605,7 @@ export interface PublicInvoice {
   amount_paid: number
   balance_due: number
   currency: string
-  status:
-    | 'draft'
-    | 'sent'
-    | 'partial'
-    | 'paid'
-    | 'overdue'
-    | 'cancelled'
-    | 'superseded'
-    | string
+  status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'cancelled' | 'superseded' | string
   notes: string | null
   payment_terms: string | null
   sent_at: string | null
@@ -701,6 +681,10 @@ export interface ExpenseListParams extends CursorParams {
 // ─── Debt ─────────────────────────────────────────────────────────────────────
 
 export interface Debt {
+  /** Frontend-only payment routing metadata, never sent as a debt UUID. */
+  payment_source?: 'sale' | 'manual' | 'unresolved'
+  sale_id?: string
+
   id: string
   business_id: string
   direction: 'receivable' | 'payable' | string
@@ -733,7 +717,7 @@ export interface CreateDebtRequest {
 
 export interface RecordDebtPaymentRequest {
   amount: number
-  note?: string
+  notes?: string
 }
 
 export interface DebtListParams extends CursorParams {
@@ -746,10 +730,7 @@ export interface DebtListParams extends CursorParams {
 // ─── Digital Products ─────────────────────────────────────────────────────────
 
 export type DigitalFulfillmentMode =
-  | 'file_download'
-  | 'course_access'
-  | 'external_link'
-  | 'manual_delivery'
+  'file_download' | 'course_access' | 'external_link' | 'manual_delivery'
 
 export interface DigitalProduct {
   id: string
@@ -1055,7 +1036,7 @@ export interface PayoutAccountResponse {
   business_id: string
   bank_name: string
   bank_code: string
-  account_number: string  // masked e.g. "******1234"
+  account_number: string // masked e.g. "******1234"
   account_name: string
   is_verified: boolean
   is_default: boolean

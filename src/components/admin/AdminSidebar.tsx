@@ -1,25 +1,23 @@
 'use client'
+import { useAdminAuthStore } from '@/stores/adminAuthStore'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { cn, getInitials } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  LayoutDashboard,
-  ShieldCheck,
-  Users,
   Building2,
-  TicketPercent,
-  ChartColumn,
-  Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
-  X,
+  LayoutDashboard,
+  LogOut,
   Menu,
+  ShieldCheck,
+  TicketPercent,
   UserCog,
+  X,
 } from 'lucide-react'
-import { cn, getInitials } from '@/lib/utils'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 const NAV_GROUPS = [
@@ -30,19 +28,10 @@ const NAV_GROUPS = [
   {
     label: 'Management',
     items: [
-      { label: 'Admins',     href: '/admin/dashboard/admins',     icon: ShieldCheck   },
-      { label: 'Users',      href: '/admin/dashboard/users',      icon: Users         },
-      { label: 'Businesses', href: '/admin/dashboard/businesses', icon: Building2     },
-      { label: 'Coupons',    href: '/admin/dashboard/coupons',    icon: TicketPercent },
+      { label: 'Admins', href: '/admin/dashboard/admins', icon: ShieldCheck },
+      { label: 'Businesses', href: '/admin/dashboard/businesses', icon: Building2 },
+      { label: 'Coupons', href: '/admin/dashboard/coupons', icon: TicketPercent },
     ],
-  },
-  {
-    label: 'Insights',
-    items: [{ label: 'Analytics', href: '/admin/dashboard/analytics', icon: ChartColumn }],
-  },
-  {
-    label: 'System',
-    items: [{ label: 'Settings', href: '/admin/dashboard/settings', icon: Settings }],
   },
 ]
 
@@ -70,7 +59,7 @@ function NavItem({ href, icon: Icon, label, collapsed, active }: NavItemProps) {
         'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group',
         active
           ? 'bg-primary/15 text-primary border border-primary/25'
-          : 'text-gray-400 hover:text-white hover:bg-white/5'
+          : 'text-gray-400 hover:text-white hover:bg-white/5',
       )}
     >
       {active && (
@@ -114,14 +103,13 @@ function SidebarInner({
   const router = useRouter()
 
   const isActive = (href: string) =>
-    href === '/admin/dashboard'
-      ? pathname === '/admin/dashboard'
-      : pathname.startsWith(href)
+    href === '/admin/dashboard' ? pathname === '/admin/dashboard' : pathname.startsWith(href)
 
   const handleLogout = async () => {
     try {
       await fetch('/api/admin/auth/logout', { method: 'POST', credentials: 'include' })
     } catch {}
+    useAdminAuthStore.getState().clearAuth()
     toast.success('Logged out')
     router.push('/admin/auth/login')
   }
@@ -134,12 +122,13 @@ function SidebarInner({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-
       {/* ── Logo / brand ── */}
-      <div className={cn(
-        'flex items-center h-16 px-4 border-b border-white/8 shrink-0',
-        collapsed ? 'justify-center' : 'justify-between'
-      )}>
+      <div
+        className={cn(
+          'flex items-center h-16 px-4 border-b border-white/8 shrink-0',
+          collapsed ? 'justify-center' : 'justify-between',
+        )}
+      >
         {!collapsed && (
           <Link href="/admin/dashboard" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center">
@@ -163,9 +152,11 @@ function SidebarInner({
             onClick={onCollapse}
             className="hidden md:flex w-6 h-6 items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-all"
           >
-            {collapsed
-              ? <ChevronRight className="w-3.5 h-3.5" />
-              : <ChevronLeft  className="w-3.5 h-3.5" />}
+            {collapsed ? (
+              <ChevronRight className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronLeft className="w-3.5 h-3.5" />
+            )}
           </button>
         )}
       </div>
@@ -205,16 +196,13 @@ function SidebarInner({
 
       {/* ── Bottom — avatar + logout ── */}
       <div className="shrink-0 border-t border-white/8 p-2 space-y-1">
-
         {/* Avatar — links to profile page */}
         <Link
           href="/admin/dashboard/profile"
           title={collapsed ? 'My Profile' : undefined}
           className={cn(
             'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group',
-            profileActive
-              ? 'bg-primary/15 border border-primary/25'
-              : 'hover:bg-white/5'
+            profileActive ? 'bg-primary/15 border border-primary/25' : 'hover:bg-white/5',
           )}
         >
           {profileActive && (
@@ -237,10 +225,12 @@ function SidebarInner({
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden whitespace-nowrap min-w-0 flex-1"
               >
-                <p className={cn(
-                  'text-sm font-medium truncate',
-                  profileActive ? 'text-primary' : 'text-white'
-                )}>
+                <p
+                  className={cn(
+                    'text-sm font-medium truncate',
+                    profileActive ? 'text-primary' : 'text-white',
+                  )}
+                >
                   {displayName}
                 </p>
                 <p className="text-xs text-gray-500 truncate capitalize">
@@ -263,7 +253,7 @@ function SidebarInner({
           onClick={handleLogout}
           className={cn(
             'flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/8 transition-all',
-            collapsed ? 'justify-center' : ''
+            collapsed ? 'justify-center' : '',
           )}
           title={collapsed ? 'Log out' : undefined}
         >
@@ -288,7 +278,7 @@ function SidebarInner({
 }
 
 export default function AdminSidebar({ admin }: { admin?: AdminProfile | null }) {
-  const [collapsed, setCollapsed]   = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (

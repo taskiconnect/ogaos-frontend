@@ -1,9 +1,9 @@
 'use client'
 
+import { BrowserMultiFormatReader } from '@zxing/browser'
+import { AlertCircle, Camera, Loader2, RefreshCw, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { BrowserMultiFormatReader } from '@zxing/browser'
-import { X, Camera, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
 
 interface BarcodeScannerModalProps {
   open: boolean
@@ -130,15 +130,8 @@ export default function BarcodeScannerModal({
     if (!open) return null
 
     return (
-      <div
-        className="fixed inset-0 z-[2147483647] isolate"
-        aria-modal="true"
-        role="dialog"
-      >
-        <div
-          className="absolute inset-0 bg-black/90 backdrop-blur-md"
-          onClick={closeModal}
-        />
+      <div className="fixed inset-0 z-[2147483647] isolate" aria-modal="true" role="dialog">
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={closeModal} />
 
         <div className="absolute inset-0 overflow-y-auto overscroll-contain">
           <div className="flex min-h-full items-end justify-center p-0 sm:items-center sm:p-5">
@@ -276,7 +269,8 @@ export default function BarcodeScannerModal({
                     <Camera className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
                     <div className="space-y-1">
                       <p className="text-xs leading-5 text-emerald-100">
-                        Hold the barcode a bit farther away on laptop cameras so it stays sharp inside the guide.
+                        Hold the barcode a bit farther away on laptop cameras so it stays sharp
+                        inside the guide.
                       </p>
                     </div>
                   </div>
@@ -287,7 +281,18 @@ export default function BarcodeScannerModal({
         </div>
       </div>
     )
-  }, [open, closeModal, loading, cameraReady, error, detecting, devices, deviceId, handleRefresh, scanGuide])
+  }, [
+    open,
+    closeModal,
+    loading,
+    cameraReady,
+    error,
+    detecting,
+    devices,
+    deviceId,
+    handleRefresh,
+    scanGuide,
+  ])
 
   useEffect(() => {
     if (!open) {

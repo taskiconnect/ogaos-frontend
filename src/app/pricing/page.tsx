@@ -3,9 +3,9 @@
 export const dynamic = 'force-dynamic'
 
 // src/app/pricing/page.tsx
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { PricingSection } from '@/components/landing/PricingSection'
 import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 
 export default function PricingPage() {
   return (

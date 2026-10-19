@@ -1,12 +1,12 @@
 // src/app/not-found.tsx
 'use client'
 
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Search, Home, ArrowLeft } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
+import { Button } from '@/components/ui/button'
+import { motion } from 'framer-motion'
+import { ArrowLeft, Home, Search } from 'lucide-react'
+import Link from 'next/link'
 
 export default function NotFound() {
   return (
@@ -51,8 +51,8 @@ export default function NotFound() {
             </h2>
 
             <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto">
-              Oops! The page you're looking for doesn't exist or has been moved.
-              Let's get you back to building your business.
+              Oops! The page you&apos;re looking for doesn&apos;t exist or has been moved.
+              Let&apos;s get you back to building your business.
             </p>
           </motion.div>
 
@@ -111,8 +111,14 @@ export default function NotFound() {
             transition={{ delay: 1, duration: 0.8 }}
             className="text-base text-gray-300 pt-8"
           >
-            Lost? <Link href="/contact" className="text-primary hover:underline">Contact support</Link> or{' '}
-            <Link href="/faqs" className="text-primary hover:underline">check FAQs</Link>
+            Lost?{' '}
+            <Link href="/contact" className="text-primary hover:underline">
+              Contact support
+            </Link>{' '}
+            or{' '}
+            <Link href="/faqs" className="text-primary hover:underline">
+              check FAQs
+            </Link>
           </motion.p>
         </div>
       </div>

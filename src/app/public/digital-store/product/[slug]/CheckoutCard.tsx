@@ -1,19 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import {
-  Share2,
-  Copy,
-  Check,
-  Lock,
-  ShieldCheck,
-  BadgeCheck,
-  Wallet,
-} from 'lucide-react'
 import { initializeDigitalCheckout } from '@/lib/api/public'
+import { cn } from '@/lib/utils'
 import type { PublicDigitalProductResponse } from '@/types/public'
 import { formatCurrency } from '@/types/public'
-import { cn } from '@/lib/utils'
+import { BadgeCheck, Check, Copy, Lock, Share2, ShieldCheck, Wallet } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 type Props = {
   product: PublicDigitalProductResponse
@@ -51,9 +43,9 @@ export default function CheckoutCard({ product }: Props) {
   const productUrl = useMemo(() => buildProductUrl(product.slug), [product.slug])
 
   const fees = useMemo(() => {
-    const price = Math.round((product.price || 0) / 100)
-    const platformFee = Math.round(price * 0.05)
-    return { price, platformFee, total: price + platformFee }
+    const price = product.price || 0
+    const platformFee = Math.floor(price * 0.05)
+    return { price, platformFee, total: price }
   }, [product.price])
 
   async function handleCopyLink() {
@@ -112,28 +104,25 @@ export default function CheckoutCard({ product }: Props) {
   const inputClass =
     'w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-gray-600 outline-none transition focus:border-primary focus:bg-white/[0.06]'
 
-  const labelClass =
-    'mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-gray-500'
+  const labelClass = 'mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-gray-500'
 
   return (
     <aside className="lg:sticky lg:top-[92px]">
       <div className="overflow-hidden rounded-3xl border border-white/8 bg-dash-surface shadow-lg">
-
         {/* Price header */}
         <div className="border-b border-white/8 p-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">
             Buy this product
           </p>
           <p className="mt-2 text-4xl font-black tracking-tight text-white">
-            {formatCurrency(product.price / 100, product.currency)}
+            {formatCurrency(product.price, product.currency)}
           </p>
           <p className="mt-2 text-xs leading-5 text-gray-500">
-            Secure payment via Paystack. Delivery based on seller's fulfillment flow.
+            Secure payment via Paystack. Delivery based on seller&apos;s fulfillment flow.
           </p>
         </div>
 
         <div className="p-6 space-y-5">
-
           {/* Fee breakdown */}
           <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-3 text-sm">
             <div className="flex items-center justify-between text-gray-400">
@@ -143,7 +132,7 @@ export default function CheckoutCard({ product }: Props) {
               </span>
             </div>
             <div className="flex items-center justify-between text-gray-400">
-              <span>Platform fee (5%)</span>
+              <span>Platform fee (included)</span>
               <span className="font-semibold text-white">
                 {formatCurrency(fees.platformFee, product.currency)}
               </span>
@@ -160,19 +149,25 @@ export default function CheckoutCard({ product }: Props) {
           <div className="grid grid-cols-3 gap-2.5">
             <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5 text-center">
               <ShieldCheck className="h-5 w-5 text-primary mx-auto" />
-              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-white">Secure</p>
+              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-white">
+                Secure
+              </p>
               <p className="mt-1 text-[10px] leading-4 text-gray-500">Protected checkout</p>
             </div>
 
             <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5 text-center">
               <BadgeCheck className="h-5 w-5 text-primary mx-auto" />
-              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-white">Trusted</p>
+              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-white">
+                Trusted
+              </p>
               <p className="mt-1 text-[10px] leading-4 text-gray-500">OgaOS store</p>
             </div>
 
             <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-3.5 text-center">
               <Wallet className="h-5 w-5 text-primary mx-auto" />
-              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-white">Simple</p>
+              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-white">
+                Simple
+              </p>
               <p className="mt-1 text-[10px] leading-4 text-gray-500">Fast purchase</p>
             </div>
           </div>
@@ -201,7 +196,11 @@ export default function CheckoutCard({ product }: Props) {
                 onClick={handleCopyLink}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 text-[11px] font-semibold text-gray-400 transition hover:bg-white/[0.07] hover:text-white"
               >
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
                 <span className={cn(copied && 'text-emerald-400')}>
                   {copied ? 'Copied!' : 'Copy link'}
                 </span>
@@ -234,7 +233,9 @@ export default function CheckoutCard({ product }: Props) {
             </div>
 
             <div>
-              <label className={labelClass}>Phone number <span className="normal-case text-gray-600">(optional)</span></label>
+              <label className={labelClass}>
+                Phone number <span className="normal-case text-gray-600">(optional)</span>
+              </label>
               <input
                 type="tel"
                 value={buyerPhone}
@@ -255,7 +256,7 @@ export default function CheckoutCard({ product }: Props) {
               disabled={loading}
               className={cn(
                 'inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-semibold text-white transition hover:opacity-90',
-                loading && 'cursor-not-allowed opacity-60'
+                loading && 'cursor-not-allowed opacity-60',
               )}
             >
               <Lock className="h-4 w-4" />
@@ -263,7 +264,8 @@ export default function CheckoutCard({ product }: Props) {
             </button>
 
             <p className="text-center text-[10px] text-gray-600 leading-4">
-              By purchasing, you agree to the seller's delivery terms. Payments are processed securely via Paystack.
+              By purchasing, you agree to the seller&apos;s delivery terms. Payments are processed
+              securely via Paystack.
             </p>
           </form>
         </div>

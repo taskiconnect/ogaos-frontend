@@ -1,9 +1,9 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
 import { listStaff } from '@/lib/api/business'
-import { Users, UserPlus, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { Circle, UserPlus, Users } from 'lucide-react'
 import Link from 'next/link'
 
 export default function StaffOverview() {
@@ -87,7 +87,9 @@ export default function StaffOverview() {
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  {[member.first_name, member.last_name].filter(Boolean).join(' ') || member.email || 'Unnamed staff'}
+                  {[member.first_name, member.last_name].filter(Boolean).join(' ') ||
+                    member.email ||
+                    'Unnamed staff'}
                 </p>
                 <p className="text-xs text-gray-500 truncate">{member.email || 'No email'}</p>
               </div>
@@ -96,13 +98,13 @@ export default function StaffOverview() {
                 <Circle
                   className={cn(
                     'w-2 h-2 fill-current',
-                    member.is_active !== false ? 'text-emerald-400' : 'text-gray-600'
+                    member.is_active !== false ? 'text-emerald-400' : 'text-gray-600',
                   )}
                 />
                 <span
                   className={cn(
                     'text-[10px] font-semibold',
-                    member.is_active !== false ? 'text-emerald-400' : 'text-gray-500'
+                    member.is_active !== false ? 'text-emerald-400' : 'text-gray-500',
                   )}
                 >
                   {member.is_active !== false ? 'Active' : 'Inactive'}

@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic'
 
 // src/app/auth/login/page.tsx
 
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
-import AnimatedLoginWrapper from './AnimatedLoginWrapper'   
+import { LandingHeader } from '@/components/shared/LandingHeader'
+import AnimatedLoginWrapper from './AnimatedLoginWrapper'
 
 export default function LoginPage() {
   return (
@@ -29,12 +29,13 @@ export default function LoginPage() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
         }}
       />
 
       <div className="relative z-10 flex min-h-[calc(100vh-80px)] items-center justify-center px-5 pt-28 pb-16">
-        <AnimatedLoginWrapper />   {/* ← use the client wrapper */}
+        <AnimatedLoginWrapper /> {/* ← use the client wrapper */}
       </div>
 
       <Footer />

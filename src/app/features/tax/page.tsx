@@ -25,9 +25,21 @@ export default function TaxCalculationPage() {
         'Data is FIRS-ready — walk in prepared, not panicked',
       ]}
       howItWorks={[
-        { step: 1, title: 'Enter the transaction amount', body: 'Type in the amount for any transaction — a sale, service fee, or supplier payment. Select Goods or Services to apply the correct WHT rate.' },
-        { step: 2, title: 'Add your annual turnover', body: 'OgaOS uses your estimated annual turnover to determine your CIT band — 0% for small businesses under ₦25M, scaling up from there.' },
-        { step: 3, title: 'Get your full breakdown instantly', body: 'VAT, WHT, CIT, and net-after-tax are computed live. Export the summary or use it as a reference for your accountant or FIRS filing.' },
+        {
+          step: 1,
+          title: 'Enter the transaction amount',
+          body: 'Type in the amount for any transaction — a sale, service fee, or supplier payment. Select Goods or Services to apply the correct WHT rate.',
+        },
+        {
+          step: 2,
+          title: 'Add your annual turnover',
+          body: 'OgaOS uses your estimated annual turnover to determine your CIT band — 0% for small businesses under ₦25M, scaling up from there.',
+        },
+        {
+          step: 3,
+          title: 'Get your full breakdown instantly',
+          body: 'VAT, WHT, CIT, and net-after-tax are computed live. Export the summary or use it as a reference for your accountant or FIRS filing.',
+        },
       ]}
       prevFeature={{ label: 'Debt Tracking', href: '/features/debt' }}
       nextFeature={{ label: 'Recruitment', href: '/features/recruitment' }}

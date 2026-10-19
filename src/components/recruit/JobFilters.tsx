@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -11,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 
 type Props = {
   q?: string
@@ -59,10 +59,7 @@ export function JobFilters({ q = '', type = '', location = '', isRemote = '' }: 
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl border bg-card p-4 shadow-sm"
-    >
+    <form onSubmit={handleSubmit} className="rounded-2xl border bg-card p-4 shadow-sm">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Input
           value={query}

@@ -1,38 +1,30 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import Image from 'next/image'
 import {
-  ShoppingBag,
-  Building2,
-  Eye,
-  Search,
-  MapPin,
-  Globe,
-  ExternalLink,
-  MessageCircle,
-  QrCode,
-  Copy,
-  Play,
-  Download,
-  Package,
   BriefcaseBusiness,
+  Building2,
+  Copy,
+  Download,
+  ExternalLink,
+  Eye,
+  Globe,
+  MapPin,
+  MessageCircle,
+  Package,
+  Play,
+  QrCode,
+  Search,
+  ShoppingBag,
 } from 'lucide-react'
+import Image from 'next/image'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import type {
-  PublicBusiness,
-  PublicDigitalProduct,
-  PublicProduct,
-} from '@/types/public'
-import {
-  fullAddress,
-  mapsEmbed,
-  mapsLink,
-} from '@/types/public'
+import type { PublicBusiness, PublicDigitalProduct, PublicProduct } from '@/types/public'
+import { fullAddress, mapsEmbed, mapsLink } from '@/types/public'
 
+import { Lightbox } from './Lightbox'
 import { ProductCard } from './ProductCard'
 import { ShareModal } from './ShareModal'
-import { Lightbox } from './Lightbox'
 
 type OfferingKind = 'all' | 'digital' | 'products' | 'services'
 
@@ -44,6 +36,7 @@ interface NormalizedOffering {
   image: string | null
   type: string
   itemKind: 'digital' | 'physical' | 'service'
+  slug?: string
   currency?: string
   salesCount?: number
   fileSize?: number | null
@@ -60,14 +53,7 @@ interface Props {
   accent: string
 }
 
-export function ProfileContent({
-  biz,
-  digital,
-  physical,
-  services,
-  keywords,
-  gallery,
-}: Props) {
+export function ProfileContent({ biz, digital, physical, services, keywords, gallery }: Props) {
   const [activeTab, setActiveTab] = useState<'shop' | 'about' | 'gallery'>('shop')
   const [filter, setFilter] = useState<OfferingKind>('all')
   const [search, setSearch] = useState('')
@@ -81,6 +67,7 @@ export function ProfileContent({
       ...digital.map((item) => ({
         id: item.id,
         name: item.title,
+        slug: item.slug,
         description: item.description,
         price: item.price,
         image: item.cover_image_url,
@@ -114,7 +101,7 @@ export function ProfileContent({
         inStock: true,
       })),
     ],
-    [digital, physical, services]
+    [digital, physical, services],
   )
 
   useEffect(() => {
@@ -127,7 +114,7 @@ export function ProfileContent({
           observer.disconnect()
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     )
 
     observer.observe(mapRef.current)
@@ -276,6 +263,7 @@ export function ProfileContent({
                   fileSize={item.fileSize}
                   itemKind={item.itemKind}
                   inStock={item.inStock}
+                  slug={item.slug}
                   bizSlug={biz.slug}
                 />
               ))}
@@ -320,7 +308,7 @@ export function ProfileContent({
 
                 {(() => {
                   const match = biz.storefront_video_url.match(
-                    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&?/]+)/
+                    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&?/]+)/,
                   )
                   const embedId = match?.[1]
 
@@ -447,7 +435,11 @@ export function ProfileContent({
 
               {biz.website_url && (
                 <a
-                  href={biz.website_url.startsWith('http') ? biz.website_url : `https://${biz.website_url}`}
+                  href={
+                    biz.website_url.startsWith('http')
+                      ? biz.website_url
+                      : `https://${biz.website_url}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-start gap-3"
@@ -486,7 +478,7 @@ export function ProfileContent({
 
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
-                    `Check out ${biz.name}: ${typeof window !== 'undefined' ? window.location.href : ''}`
+                    `Check out ${biz.name}: ${typeof window !== 'undefined' ? window.location.href : ''}`,
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -499,7 +491,7 @@ export function ProfileContent({
                 <button
                   onClick={() =>
                     navigator.clipboard.writeText(
-                      typeof window !== 'undefined' ? window.location.href : ''
+                      typeof window !== 'undefined' ? window.location.href : '',
                     )
                   }
                   className="flex flex-col items-center gap-1.5 rounded-xl border border-dash-border bg-dash-hover p-3 text-muted-foreground transition-all hover:bg-dash-hover/80 hover:text-foreground"
@@ -561,11 +553,7 @@ export function ProfileContent({
       )}
 
       {lightbox && (
-        <Lightbox
-          images={lightbox.images}
-          idx={lightbox.idx}
-          onClose={() => setLightbox(null)}
-        />
+        <Lightbox images={lightbox.images} idx={lightbox.idx} onClose={() => setLightbox(null)} />
       )}
 
       {showShare && <ShareModal biz={biz} onClose={() => setShowShare(false)} />}

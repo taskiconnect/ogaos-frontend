@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { toast } from 'sonner'
-import { TicketPercent } from 'lucide-react'
 import { validateSubscriptionCoupon } from '@/lib/api/subscription'
 import type { CouponValidationData, SubscriptionPlan } from '@/lib/api/types'
 import { formatNaira } from '@/lib/utils/Utils'
+import { TicketPercent } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 interface Props {
   plan: SubscriptionPlan
@@ -80,7 +80,8 @@ export default function CouponBox({ plan, periodMonths, originalAmount, onValida
       {result && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
           <p className="text-sm text-emerald-300">
-            Discount applied: <span className="font-semibold">{formatNaira(result.discount_amount)}</span>
+            Discount applied:{' '}
+            <span className="font-semibold">{formatNaira(result.discount_amount)}</span>
           </p>
           <p className="text-xs text-emerald-400/90 mt-1">
             Final total: {formatNaira(result.final_amount)}

@@ -1,7 +1,7 @@
 // src/lib/hooks/useAdminDashboard.ts
-import { useMemo } from 'react'
-import { useAdminAuthStore } from '@/stores/adminAuthStore'
 import { useAdminMe } from '@/lib/hooks/useAdminMe'
+import { useAdminAuthStore } from '@/stores/adminAuthStore'
+import { useMemo } from 'react'
 
 export function useAdminDashboard() {
   const { user, isAuthenticated } = useAdminAuthStore()
@@ -25,6 +25,6 @@ export function useAdminDashboard() {
       meQuery.isError,
       meQuery.error,
       meQuery.refetch,
-    ]
+    ],
   )
 }

@@ -1,21 +1,31 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { getNigeriaLGAs, getNigeriaStates, registerUser } from '@/lib/api/auth'
+import { registerSchema, SignUpFormInput } from '@/lib/validators/auth'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { useState, useRef, useEffect } from 'react'
-import { registerUser, getNigeriaStates, getNigeriaLGAs } from '@/lib/api/auth'
-import { registerSchema, SignUpFormInput } from '@/lib/validators/auth'
+import { useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Mail, Lock, User, Building2, Phone, MapPin,
-  ArrowRight, Tag, Map, Globe, ChevronDown,
-  Search, Check,
+  ArrowRight,
+  Building2,
+  Check,
+  ChevronDown,
+  Globe,
+  Lock,
+  Mail,
+  Map,
+  MapPin,
+  Phone,
+  Search,
+  Tag,
+  User,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -157,10 +167,7 @@ function SearchableDropdown({
           </div>
 
           {/* Options list */}
-          <ul
-            role="listbox"
-            className="max-h-52 overflow-y-auto py-1"
-          >
+          <ul role="listbox" className="max-h-52 overflow-y-auto py-1">
             {filtered.length === 0 ? (
               <li className="px-3 py-2 text-sm text-gray-500">No results</li>
             ) : (
@@ -191,10 +198,22 @@ function SearchableDropdown({
 function GoogleLogo() {
   return (
     <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      <path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        fill="#EA4335"
+      />
     </svg>
   )
 }
@@ -280,7 +299,10 @@ export default function RegisterForm() {
     },
     onError: (err: unknown) => {
       // Pull the message from our enriched error or fall back gracefully
-      const anyErr = err as { response?: { data?: { message?: string; error?: string } }; message?: string }
+      const anyErr = err as {
+        response?: { data?: { message?: string; error?: string } }
+        message?: string
+      }
       const message =
         anyErr?.response?.data?.message ||
         anyErr?.response?.data?.error ||
@@ -303,7 +325,9 @@ export default function RegisterForm() {
           <Building2 className="w-5 h-5 text-primary" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight mb-1.5">Create your OgaOS account</h1>
-        <p className="text-sm text-gray-400">Start managing your business like an Oga — free to begin</p>
+        <p className="text-sm text-gray-400">
+          Start managing your business like an Oga — free to begin
+        </p>
       </div>
 
       {/* Google SSO (placeholder) */}
@@ -329,43 +353,76 @@ export default function RegisterForm() {
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
-
         {/* ── Personal Information ── */}
         <section>
           <SectionLabel>Personal Information</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="first_name" className={labelClass}>First Name *</Label>
+              <Label htmlFor="first_name" className={labelClass}>
+                First Name *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={User} />
-                <Input id="first_name" {...form.register('first_name')} className={inputClass} placeholder="Oga" autoComplete="given-name" />
+                <Input
+                  id="first_name"
+                  {...form.register('first_name')}
+                  className={inputClass}
+                  placeholder="Oga"
+                  autoComplete="given-name"
+                />
               </div>
               <FieldError message={form.formState.errors.first_name?.message} />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="last_name" className={labelClass}>Last Name *</Label>
+              <Label htmlFor="last_name" className={labelClass}>
+                Last Name *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={User} />
-                <Input id="last_name" {...form.register('last_name')} className={inputClass} placeholder="Tunde" autoComplete="family-name" />
+                <Input
+                  id="last_name"
+                  {...form.register('last_name')}
+                  className={inputClass}
+                  placeholder="Tunde"
+                  autoComplete="family-name"
+                />
               </div>
               <FieldError message={form.formState.errors.last_name?.message} />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="phone_number" className={labelClass}>Phone Number *</Label>
+              <Label htmlFor="phone_number" className={labelClass}>
+                Phone Number *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={Phone} />
-                <Input id="phone_number" {...form.register('phone_number')} className={inputClass} placeholder="+234 80X XXX XXXX" autoComplete="tel" inputMode="tel" />
+                <Input
+                  id="phone_number"
+                  {...form.register('phone_number')}
+                  className={inputClass}
+                  placeholder="+234 80X XXX XXXX"
+                  autoComplete="tel"
+                  inputMode="tel"
+                />
               </div>
               <FieldError message={form.formState.errors.phone_number?.message} />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className={labelClass}>Email *</Label>
+              <Label htmlFor="email" className={labelClass}>
+                Email *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={Mail} />
-                <Input id="email" {...form.register('email')} type="email" className={inputClass} placeholder="you@business.com" autoComplete="email" />
+                <Input
+                  id="email"
+                  {...form.register('email')}
+                  type="email"
+                  className={inputClass}
+                  placeholder="you@business.com"
+                  autoComplete="email"
+                />
               </div>
               <FieldError message={form.formState.errors.email?.message} />
             </div>
@@ -377,19 +434,37 @@ export default function RegisterForm() {
           <SectionLabel>Security</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="password" className={labelClass}>Password *</Label>
+              <Label htmlFor="password" className={labelClass}>
+                Password *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={Lock} />
-                <Input id="password" {...form.register('password')} type="password" className={inputClass} placeholder="••••••••" autoComplete="new-password" />
+                <Input
+                  id="password"
+                  {...form.register('password')}
+                  type="password"
+                  className={inputClass}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
               </div>
               <FieldError message={form.formState.errors.password?.message} />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className={labelClass}>Confirm Password *</Label>
+              <Label htmlFor="confirmPassword" className={labelClass}>
+                Confirm Password *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={Lock} />
-                <Input id="confirmPassword" {...form.register('confirmPassword')} type="password" className={inputClass} placeholder="••••••••" autoComplete="new-password" />
+                <Input
+                  id="confirmPassword"
+                  {...form.register('confirmPassword')}
+                  type="password"
+                  className={inputClass}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
               </div>
               <FieldError message={form.formState.errors.confirmPassword?.message} />
             </div>
@@ -401,10 +476,17 @@ export default function RegisterForm() {
           <SectionLabel>Business Details</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="business_name" className={labelClass}>Business Name *</Label>
+              <Label htmlFor="business_name" className={labelClass}>
+                Business Name *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={Building2} />
-                <Input id="business_name" {...form.register('business_name')} className={inputClass} placeholder="Tunde Ventures" />
+                <Input
+                  id="business_name"
+                  {...form.register('business_name')}
+                  className={inputClass}
+                  placeholder="Tunde Ventures"
+                />
               </div>
               <FieldError message={form.formState.errors.business_name?.message} />
             </div>
@@ -416,7 +498,9 @@ export default function RegisterForm() {
                 value={form.watch('business_category')}
                 placeholder="Select category"
                 options={BUSINESS_CATEGORIES}
-                onChange={(val) => form.setValue('business_category', val, { shouldValidate: true })}
+                onChange={(val) =>
+                  form.setValue('business_category', val, { shouldValidate: true })
+                }
               />
               <FieldError message={form.formState.errors.business_category?.message} />
             </div>
@@ -427,13 +511,20 @@ export default function RegisterForm() {
         <section>
           <SectionLabel>Business Address</SectionLabel>
           <div className="space-y-4">
-
             {/* Street */}
             <div className="space-y-1.5">
-              <Label htmlFor="street" className={labelClass}>Street *</Label>
+              <Label htmlFor="street" className={labelClass}>
+                Street *
+              </Label>
               <div className="relative">
                 <FieldIcon icon={MapPin} />
-                <Input id="street" {...form.register('street')} className={inputClass} placeholder="12 Allen Avenue" autoComplete="street-address" />
+                <Input
+                  id="street"
+                  {...form.register('street')}
+                  className={inputClass}
+                  placeholder="12 Allen Avenue"
+                  autoComplete="street-address"
+                />
               </div>
               <FieldError message={form.formState.errors.street?.message} />
             </div>
@@ -441,10 +532,18 @@ export default function RegisterForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* City / Town */}
               <div className="space-y-1.5">
-                <Label htmlFor="city_town" className={labelClass}>City / Town *</Label>
+                <Label htmlFor="city_town" className={labelClass}>
+                  City / Town *
+                </Label>
                 <div className="relative">
                   <FieldIcon icon={Map} />
-                  <Input id="city_town" {...form.register('city_town')} className={inputClass} placeholder="Ikeja" autoComplete="address-level2" />
+                  <Input
+                    id="city_town"
+                    {...form.register('city_town')}
+                    className={inputClass}
+                    placeholder="Ikeja"
+                    autoComplete="address-level2"
+                  />
                 </div>
                 <FieldError message={form.formState.errors.city_town?.message} />
               </div>
@@ -477,17 +576,26 @@ export default function RegisterForm() {
                   options={lgas}
                   disabled={!selectedState}
                   isLoading={lgasLoading}
-                  onChange={(val) => form.setValue('local_government', val, { shouldValidate: true })}
+                  onChange={(val) =>
+                    form.setValue('local_government', val, { shouldValidate: true })
+                  }
                 />
                 <FieldError message={form.formState.errors.local_government?.message} />
               </div>
 
               {/* Country — pre-filled, editable */}
               <div className="space-y-1.5">
-                <Label htmlFor="country" className={labelClass}>Country *</Label>
+                <Label htmlFor="country" className={labelClass}>
+                  Country *
+                </Label>
                 <div className="relative">
                   <FieldIcon icon={Globe} />
-                  <Input id="country" {...form.register('country')} className={inputClass} autoComplete="country-name" />
+                  <Input
+                    id="country"
+                    {...form.register('country')}
+                    className={inputClass}
+                    autoComplete="country-name"
+                  />
                 </div>
                 <FieldError message={form.formState.errors.country?.message} />
               </div>
@@ -499,10 +607,17 @@ export default function RegisterForm() {
         <section>
           <SectionLabel>Referral</SectionLabel>
           <div className="space-y-1.5">
-            <Label htmlFor="referral_code" className={labelClass}>Referral Code (optional)</Label>
+            <Label htmlFor="referral_code" className={labelClass}>
+              Referral Code (optional)
+            </Label>
             <div className="relative">
               <FieldIcon icon={Tag} />
-              <Input id="referral_code" {...form.register('referral_code')} className={inputClass} placeholder="e.g. OG1234" />
+              <Input
+                id="referral_code"
+                {...form.register('referral_code')}
+                className={inputClass}
+                placeholder="e.g. OG1234"
+              />
             </div>
           </div>
         </section>
@@ -512,7 +627,10 @@ export default function RegisterForm() {
           type="submit"
           disabled={mutation.isPending}
           className="w-full h-11 font-semibold rounded-lg text-white transition-all hover:opacity-90 active:scale-[0.99]"
-          style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%)' }}
+          style={{
+            background:
+              'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%)',
+          }}
         >
           {mutation.isPending ? 'Creating account…' : 'Create Account'}
           <ArrowRight className="ml-2 w-4 h-4" />
@@ -520,7 +638,10 @@ export default function RegisterForm() {
 
         <p className="text-center text-sm text-gray-500">
           Already have an account?{' '}
-          <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium transition-colors">
+          <Link
+            href="/auth/login"
+            className="text-primary hover:text-primary/80 font-medium transition-colors"
+          >
             Sign in
           </Link>
         </p>

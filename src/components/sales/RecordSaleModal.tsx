@@ -1,21 +1,29 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import { createSale } from '@/lib/api/finance'
-import { listCustomers, listProducts } from '@/lib/api/business'
-import {
-  X, Plus, Trash2, ShoppingCart, Search,
-  UserPlus, Phone, Mail, ScanBarcode,
-} from 'lucide-react'
-import { cn, isUpgradeRequiredError, getSubscriptionToastMessage } from '@/lib/utils'
-import { toast } from 'sonner'
-import type { Customer, WalkInCustomer, CreateSaleRequest } from '@/lib/api/types'
 import BarcodeScannerModal from '@/components/products/BarcodeScannerModal'
+import { listCustomers, listProducts, scanProductByBarcode } from '@/lib/api/business'
+import { createSale } from '@/lib/api/finance'
+import type { CreateSaleRequest, Customer, WalkInCustomer } from '@/lib/api/types'
+import { useDebouncedValue } from '@/lib/hooks/useDebouncedValue'
+import { cn, getSubscriptionToastMessage, isUpgradeRequiredError } from '@/lib/utils'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Mail,
+  Phone,
+  Plus,
+  ScanBarcode,
+  Search,
+  ShoppingCart,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { useFieldArray, useForm } from 'react-hook-form'
+import { toast } from 'sonner'
+import { z } from 'zod'
 
 const itemSchema = z.object({
   product_id: z.string().optional(),
@@ -25,33 +33,44 @@ const itemSchema = z.object({
   discount: z.coerce.number().min(0).default(0),
 })
 
-const formSchema = z.object({
-  customer_id: z.string().optional(),
-  walk_in_first_name: z.string().optional(),
-  walk_in_last_name: z.string().optional(),
-  walk_in_phone: z.string().optional(),
-  walk_in_email: z.string().optional(),
-  staff_name: z.string().optional(),
-  payment_method: z.string().min(1, 'Required'),
-  amount_paid: z
-    .string()
-    .trim()
-    .min(1, 'Amount paid is required')
-    .refine((val) => !Number.isNaN(Number(val)), { message: 'Amount paid must be a valid number' })
-    .refine((val) => Number(val) >= 0, { message: 'Cannot be negative' }),
-  discount_amount: z.coerce.number().min(0).default(0),
-  notes: z.string().optional(),
-  send_receipt_email: z.boolean().default(false),
-  items: z.array(itemSchema).min(1, 'Add at least one item'),
-}).superRefine((data, ctx) => {
-  const subtotal = data.items.reduce((sum, item) => sum + Number(item.unit_price) * Number(item.quantity), 0)
-  const totalDiscount = data.items.reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
-  const total = Math.max(0, subtotal - totalDiscount)
-  const amountPaid = Number(data.amount_paid)
-  if (amountPaid > total) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amount_paid'], message: 'Amount paid cannot be more than total due' })
-  }
-})
+const formSchema = z
+  .object({
+    customer_id: z.string().optional(),
+    walk_in_first_name: z.string().optional(),
+    walk_in_last_name: z.string().optional(),
+    walk_in_phone: z.string().optional(),
+    walk_in_email: z.string().optional(),
+    staff_name: z.string().optional(),
+    payment_method: z.string().min(1, 'Required'),
+    amount_paid: z
+      .string()
+      .trim()
+      .min(1, 'Amount paid is required')
+      .refine((val) => !Number.isNaN(Number(val)), {
+        message: 'Amount paid must be a valid number',
+      })
+      .refine((val) => Number(val) >= 0, { message: 'Cannot be negative' }),
+    discount_amount: z.coerce.number().min(0).default(0),
+    notes: z.string().optional(),
+    send_receipt_email: z.boolean().default(false),
+    items: z.array(itemSchema).min(1, 'Add at least one item'),
+  })
+  .superRefine((data, ctx) => {
+    const subtotal = data.items.reduce(
+      (sum, item) => sum + Number(item.unit_price) * Number(item.quantity),
+      0,
+    )
+    const totalDiscount = data.items.reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
+    const total = Math.max(0, subtotal - totalDiscount)
+    const amountPaid = Number(data.amount_paid)
+    if (amountPaid > total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['amount_paid'],
+        message: 'Amount paid cannot be more than total due',
+      })
+    }
+  })
 
 type FormValues = z.input<typeof formSchema>
 
@@ -63,7 +82,13 @@ interface Props {
   onSuccess?: () => void
 }
 
-function CustomerPicker({ customers, onSelect, onAddNew }: {
+function CustomerPicker({
+  customers,
+  onSelect,
+  onAddNew,
+  onSearch,
+}: {
+  onSearch: (value: string) => void
   customers: Customer[]
   onSelect: (c: Customer) => void
   onAddNew: (prefill: string) => void
@@ -97,7 +122,11 @@ function CustomerPicker({ customers, onSelect, onAddNew }: {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
         <input
           value={q}
-          onChange={(e) => { setQ(e.target.value); setOpen(true) }}
+          onChange={(e) => {
+            setQ(e.target.value)
+            onSearch(e.target.value)
+            setOpen(true)
+          }}
           onFocus={() => setOpen(true)}
           placeholder="Search by name or phone…"
           className="w-full h-10 pl-9 pr-4 rounded-xl bg-dash-bg border border-dash-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -110,22 +139,34 @@ function CustomerPicker({ customers, onSelect, onAddNew }: {
             <button
               key={c.id}
               type="button"
-              onClick={() => { onSelect(c); setQ(''); setOpen(false) }}
+              onClick={() => {
+                onSelect(c)
+                setQ('')
+                setOpen(false)
+              }}
               className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-dash-hover text-left transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-[11px] font-bold text-primary uppercase">
-                {c.first_name[0]}{c.last_name[0]}
+                {c.first_name[0]}
+                {c.last_name[0]}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground">{c.first_name} {c.last_name}</p>
-                {c.phone_number && <p className="text-xs text-muted-foreground">{c.phone_number}</p>}
+                <p className="text-sm font-medium text-foreground">
+                  {c.first_name} {c.last_name}
+                </p>
+                {c.phone_number && (
+                  <p className="text-xs text-muted-foreground">{c.phone_number}</p>
+                )}
               </div>
             </button>
           ))}
 
           <button
             type="button"
-            onClick={() => { setOpen(false); onAddNew(q) }}
+            onClick={() => {
+              setOpen(false)
+              onAddNew(q)
+            }}
             className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-emerald-500/5 text-left border-t border-dash-border transition-colors"
           >
             <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
@@ -147,6 +188,8 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
   const [customerMode, setCustomerMode] = useState<'none' | 'existing' | 'new'>('none')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [activeProductQuery, setActiveProductQuery] = useState('')
+  const [customerQuery, setCustomerQuery] = useState('')
   const [productSearch, setProductSearch] = useState<string[]>([])
   const [idempotencyKey, setIdempotencyKey] = useState('')
 
@@ -157,22 +200,24 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
   useEffect(() => {
     if (open) {
-      setIdempotencyKey(globalThis.crypto?.randomUUID?.() ?? `sale_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+      setIdempotencyKey(crypto.randomUUID())
     } else {
       setIdempotencyKey('')
     }
   }, [open])
 
+  const customerSearch = useDebouncedValue(customerQuery)
+  const productQuery = useDebouncedValue(activeProductQuery)
   const { data: customersData } = useQuery({
-    queryKey: ['customers-picker'],
-    queryFn: () => listCustomers({ limit: 500 }),
+    queryKey: ['customers-picker', customerSearch],
+    queryFn: () => listCustomers({ search: customerSearch, limit: 20 }),
     enabled: open,
     staleTime: 0,
   })
 
   const { data: productsData } = useQuery({
-    queryKey: ['products-picker'],
-    queryFn: () => listProducts({ limit: 500 }),
+    queryKey: ['products-picker', productQuery],
+    queryFn: () => listProducts({ search: productQuery, limit: 30 }),
     enabled: open,
     staleTime: 30_000,
   })
@@ -212,7 +257,10 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     setValue('discount_amount', totalDiscount, { shouldValidate: false })
   }, [watchItems, setValue])
 
-  const subtotal = watchItems.reduce((sum, item) => sum + Number(item.unit_price) * Number(item.quantity), 0)
+  const subtotal = watchItems.reduce(
+    (sum, item) => sum + Number(item.unit_price) * Number(item.quantity),
+    0,
+  )
   const totalDiscount = watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
   const total = Math.max(0, subtotal - totalDiscount)
   const balance = Math.max(0, total - (watchAmountPaidRaw === '' ? 0 : Number(watchAmountPaidRaw)))
@@ -242,8 +290,14 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   }, [canSendEmail, setValue])
 
   // ── Barcode detected handler ──────────────────────────────────────────────
-  const handleBarcodeDetected = (barcode: string) => {
-    const match = products.find((p) => p.barcode === barcode)
+  const handleBarcodeDetected = async (barcode: string) => {
+    let match
+    try {
+      match = await scanProductByBarcode(barcode)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Barcode lookup failed')
+      return
+    }
 
     if (!match) {
       toast.error(`No product found for barcode: ${barcode}`)
@@ -294,7 +348,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     setCustomerMode('none')
     setSelectedCustomer(null)
     setProductSearch([])
-    setIdempotencyKey(globalThis.crypto?.randomUUID?.() ?? `sale_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+    setIdempotencyKey(crypto.randomUUID())
   }
 
   const mutation = useMutation({
@@ -356,6 +410,8 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
       qc.invalidateQueries({ queryKey: ['customers-picker'] })
       qc.invalidateQueries({ queryKey: ['customers'] })
       qc.invalidateQueries({ queryKey: ['products'] })
+      qc.invalidateQueries({ queryKey: ['products-picker'] })
+      qc.invalidateQueries({ queryKey: ['debts'] })
       doReset()
       onOpenChange(false)
       onSuccess?.()
@@ -364,7 +420,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
       if (isUpgradeRequiredError(e)) {
         toast.error(getSubscriptionToastMessage(e))
         onOpenChange(false)
-        router.push('/subscription')
+        router.push('/dashboard/subscription')
         return
       }
       toast.error(e?.message ?? e?.response?.data?.message ?? 'Failed to record sale')
@@ -373,8 +429,10 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
   if (!open) return null
 
-  const inputCls = 'w-full h-10 rounded-xl bg-dash-bg border border-dash-border px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30'
-  const smallCls = 'w-full h-9 rounded-lg bg-dash-surface border border-dash-border px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30'
+  const inputCls =
+    'w-full h-10 rounded-xl bg-dash-bg border border-dash-border px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30'
+  const smallCls =
+    'w-full h-9 rounded-lg bg-dash-surface border border-dash-border px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30'
 
   return (
     <>
@@ -382,15 +440,20 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
         <div
           className={cn(
             'absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity',
-            scannerOpen && 'pointer-events-none opacity-20'
+            scannerOpen && 'pointer-events-none opacity-20',
           )}
-          onClick={() => { if (!scannerOpen) { doReset(); onOpenChange(false) } }}
+          onClick={() => {
+            if (!scannerOpen) {
+              doReset()
+              onOpenChange(false)
+            }
+          }}
         />
 
         <div
           className={cn(
             'relative w-full sm:max-w-2xl bg-dash-surface border border-dash-border rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col',
-            scannerOpen && 'pointer-events-none select-none'
+            scannerOpen && 'pointer-events-none select-none',
           )}
           aria-hidden={scannerOpen}
         >
@@ -405,7 +468,14 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                 <p className="text-xs text-muted-foreground">All amounts in Naira (₦)</p>
               </div>
             </div>
-            <button onClick={() => { doReset(); onOpenChange(false) }} disabled={scannerOpen} className="p-2 rounded-xl hover:bg-dash-hover text-muted-foreground hover:text-foreground transition-colors">
+            <button
+              onClick={() => {
+                doReset()
+                onOpenChange(false)
+              }}
+              disabled={scannerOpen}
+              className="p-2 rounded-xl hover:bg-dash-hover text-muted-foreground hover:text-foreground transition-colors"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -413,11 +483,14 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
             {/* Customer section */}
             <div className="space-y-3">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Customer</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                Customer
+              </label>
 
               {customerMode === 'none' && (
                 <CustomerPicker
                   customers={customers}
+                  onSearch={setCustomerQuery}
                   onSelect={(c) => {
                     setSelectedCustomer(c)
                     setValue('customer_id', c.id)
@@ -435,10 +508,13 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
               {customerMode === 'existing' && selectedCustomer && (
                 <div className="flex items-center gap-3 bg-dash-bg rounded-xl border border-emerald-500/30 px-3 py-2.5">
                   <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-xs font-bold text-primary uppercase">
-                    {selectedCustomer.first_name[0]}{selectedCustomer.last_name[0]}
+                    {selectedCustomer.first_name[0]}
+                    {selectedCustomer.last_name[0]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {selectedCustomer.first_name} {selectedCustomer.last_name}
+                    </p>
                     <p className="text-xs text-muted-foreground">{selectedCustomer.phone_number}</p>
                   </div>
                   <button
@@ -467,7 +543,14 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                       type="button"
                       onClick={() => {
                         setCustomerMode('none')
-                        ;(['walk_in_first_name', 'walk_in_last_name', 'walk_in_phone', 'walk_in_email'] as const).forEach((f) => setValue(f, ''))
+                        ;(
+                          [
+                            'walk_in_first_name',
+                            'walk_in_last_name',
+                            'walk_in_phone',
+                            'walk_in_email',
+                          ] as const
+                        ).forEach((f) => setValue(f, ''))
                         setValue('send_receipt_email', false)
                       }}
                       className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
@@ -480,25 +563,46 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">First Name *</label>
-                      <input {...register('walk_in_first_name')} placeholder="Ada" className={smallCls} />
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                        First Name *
+                      </label>
+                      <input
+                        {...register('walk_in_first_name')}
+                        placeholder="Ada"
+                        className={smallCls}
+                      />
                     </div>
                     <div>
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Last Name</label>
-                      <input {...register('walk_in_last_name')} placeholder="Okonkwo" className={smallCls} />
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                        Last Name
+                      </label>
+                      <input
+                        {...register('walk_in_last_name')}
+                        placeholder="Okonkwo"
+                        className={smallCls}
+                      />
                     </div>
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                       <Phone className="w-3 h-3" /> Phone *
                     </label>
-                    <input {...register('walk_in_phone')} placeholder="08012345678" className={smallCls} />
+                    <input
+                      {...register('walk_in_phone')}
+                      placeholder="08012345678"
+                      className={smallCls}
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                       <Mail className="w-3 h-3" /> Email (optional — needed to send receipt)
                     </label>
-                    <input {...register('walk_in_email')} type="email" placeholder="ada@email.com" className={smallCls} />
+                    <input
+                      {...register('walk_in_email')}
+                      type="email"
+                      placeholder="ada@email.com"
+                      className={smallCls}
+                    />
                   </div>
                 </div>
               )}
@@ -507,14 +611,20 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             {/* Served By + Payment Method */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Served By</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                  Served By
+                </label>
                 <input {...register('staff_name')} placeholder="Staff name" className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Payment Method</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                  Payment Method
+                </label>
                 <select {...register('payment_method')} className={inputCls}>
                   {PAYMENT_METHODS.map((m) => (
-                    <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                    <option key={m} value={m}>
+                      {m.charAt(0).toUpperCase() + m.slice(1)}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -523,7 +633,9 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             {/* Items */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Items</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Items
+                </label>
                 <div className="flex items-center gap-2">
                   {/* ── Scan barcode to add new item row ── */}
                   <button
@@ -539,7 +651,9 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                   <span className="text-muted-foreground/40 text-xs">·</span>
                   <button
                     type="button"
-                    onClick={() => append({ product_name: '', unit_price: 0, quantity: 1, discount: 0 })}
+                    onClick={() =>
+                      append({ product_name: '', unit_price: 0, quantity: 1, discount: 0 })
+                    }
                     className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add item
@@ -549,11 +663,20 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
               <div className="space-y-3">
                 {fields.map((field, i) => {
                   const srch = productSearch[i] ?? ''
-                  const filteredProds = products.filter((p) => p.name.toLowerCase().includes(srch.toLowerCase())).slice(0, 6)
-                  const lineTotal = Math.max(0, Number(watchItems[i]?.unit_price) * Number(watchItems[i]?.quantity) - Number(watchItems[i]?.discount ?? 0))
+                  const filteredProds = products
+                    .filter((p) => p.name.toLowerCase().includes(srch.toLowerCase()))
+                    .slice(0, 6)
+                  const lineTotal = Math.max(
+                    0,
+                    Number(watchItems[i]?.unit_price) * Number(watchItems[i]?.quantity) -
+                      Number(watchItems[i]?.discount ?? 0),
+                  )
 
                   return (
-                    <div key={field.id} className="bg-dash-bg rounded-2xl border border-dash-border p-4 space-y-3">
+                    <div
+                      key={field.id}
+                      className="bg-dash-bg rounded-2xl border border-dash-border p-4 space-y-3"
+                    >
                       {/* Product name + per-row scan button */}
                       <div className="relative flex gap-2">
                         <div className="relative flex-1">
@@ -564,6 +687,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                               register(`items.${i}.product_name`).onChange(e)
                               const arr = [...productSearch]
                               arr[i] = e.target.value
+                              setActiveProductQuery(e.target.value)
                               setProductSearch(arr)
                               setValue(`items.${i}.product_id`, '')
                             }}
@@ -586,7 +710,9 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
                                   className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-dash-hover text-left text-sm transition-colors"
                                 >
                                   <span className="text-foreground">{p.name}</span>
-                                  <span className="text-muted-foreground text-xs">₦{(p.price / 100).toLocaleString('en-NG')}</span>
+                                  <span className="text-muted-foreground text-xs">
+                                    ₦{(p.price / 100).toLocaleString('en-NG')}
+                                  </span>
                                 </button>
                               ))}
                             </div>
@@ -609,25 +735,55 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
                       <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Price (₦)</label>
-                          <input type="number" step="0.01" min="0" {...register(`items.${i}.unit_price`)} className={smallCls} />
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                            Price (₦)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            {...register(`items.${i}.unit_price`)}
+                            className={smallCls}
+                          />
                         </div>
                         <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Qty</label>
-                          <input type="number" min="1" {...register(`items.${i}.quantity`)} className={smallCls} />
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                            Qty
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            {...register(`items.${i}.quantity`)}
+                            className={smallCls}
+                          />
                         </div>
                         <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Disc. (₦)</label>
-                          <input type="number" step="0.01" min="0" {...register(`items.${i}.discount`)} className={smallCls} />
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                            Disc. (₦)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            {...register(`items.${i}.discount`)}
+                            className={smallCls}
+                          />
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          Line total: <span className="font-semibold text-foreground">₦{lineTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                          Line total:{' '}
+                          <span className="font-semibold text-foreground">
+                            ₦{lineTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                          </span>
                         </span>
                         {fields.length > 1 && (
-                          <button type="button" onClick={() => remove(i)} className="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() => remove(i)}
+                            className="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                          >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -640,8 +796,15 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
 
             {/* Notes */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes (optional)</label>
-              <textarea {...register('notes')} rows={2} placeholder="Any notes for this sale…" className="w-full rounded-xl bg-dash-bg border border-dash-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                Notes (optional)
+              </label>
+              <textarea
+                {...register('notes')}
+                rows={2}
+                placeholder="Any notes for this sale…"
+                className="w-full rounded-xl bg-dash-bg border border-dash-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              />
             </div>
           </div>
 
@@ -649,18 +812,34 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
           <div className="px-6 pb-6 pt-4 border-t border-dash-border bg-dash-bg rounded-b-3xl shrink-0 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Total Item Discounts (₦)</label>
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                  Total Item Discounts (₦)
+                </label>
                 <input
                   type="number"
-                  value={watchItems.reduce((sum, item) => sum + Number(item.discount ?? 0), 0).toFixed(2)}
+                  value={watchItems
+                    .reduce((sum, item) => sum + Number(item.discount ?? 0), 0)
+                    .toFixed(2)}
                   readOnly
                   className="w-full h-9 rounded-lg bg-dash-surface border border-dash-border px-2.5 text-sm text-foreground cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Amount Paid Now (₦)</label>
-                <input type="number" step="0.01" min="0" max={total} placeholder="0.00" {...register('amount_paid')} className={smallCls} />
-                {errors.amount_paid && <p className="text-xs text-red-500 mt-1">{errors.amount_paid.message}</p>}
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                  Amount Paid Now (₦)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={total}
+                  placeholder="0.00"
+                  {...register('amount_paid')}
+                  className={smallCls}
+                />
+                {errors.amount_paid && (
+                  <p className="text-xs text-red-500 mt-1">{errors.amount_paid.message}</p>
+                )}
               </div>
             </div>
 
@@ -668,31 +847,57 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
               <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 shrink-0 mt-1.5" />
                 <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                  <span className="font-semibold">₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span> balance will be recorded as outstanding debt.
+                  <span className="font-semibold">
+                    ₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                  </span>{' '}
+                  balance will be recorded as outstanding debt.
                 </p>
               </div>
             )}
 
             {hasAnyCustomer && (
               <div className="space-y-1">
-                <label className={cn('flex items-center gap-3 select-none', canSendEmail ? 'cursor-pointer' : 'cursor-not-allowed opacity-50')}>
+                <label
+                  className={cn(
+                    'flex items-center gap-3 select-none',
+                    canSendEmail ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+                  )}
+                >
                   <button
                     type="button"
                     disabled={!canSendEmail}
-                    onClick={() => canSendEmail && setValue('send_receipt_email', !watch('send_receipt_email'))}
-                    className={cn('w-9 h-5 rounded-full transition-colors relative shrink-0', watch('send_receipt_email') && canSendEmail ? 'bg-primary' : 'bg-dash-border')}
+                    onClick={() =>
+                      canSendEmail && setValue('send_receipt_email', !watch('send_receipt_email'))
+                    }
+                    className={cn(
+                      'w-9 h-5 rounded-full transition-colors relative shrink-0',
+                      watch('send_receipt_email') && canSendEmail ? 'bg-primary' : 'bg-dash-border',
+                    )}
                   >
-                    <div className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', watch('send_receipt_email') && canSendEmail ? 'translate-x-4' : 'translate-x-0.5')} />
+                    <div
+                      className={cn(
+                        'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform',
+                        watch('send_receipt_email') && canSendEmail
+                          ? 'translate-x-4'
+                          : 'translate-x-0.5',
+                      )}
+                    />
                   </button>
-                  <span className="text-xs font-medium text-muted-foreground">Email receipt to customer after saving</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Email receipt to customer after saving
+                  </span>
                 </label>
               </div>
             )}
 
             <div className="flex items-center justify-between pt-1">
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Total Due</p>
-                <p className="text-2xl font-bold text-foreground tracking-tight">₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+                  Total Due
+                </p>
+                <p className="text-2xl font-bold text-foreground tracking-tight">
+                  ₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                </p>
               </div>
               <button
                 type="button"

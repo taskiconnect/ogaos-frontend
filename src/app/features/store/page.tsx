@@ -25,9 +25,21 @@ export default function DigitalStorePage() {
         'Share your store link on WhatsApp, Instagram, and anywhere',
       ]}
       howItWorks={[
-        { step: 1, title: 'Create your store in minutes', body: "Add your business name, logo, and products. Set prices in naira. Toggle each product live when you're ready to sell." },
-        { step: 2, title: 'Share your store link', body: 'Copy your unique store URL and paste it anywhere — WhatsApp status, Instagram bio, Twitter, or a flyer. Customers click and shop.' },
-        { step: 3, title: 'Get paid, get notified', body: 'When a customer orders, you get a WhatsApp notification. Payment is confirmed before fulfilment. Digital products are delivered automatically.' },
+        {
+          step: 1,
+          title: 'Create your store in minutes',
+          body: "Add your business name, logo, and products. Set prices in naira. Toggle each product live when you're ready to sell.",
+        },
+        {
+          step: 2,
+          title: 'Share your store link',
+          body: 'Copy your unique store URL and paste it anywhere — WhatsApp status, Instagram bio, Twitter, or a flyer. Customers click and shop.',
+        },
+        {
+          step: 3,
+          title: 'Get paid, get notified',
+          body: 'When a customer orders, you get a WhatsApp notification. Payment is confirmed before fulfilment. Digital products are delivered automatically.',
+        },
       ]}
       prevFeature={{ label: 'Staff Management', href: '/features/staff' }}
       nextFeature={{ label: 'Sales Record', href: '/features/sales' }}

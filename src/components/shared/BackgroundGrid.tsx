@@ -1,7 +1,7 @@
 // src/components/shared/BackgroundGrid.tsx
 'use client'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 interface BackgroundGridProps {
   className?: string
@@ -19,7 +19,7 @@ export function BackgroundGrid({
   children,
 }: BackgroundGridProps) {
   return (
-    <div className={cn("relative w-full h-full overflow-hidden isolate", className)}>
+    <div className={cn('relative w-full h-full overflow-hidden isolate', className)}>
       {/* Subtle grid lines using brand blue */}
       <div
         className="absolute inset-0 pointer-events-none"

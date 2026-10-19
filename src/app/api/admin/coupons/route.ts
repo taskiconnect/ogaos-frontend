@@ -1,6 +1,6 @@
 // src/app/api/admin/coupons/route.ts
-import { NextRequest } from 'next/server'
 import { proxyRequest } from '@/lib/api/proxy'
+import { NextRequest } from 'next/server'
 
 // GET /api/admin/coupons — list all coupons
 export async function GET(req: NextRequest) {

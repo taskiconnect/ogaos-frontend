@@ -3,8 +3,8 @@
 
 export const dynamic = 'force-dynamic'
 
-import { LandingHeader } from '@/components/shared/LandingHeader'
 import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
 import AnimatedSignupWrapper from './AnimatedSignupWrapper'
 
 export default function SignUpPage() {
@@ -28,7 +28,8 @@ export default function SignUpPage() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,43,157,0.09) 0%, transparent 70%)',
         }}
       />
 

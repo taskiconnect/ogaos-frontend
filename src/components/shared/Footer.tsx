@@ -1,36 +1,36 @@
 'use client'
 
+import { Instagram, Linkedin, MessageCircle, Twitter, Youtube } from 'lucide-react'
 import Link from 'next/link'
-import { Twitter, Instagram, Facebook, Linkedin, Youtube, MessageCircle } from 'lucide-react'
 
 const footerColumns = [
   {
     title: 'Features',
     items: [
-      { label: 'Sales Record',       href: '/features/sales'       },
-      { label: 'Debt Tracking',      href: '/features/debt'        },
-      { label: 'Tax Calculation',    href: '/features/tax'         },
-      { label: 'Recruitment',        href: '/features/recruitment' },
-      { label: 'Staff Management',   href: '/features/staff'       },
-      { label: 'Digital Store',      href: '/features/store'       },
-      { label: 'Business Directory', href: '/features/directory'   },
+      { label: 'Sales Record', href: '/features/sales' },
+      { label: 'Debt Tracking', href: '/features/debt' },
+      { label: 'Tax Calculation', href: '/features/tax' },
+      { label: 'Recruitment', href: '/features/recruitment' },
+      { label: 'Staff Management', href: '/features/staff' },
+      { label: 'Digital Store', href: '/features/store' },
+      { label: 'Business Directory', href: '/features/directory' },
     ],
   },
   {
     title: 'Product',
     items: [
       { label: 'Pricing', href: '/pricing' },
-      { label: 'Blog',    href: '/blog'    },
-      { label: 'FAQs',    href: '/faqs'    },
+      { label: 'Blog', href: '/blog' },
+      { label: 'FAQs', href: '/faqs' },
       { label: 'Reviews', href: '/reviews' },
     ],
   },
   {
     title: 'Legal',
     items: [
-      { label: 'Terms of Service', href: '/terms'   },
-      { label: 'Privacy Policy',   href: '/privacy' },
-      { label: 'Contact',          href: '/contact' },
+      { label: 'Terms of Service', href: '/terms' },
+      { label: 'Privacy Policy', href: '/privacy' },
+      { label: 'Contact', href: '/contact' },
     ],
   },
 ]
@@ -85,7 +85,8 @@ export function Footer() {
             </Link>
 
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs mb-8">
-              Your smart business assistant for better money tracking, debt recovery, staff management, and credibility building.
+              Your smart business assistant for better money tracking, debt recovery, staff
+              management, and credibility building.
             </p>
 
             {/* Social icons with bottom-up primary blue hover */}

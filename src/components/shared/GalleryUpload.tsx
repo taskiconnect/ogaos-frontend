@@ -5,27 +5,31 @@
 //  - Digital product edit drawer
 //  - Business settings storefront section
 
-import { useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { ImagePlus, X, Loader2, GripVertical } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import api from '@/lib/api/client'
+import { useMutation } from '@tanstack/react-query'
+import { ImagePlus, Loader2, X } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 interface Props {
-  images:        string[]          // current image URLs
-  uploadUrl:     string            // e.g. /digital-products/:id/gallery
-  deleteUrl:     (i: number) => string  // e.g. /digital-products/:id/gallery/0
-  onSuccess:     () => void        // refetch parent query
-  maxImages?:    number            // default 3
-  label?:        string
+  images: string[] // current image URLs
+  uploadUrl: string // e.g. /digital-products/:id/gallery
+  deleteUrl: (i: number) => string // e.g. /digital-products/:id/gallery/0
+  onSuccess: () => void // refetch parent query
+  maxImages?: number // default 3
+  label?: string
 }
 
 export default function GalleryUpload({
-  images, uploadUrl, deleteUrl, onSuccess, maxImages = 3, label = 'Gallery Images',
+  images,
+  uploadUrl,
+  deleteUrl,
+  onSuccess,
+  maxImages = 3,
+  label = 'Gallery Images',
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
-  const [error, setError]         = useState('')
+  const [error, setError] = useState('')
 
   const deleteMut = useMutation({
     mutationFn: (index: number) => api.delete(deleteUrl(index)),
@@ -75,10 +79,15 @@ export default function GalleryUpload({
             disabled={uploading}
             className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
           >
-            {uploading
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
-              : <><ImagePlus className="w-3.5 h-3.5" /> Add image</>
-            }
+            {uploading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...
+              </>
+            ) : (
+              <>
+                <ImagePlus className="w-3.5 h-3.5" /> Add image
+              </>
+            )}
           </button>
         )}
         <input
@@ -86,14 +95,21 @@ export default function GalleryUpload({
           type="file"
           accept="image/jpeg,image/png,image/webp"
           className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = '' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) handleUpload(f)
+            e.target.value = ''
+          }}
         />
       </div>
 
       {/* Grid */}
       <div className="grid grid-cols-3 gap-2">
         {images.map((url, i) => (
-          <div key={url} className="relative group aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10">
+          <div
+            key={url}
+            className="relative group aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10"
+          >
             <img src={url} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
             <button
               type="button"
@@ -101,7 +117,11 @@ export default function GalleryUpload({
               disabled={deleteMut.isPending}
               className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
             >
-              {deleteMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+              {deleteMut.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <X className="w-3 h-3" />
+              )}
             </button>
             <span className="absolute bottom-1 left-1 text-[10px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-full">
               {i + 1}

@@ -1,9 +1,9 @@
 // src/lib/hooks/useAdminMe.ts
-import { useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { getAdminProfile } from '@/lib/api/admin'
 import { useAdminAuthStore } from '@/stores/adminAuthStore'
 import type { AdminProfileApiResponse } from '@/types/admin'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 
 export function useAdminMe() {
   const { isAuthenticated, setUser, clearAuth } = useAdminAuthStore()
@@ -13,7 +13,7 @@ export function useAdminMe() {
     queryFn: getAdminProfile,
     enabled: isAuthenticated,
     staleTime: 1000 * 60 * 5,
-    gcTime:    1000 * 60 * 10,
+    gcTime: 1000 * 60 * 10,
     // Retry once on failure — catches transient network blips on page load
     // without masking a genuine 401.
     retry: 1,

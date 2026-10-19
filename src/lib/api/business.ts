@@ -1,32 +1,29 @@
+import { handleApiError } from './errors'
 // src/lib/api/business.ts
 import api from './client'
-import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
 import type {
-  Business, UpdateBusinessRequest, SetBusinessKeywordsRequest,
-  Store, CreateStoreRequest, UpdateStoreRequest,
-  Customer, CreateCustomerRequest, UpdateCustomerRequest, CustomerListParams,
-  Product, CreateProductRequest, UpdateProductRequest, AdjustStockRequest, ProductListParams,
-  StaffMember, InviteStaffRequest, UpdateStaffRequest, StaffListParams,
+  AdjustStockRequest,
+  ApiCursorList,
+  ApiMessage,
+  ApiSuccess,
+  Business,
+  CreateCustomerRequest,
+  CreateProductRequest,
+  CreateStoreRequest,
+  Customer,
+  CustomerListParams,
+  InviteStaffRequest,
+  Product,
+  ProductListParams,
+  SetBusinessKeywordsRequest,
+  StaffListParams,
+  StaffMember,
+  Store,
+  UpdateBusinessRequest,
+  UpdateCustomerRequest,
+  UpdateProductRequest,
+  UpdateStoreRequest,
 } from './types'
-
-function handleApiError(error: any): never {
-  const status = error?.response?.status
-  const data = error?.response?.data
-
-  if (status === 402 && data?.upgrade_required) {
-    throw {
-      type: 'subscription',
-      status,
-      ...data,
-    }
-  }
-
-  throw {
-    type: 'api',
-    status,
-    message: data?.message || 'Something went wrong',
-  }
-}
 
 // ─── Business ─────────────────────────────────────────────────────────────────
 
@@ -218,7 +215,9 @@ export const createCustomer = async (data: CreateCustomerRequest) => {
 
 export const listCustomers = async (params?: CustomerListParams) => {
   try {
-    const res = await api.get<ApiCursorList<Customer>>('/customers', { params })
+    const res = await api.get<ApiCursorList<Customer>>('/customers', {
+      params: { ...params, limit: Math.min(params?.limit ?? 20, 100) },
+    })
     return res.data
   } catch (error) {
     handleApiError(error)
@@ -256,9 +255,7 @@ export const deleteCustomer = async (id: string) => {
 export const createProduct = async (data: CreateProductRequest, idempotencyKey?: string) => {
   try {
     const res = await api.post<ApiSuccess<Product>>('/products', data, {
-      headers: idempotencyKey
-        ? { 'X-Idempotency-Key': idempotencyKey }
-        : undefined,
+      headers: idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : undefined,
     })
     return res.data.data
   } catch (error) {
@@ -268,7 +265,9 @@ export const createProduct = async (data: CreateProductRequest, idempotencyKey?:
 
 export const listProducts = async (params?: ProductListParams) => {
   try {
-    const res = await api.get<ApiCursorList<Product>>('/products', { params })
+    const res = await api.get<ApiCursorList<Product>>('/products', {
+      params: { ...params, limit: Math.min(params?.limit ?? 20, 100) },
+    })
     return res.data
   } catch (error) {
     handleApiError(error)

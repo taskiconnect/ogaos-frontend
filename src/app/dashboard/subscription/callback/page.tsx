@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useSubscription } from '@/lib/hooks/useSubscription'
 import { verifyPaymentReference } from '@/lib/api/subscription'
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { useSubscription } from '@/lib/hooks/useSubscription'
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 type Stage = 'verifying' | 'activating' | 'error'
 
@@ -43,7 +43,9 @@ export default function SubscriptionCallbackContent() {
           console.warn('[Callback] Payment not yet completed on Paystack → polling')
         } else if (status !== undefined) {
           if (!cancelled) {
-            setErrMsg(err?.response?.data?.message ?? 'Verification failed. Please contact support.')
+            setErrMsg(
+              err?.response?.data?.message ?? 'Verification failed. Please contact support.',
+            )
             setStage('error')
           }
           return
@@ -64,7 +66,9 @@ export default function SubscriptionCallbackContent() {
 
         const currentTry = tries + 1
         setTries(currentTry)
-        console.log(`🔄 [Callback] Poll #${currentTry} – current plan: ${subscription?.plan ?? 'free'}`)
+        console.log(
+          `🔄 [Callback] Poll #${currentTry} – current plan: ${subscription?.plan ?? 'free'}`,
+        )
 
         try {
           const res = await refetch()
@@ -86,7 +90,7 @@ export default function SubscriptionCallbackContent() {
           if (!cancelled) {
             setErrMsg(
               'We could not confirm your subscription after 75 seconds. ' +
-              'Your payment may still be processing. Please check again or contact support with this reference.'
+                'Your payment may still be processing. Please check again or contact support with this reference.',
             )
             setStage('error')
           }
@@ -157,8 +161,7 @@ export default function SubscriptionCallbackContent() {
       )}
 
       <div className="mt-6 text-xs text-gray-600">
-        Current plan:{' '}
-        <span className="capitalize font-medium">{subscription?.plan ?? 'free'}</span>
+        Current plan: <span className="capitalize font-medium">{subscription?.plan ?? 'free'}</span>
       </div>
 
       {stage === 'activating' && (

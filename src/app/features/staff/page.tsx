@@ -25,9 +25,21 @@ export default function StaffManagementPage() {
         'Deactivate staff instantly when they leave — access revoked',
       ]}
       howItWorks={[
-        { step: 1, title: 'Invite your team', body: "Enter each staff member's name, email, and role. They receive an invite to create their OgaOS login. Takes 30 seconds per person." },
-        { step: 2, title: 'Assign roles and permissions', body: 'Give each person access only to what they need. A cashier sees sales. A manager sees everything. You stay in control.' },
-        { step: 3, title: 'Monitor and manage daily', body: "Check who's active, review attendance, update salaries, and see what's been recorded — all from your staff dashboard." },
+        {
+          step: 1,
+          title: 'Invite your team',
+          body: "Enter each staff member's name, email, and role. They receive an invite to create their OgaOS login. Takes 30 seconds per person.",
+        },
+        {
+          step: 2,
+          title: 'Assign roles and permissions',
+          body: 'Give each person access only to what they need. A cashier sees sales. A manager sees everything. You stay in control.',
+        },
+        {
+          step: 3,
+          title: 'Monitor and manage daily',
+          body: "Check who's active, review attendance, update salaries, and see what's been recorded — all from your staff dashboard.",
+        },
       ]}
       prevFeature={{ label: 'Recruitment', href: '/features/recruitment' }}
       nextFeature={{ label: 'Digital Store', href: '/features/store' }}

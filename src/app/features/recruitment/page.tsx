@@ -25,9 +25,21 @@ export default function RecruitmentPage() {
         'Onboard successful hires directly into staff management',
       ]}
       howItWorks={[
-        { step: 1, title: 'Post a job in 2 minutes', body: 'Add a job title, description, type, location, salary range, and deadline. Toggle remote if applicable. Hit Post Job.' },
-        { step: 2, title: 'Review applications as they come in', body: 'See all applicants in one place. Review their details, shortlist the best candidates, and move them through your pipeline.' },
-        { step: 3, title: 'Hire and onboard', body: 'Accept a candidate and they flow straight into your Staff Management module — roles, salary, and start date all pre-filled.' },
+        {
+          step: 1,
+          title: 'Post a job in 2 minutes',
+          body: 'Add a job title, description, type, location, salary range, and deadline. Toggle remote if applicable. Hit Post Job.',
+        },
+        {
+          step: 2,
+          title: 'Review applications as they come in',
+          body: 'See all applicants in one place. Review their details, shortlist the best candidates, and move them through your pipeline.',
+        },
+        {
+          step: 3,
+          title: 'Hire and onboard',
+          body: 'Accept a candidate and they flow straight into your Staff Management module — roles, salary, and start date all pre-filled.',
+        },
       ]}
       prevFeature={{ label: 'Tax Calculation', href: '/features/tax' }}
       nextFeature={{ label: 'Staff Management', href: '/features/staff' }}

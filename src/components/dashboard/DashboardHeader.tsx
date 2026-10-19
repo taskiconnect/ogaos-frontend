@@ -1,78 +1,58 @@
 'use client'
-
-import { useTheme } from 'next-themes'
-import { Sun, Moon, Bell, Search } from 'lucide-react'
-import { usePathname } from 'next/navigation'
-import { useAuthStore } from '@/stores/authStore'
 import { getInitials } from '@/lib/utils'
-
-const ROUTE_LABELS: Record<string, string> = {
-  '/dashboard':             'Dashboard',
-  '/dashboard/sales':       'Sales',
-  '/dashboard/invoices':    'Invoices',
-  '/dashboard/expenses':    'Expenses',
-  '/dashboard/debts':       'Debts',
-  '/dashboard/products':    'Products',
-  '/dashboard/digital':     'Digital Store',
-  '/dashboard/stores':      'Stores',
-  '/dashboard/customers':   'Customers',
-  '/dashboard/staff':       'Staff',
-  '/dashboard/recruitment': 'Recruitment',
-  '/dashboard/settings':    'Settings',
+import { useAuthStore } from '@/stores/authStore'
+import { ArrowUpRight } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+const LABELS: Record<string, string> = {
+  sales: 'Sales',
+  invoices: 'Invoices',
+  expenses: 'Expenses',
+  debts: 'Debts',
+  products: 'Products',
+  digital: 'Digital store',
+  stores: 'Stores',
+  customers: 'Customers',
+  staff: 'Staff',
+  recruitment: 'Recruitment',
+  settings: 'Settings',
+  subscription: 'Subscription',
 }
-
 export default function DashboardHeader() {
-  const { theme, setTheme } = useTheme()
   const pathname = usePathname()
-  const { user } = useAuthStore()
-
-  const pageTitle   = ROUTE_LABELS[pathname] ?? 'Dashboard'
-  const displayName = user
-    ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()
-    : 'User'
-
+  const user = useAuthStore((s) => s.user)
+  const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Account'
+  const title = LABELS[pathname.split('/')[2]] || 'Overview'
   return (
-    /*
-     * On mobile the sidebar is hidden and a floating menu button sits at
-     * top-4 left-4 (w-9 = 36px, left-4 = 16px → occupies ~52px from left).
-     * pl-14 (56px) on mobile pushes the header content clear of that button.
-     * On lg+ the sidebar is always visible so we revert to the normal px-10.
-     */
-    <header className="sticky top-0 z-10 h-16 flex items-center gap-4 pl-14 pr-6 lg:px-10 border-b border-white/8 bg-[#0c0c12]/80 backdrop-blur-md">
-      <h1 className="text-base font-semibold text-white flex-1">{pageTitle}</h1>
-
-      {/* Search */}
-      <div className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-xl bg-white/5 border border-white/8 text-gray-400 text-sm w-52 cursor-text hover:border-white/15 transition-colors">
-        <Search className="w-3.5 h-3.5 shrink-0" />
-        <span className="text-xs">Search…</span>
-        <span className="ml-auto text-[10px] border border-white/15 rounded px-1.5 py-0.5">⌘K</span>
-      </div>
-
-      {/* Notifications */}
-      <button
-        className="relative w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/8 transition-all"
-        aria-label="Notifications"
-      >
-        <Bell className="w-4 h-4" />
-        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary ring-2 ring-[#0c0c12]" />
-      </button>
-
-      {/* Theme toggle */}
-      <button
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/8 transition-all"
-        aria-label="Toggle theme"
-      >
-        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-      </button>
-
-      {/* Avatar */}
-      <div
-        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white cursor-pointer ring-2 ring-primary/30 hover:ring-primary/60 transition-all shrink-0"
-        style={{ background: 'linear-gradient(135deg, #002b9d 0%, #3f9af5 100%)' }}
-        title={displayName}
-      >
-        {getInitials(displayName)}
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/90 pl-16 pr-5 backdrop-blur-xl lg:px-10">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-3 text-sm">
+        <Link href="/dashboard" className="hidden text-muted-foreground sm:inline">
+          Workspace
+        </Link>
+        <span className="hidden text-muted-foreground sm:inline">/</span>
+        <span className="font-medium">{title}</span>
+      </nav>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/dashboard/subscription"
+          className="hidden items-center gap-1.5 text-xs font-medium text-blue-400 sm:flex"
+        >
+          Manage plan
+          <ArrowUpRight className="size-3.5" />
+        </Link>
+        <Link
+          href={user?.role === 'owner' ? '/dashboard/settings' : '/dashboard/sales'}
+          aria-label={`Account: ${name}`}
+          className="flex items-center gap-2.5"
+        >
+          <span className="hidden text-right sm:block">
+            <span className="block text-xs font-medium">{name}</span>
+            <span className="block text-[10px] capitalize text-muted-foreground">{user?.role}</span>
+          </span>
+          <span className="grid size-9 place-items-center rounded-xl border border-blue-400/20 bg-blue-500/15 text-xs font-bold text-blue-300">
+            {getInitials(name)}
+          </span>
+        </Link>
       </div>
     </header>
   )

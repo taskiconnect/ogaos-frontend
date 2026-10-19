@@ -1,11 +1,10 @@
-import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
 
-import { getPublicBusinessFull } from '@/lib/api/public'
-import { formatCurrency } from '@/types/public'
 import { ProductDetailContent } from '@/components/public/ProductDetailContent'
+import { getPublicBusinessFull } from '@/lib/api/public'
 
 export const revalidate = 60
 
@@ -23,9 +22,24 @@ export async function generateMetadata({
     const biz = page.business
 
     const allProducts = [
-      ...page.digital_products.map((p) => ({ id: p.id, name: p.title, description: p.description, image: p.cover_image_url })),
-      ...page.physical_products.map((p) => ({ id: p.id, name: p.name, description: p.description, image: p.image_url })),
-      ...page.services.map((p) => ({ id: p.id, name: p.name, description: p.description, image: p.image_url })),
+      ...page.digital_products.map((p) => ({
+        id: p.id,
+        name: p.title,
+        description: p.description,
+        image: p.cover_image_url,
+      })),
+      ...page.physical_products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        image: p.image_url,
+      })),
+      ...page.services.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        image: p.image_url,
+      })),
     ]
 
     const product = allProducts.find((p) => p.id === productId)
@@ -42,7 +56,9 @@ export async function generateMetadata({
       openGraph: {
         title,
         description,
-        ...(product.image ? { images: [{ url: product.image, width: 1200, height: 630, alt: product.name }] } : {}),
+        ...(product.image
+          ? { images: [{ url: product.image, width: 1200, height: 630, alt: product.name }] }
+          : {}),
       },
     }
   } catch {
@@ -50,11 +66,7 @@ export async function generateMetadata({
   }
 }
 
-export default async function ProductDetailPage({
-  params,
-}: {
-  params: Promise<PageParams>
-}) {
+export default async function ProductDetailPage({ params }: { params: Promise<PageParams> }) {
   const { slug, productId } = await params
 
   let pageData
@@ -98,16 +110,11 @@ export default async function ProductDetailPage({
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <ProductDetailContent
-          product={product}
-          itemKind={itemKind}
-          biz={biz}
-          slug={slug}
-        />
+        <ProductDetailContent product={product} itemKind={itemKind} biz={biz} slug={slug} />
       </div>
 
       <div className="border-t border-dash-border py-8 text-center">
-        <a
+        <Link
           href="/"
           className="text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
@@ -115,7 +122,7 @@ export default async function ProductDetailPage({
           <span className="font-black text-foreground">
             Oga<span className="text-brand-blue">OS</span>
           </span>
-        </a>
+        </Link>
       </div>
     </div>
   )

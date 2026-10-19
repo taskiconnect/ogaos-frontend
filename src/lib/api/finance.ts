@@ -1,39 +1,34 @@
+import { dateBounds, monthRange } from '@/lib/domain/dates'
 import api from './client'
-import type { ApiSuccess, ApiMessage, ApiCursorList } from './types'
+import { handleApiError } from './errors'
 import type {
-  Sale, CreateSaleRequest, SaleListParams,
-  Invoice, CreateInvoiceRequest, UpdateInvoiceRequest, InvoiceListParams,
-  Expense, CreateExpenseRequest, UpdateExpenseRequest, ExpenseMonthlySummary, ExpenseListParams,
-  Debt, CreateDebtRequest, RecordDebtPaymentRequest, DebtListParams,
+  ApiCursorList,
+  ApiMessage,
+  ApiSuccess,
+  CreateDebtRequest,
+  CreateExpenseRequest,
+  CreateInvoiceRequest,
+  CreateSaleRequest,
+  Debt,
+  DebtListParams,
+  Expense,
+  ExpenseListParams,
+  ExpenseMonthlySummary,
+  Invoice,
+  InvoiceListParams,
+  RecordDebtPaymentRequest,
+  Sale,
+  SaleListParams,
+  UpdateExpenseRequest,
+  UpdateInvoiceRequest,
 } from './types'
-
-function handleApiError(error: any): never {
-  const status = error?.response?.status
-  const data = error?.response?.data
-
-  if (status === 402 && data?.upgrade_required) {
-    throw {
-      type: 'subscription',
-      status,
-      ...data,
-    }
-  }
-
-  throw {
-    type: 'api',
-    status,
-    message: data?.message || 'Something went wrong',
-  }
-}
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
 
 export const createSale = async (data: CreateSaleRequest, idempotencyKey?: string) => {
   try {
     const res = await api.post<ApiSuccess<Sale>>('/sales', data, {
-      headers: idempotencyKey
-        ? { 'X-Idempotency-Key': idempotencyKey }
-        : undefined,
+      headers: idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : undefined,
     })
     return res.data.data
   } catch (error) {
@@ -43,14 +38,11 @@ export const createSale = async (data: CreateSaleRequest, idempotencyKey?: strin
 
 export const listSales = async (params?: SaleListParams): Promise<ApiCursorList<Sale>> => {
   try {
-    const p: Record<string, unknown> = { ...params }
+    const p: Record<string, unknown> = {
+      ...dateBounds(params),
+      limit: Math.min(100, Math.max(1, params?.limit ?? 20)),
+    }
 
-    if (p.date_from && typeof p.date_from === 'string' && p.date_from.length === 10) {
-      p.date_from = `${p.date_from}T00:00:00Z`
-    }
-    if (p.date_to && typeof p.date_to === 'string' && p.date_to.length === 10) {
-      p.date_to = `${p.date_to}T23:59:59Z`
-    }
     if (p.cursor && typeof p.cursor === 'string') {
       p.page = parseInt(p.cursor, 10) || 1
       delete p.cursor
@@ -64,7 +56,7 @@ export const listSales = async (params?: SaleListParams): Promise<ApiCursorList<
 
     const sales = res.data.data ?? []
     const meta = res.data.meta ?? { page: 1, limit: 20, total: 0 }
-    const hasMore = sales.length >= meta.limit
+    const hasMore = meta.page * meta.limit < meta.total
 
     return {
       success: true,
@@ -128,38 +120,30 @@ export interface SalesMonthlySummary {
   unique_customers: number
 }
 
-export const getSalesSummary = async (
-  year: number,
-  month: number,
-): Promise<SalesMonthlySummary> => {
-  try {
-    const res = await api.get<ApiSuccess<SalesMonthlySummary>>('/sales/summary', {
-      params: { year, month },
-    })
-    return res.data.data
-  } catch {
-    const monthStr = String(month).padStart(2, '0')
-    const date_from = `${year}-${monthStr}-01T00:00:00Z`
-    const date_to = `${year}-${monthStr}-31T23:59:59Z`
-
-    const res = await api.get<{
-      success: boolean
-      data: Sale[]
-      meta: { total: number; page: number; limit: number }
-    }>('/sales', { params: { date_from, date_to, limit: 500 } })
-
-    const sales = (res.data.data ?? []).filter((s) => s.status !== 'cancelled')
-    const uniqueCustomers = new Set(
-      sales.filter((s) => s.customer_id).map((s) => s.customer_id)
-    ).size
-
-    return {
-      year,
-      month,
-      total_revenue: sales.reduce((sum, s) => sum + s.total_amount, 0),
-      total_sales: sales.length,
-      unique_customers: uniqueCustomers,
-    }
+export async function collectSales(params: SaleListParams = {}, maxPages = 20) {
+  const data: Sale[] = []
+  let cursor: string | undefined
+  for (let page = 0; page < maxPages; page++) {
+    const result = await listSales({ ...params, limit: 100, cursor })
+    data.push(...result.data)
+    if (!result.next_cursor) return { data, complete: true }
+    cursor = result.next_cursor
+  }
+  return { data, complete: false }
+}
+export async function getSalesSummary(year: number, month: number): Promise<SalesMonthlySummary> {
+  const result = await collectSales(monthRange(year, month))
+  if (!result.complete)
+    throw new Error(
+      'Full summary unavailable for this volume. A backend aggregate endpoint is required.',
+    )
+  const sales = result.data.filter((s) => s.status !== 'cancelled')
+  return {
+    year,
+    month,
+    total_revenue: sales.reduce((sum, s) => sum + s.amount_paid, 0),
+    total_sales: sales.length,
+    unique_customers: new Set(sales.flatMap((s) => (s.customer_id ? [s.customer_id] : []))).size,
   }
 }
 
@@ -194,7 +178,7 @@ export const reviseInvoice = async (id: string) => {
 
 export const listInvoices = async (params?: InvoiceListParams) => {
   try {
-    const res = await api.get<ApiCursorList<Invoice>>('/invoices', { params })
+    const res = await api.get<ApiCursorList<Invoice>>('/invoices', { params: dateBounds(params) })
     return res.data
   } catch (error) {
     handleApiError(error)
@@ -276,7 +260,7 @@ export const createExpense = async (data: CreateExpenseRequest) => {
 
 export const listExpenses = async (params?: ExpenseListParams) => {
   try {
-    const res = await api.get<ApiCursorList<Expense>>('/expenses', { params })
+    const res = await api.get<ApiCursorList<Expense>>('/expenses', { params: dateBounds(params) })
     return res.data
   } catch (error) {
     handleApiError(error)

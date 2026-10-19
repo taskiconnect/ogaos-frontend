@@ -2,20 +2,27 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useMemo } from 'react'
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listSales, cancelSale, getSalesSummary } from '@/lib/api/finance'
-import Sidebar from '@/components/dashboard/Sidebar'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import {
-  Plus, Search, ShoppingBag, ChevronDown,
-  ShoppingCart, TrendingUp, Users, CreditCard, Receipt, XCircle, X,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { Sale } from '@/lib/api/types'
+import ReceiptModal from '@/components/sales/ReceiptModal'
 import RecordSaleModal from '@/components/sales/RecordSaleModal'
 import SaleDetailDrawer from '@/components/sales/SaleDetailDrawer'
-import ReceiptModal from '@/components/sales/ReceiptModal'
+import { cancelSale, getSalesSummary, listSales } from '@/lib/api/finance'
+import type { Sale } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  ChevronDown,
+  CreditCard,
+  Plus,
+  Receipt,
+  Search,
+  ShoppingBag,
+  ShoppingCart,
+  TrendingUp,
+  Users,
+  X,
+  XCircle,
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 function formatMoney(kobo: number, options?: { compactFromBillions?: boolean; decimals?: number }) {
@@ -54,8 +61,13 @@ function getRowAmountTextClass(value: string) {
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({
-  label, value, sub,
-  icon: Icon, iconColor, iconBg, valueColor,
+  label,
+  value,
+  sub,
+  icon: Icon,
+  iconColor,
+  iconBg,
+  valueColor,
 }: {
   label: string
   value: string
@@ -67,17 +79,24 @@ function StatCard({
 }) {
   return (
     <div className="relative bg-[rgba(255,255,255,0.03)] border border-white/10 rounded-2xl p-5 overflow-hidden">
-      <div className={cn('absolute top-4 right-4 w-7 h-7 rounded-lg flex items-center justify-center', iconBg)}>
+      <div
+        className={cn(
+          'absolute top-4 right-4 w-7 h-7 rounded-lg flex items-center justify-center',
+          iconBg,
+        )}
+      >
         <Icon className={cn('w-3.5 h-3.5', iconColor)} />
       </div>
 
       <div className="pr-10 min-w-0">
-        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</p>
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+          {label}
+        </p>
         <p
           className={cn(
             'font-bold leading-tight break-words',
             getAmountTextClass(value),
-            valueColor ?? 'text-white'
+            valueColor ?? 'text-white',
           )}
         >
           {value}
@@ -117,15 +136,18 @@ function CancelModal({
             </div>
           </div>
 
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-dash-hover text-muted-foreground">
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-dash-hover text-muted-foreground"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <p className="text-sm text-muted-foreground">
-          This sale will be marked as <span className="font-semibold text-red-400">cancelled</span> and excluded
-          from revenue and totals. Stock, customer stats, and any linked debt will be automatically reversed.
-          The record stays visible for your audit trail.
+          This sale will be marked as <span className="font-semibold text-red-400">cancelled</span>{' '}
+          and excluded from revenue and totals. Stock, customer stats, and any linked debt will be
+          automatically reversed. The record stays visible for your audit trail.
         </p>
 
         <div>
@@ -134,7 +156,7 @@ function CancelModal({
           </label>
           <input
             value={reason}
-            onChange={e => setReason(e.target.value)}
+            onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. Customer returned item, duplicate entry…"
             className="w-full h-10 rounded-xl bg-dash-bg border border-dash-border px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
           />
@@ -177,6 +199,12 @@ export default function SalesPage() {
   const [methodFilter, setMethodFilter] = useState('')
   const [dateOpt, setDateOpt] = useState('month')
   const [showRecord, setShowRecord] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (new URLSearchParams(window.location.search).get('new') === '1') setShowRecord(true)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [])
   const [cancelTarget, setCancelTarget] = useState<Sale | null>(null)
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null)
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null)
@@ -225,21 +253,22 @@ export default function SalesPage() {
 
   const allSales: Sale[] = useMemo(
     () => (data?.pages ?? []).flatMap((p: any) => p.data ?? []),
-    [data]
+    [data],
   )
 
   const filtered = useMemo(() => {
     let list = allSales
 
-    if (methodFilter) list = list.filter(s => s.payment_method === methodFilter)
+    if (methodFilter) list = list.filter((s) => s.payment_method === methodFilter)
 
     if (!search.trim()) return list
 
     const q = search.toLowerCase()
-    return list.filter(s =>
-      s.sale_number.toLowerCase().includes(q) ||
-      (s.customer?.first_name ?? '').toLowerCase().includes(q) ||
-      (s.customer?.last_name ?? '').toLowerCase().includes(q)
+    return list.filter(
+      (s) =>
+        s.sale_number.toLowerCase().includes(q) ||
+        (s.customer?.first_name ?? '').toLowerCase().includes(q) ||
+        (s.customer?.last_name ?? '').toLowerCase().includes(q),
     )
   }, [allSales, search, methodFilter])
 
@@ -273,10 +302,7 @@ export default function SalesPage() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <Sidebar />
-      <div className="lg:pl-72">
-        <DashboardHeader />
-
+      <div className="">
         <main className="p-6 lg:p-10 space-y-8 pb-20">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -337,14 +363,14 @@ export default function SalesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search sale # or customer…"
                 className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25"
               />
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              {(['', 'completed', 'partial', 'cancelled'] as const).map(s => (
+              {(['', 'completed', 'partial', 'cancelled'] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setStatusFilter(s)}
@@ -352,7 +378,7 @@ export default function SalesPage() {
                     'px-3 py-2 rounded-xl text-xs font-semibold border uppercase transition-all',
                     statusFilter === s
                       ? 'bg-primary border-primary text-white'
-                      : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                      : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20',
                   )}
                 >
                   {s || 'All'}
@@ -362,11 +388,11 @@ export default function SalesPage() {
 
             <select
               value={methodFilter}
-              onChange={e => setMethodFilter(e.target.value)}
+              onChange={(e) => setMethodFilter(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-gray-300 focus:outline-none"
             >
               <option value="">All methods</option>
-              {PAYMENT_METHODS.map(m => (
+              {PAYMENT_METHODS.map((m) => (
                 <option key={m} value={m}>
                   {m.charAt(0).toUpperCase() + m.slice(1)}
                 </option>
@@ -375,10 +401,10 @@ export default function SalesPage() {
 
             <select
               value={dateOpt}
-              onChange={e => setDateOpt(e.target.value)}
+              onChange={(e) => setDateOpt(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-gray-300 focus:outline-none"
             >
-              {DATE_OPTS.map(o => (
+              {DATE_OPTS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -397,7 +423,7 @@ export default function SalesPage() {
               </div>
             ) : (
               <div className="divide-y divide-white/5">
-                {filtered.map(sale => {
+                {filtered.map((sale) => {
                   const isCancelled = sale.status === 'cancelled'
                   const totalAmountText = formatMoney(sale.total_amount)
                   const balanceDueText = formatMoney(sale.balance_due)
@@ -407,7 +433,7 @@ export default function SalesPage() {
                       key={sale.id}
                       className={cn(
                         'flex items-center gap-4 px-5 py-4 transition-colors',
-                        isCancelled ? 'opacity-50' : 'hover:bg-white/[0.02] cursor-pointer'
+                        isCancelled ? 'opacity-50' : 'hover:bg-white/[0.02] cursor-pointer',
                       )}
                       onClick={() => {
                         if (!isCancelled) setSelectedSaleId(sale.id)
@@ -416,7 +442,9 @@ export default function SalesPage() {
                       <div
                         className={cn(
                           'w-10 h-10 rounded-xl border flex items-center justify-center shrink-0',
-                          isCancelled ? 'bg-red-500/5 border-red-500/20' : 'bg-white/5 border-white/10'
+                          isCancelled
+                            ? 'bg-red-500/5 border-red-500/20'
+                            : 'bg-white/5 border-white/10',
                         )}
                       >
                         {isCancelled ? (
@@ -430,7 +458,7 @@ export default function SalesPage() {
                         <p
                           className={cn(
                             'text-sm font-medium truncate',
-                            isCancelled ? 'text-gray-500 line-through' : 'text-white'
+                            isCancelled ? 'text-gray-500 line-through' : 'text-white',
                           )}
                         >
                           {sale.customer
@@ -442,19 +470,22 @@ export default function SalesPage() {
                           <span
                             className={cn(
                               'text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border',
-                              STATUS_CLS[sale.status] ?? STATUS_CLS.completed
+                              STATUS_CLS[sale.status] ?? STATUS_CLS.completed,
                             )}
                           >
                             {sale.status}
                           </span>
                           <span className="text-xs text-gray-500">{sale.sale_number}</span>
-                          <span className="text-xs text-gray-500 capitalize">{sale.payment_method}</span>
+                          <span className="text-xs text-gray-500 capitalize">
+                            {sale.payment_method}
+                          </span>
                           <span className="text-xs text-gray-600">{fmtDate(sale.created_at)}</span>
                         </div>
 
                         {isCancelled && sale.notes && (
                           <p className="text-[11px] text-red-400/70 mt-1 truncate italic">
-                            Reason: {sale.notes.replace(/^Cancelled by staff \(user [^)]+\):\s*/i, '')}
+                            Reason:{' '}
+                            {sale.notes.replace(/^Cancelled by staff \(user [^)]+\):\s*/i, '')}
                           </p>
                         )}
                       </div>
@@ -464,7 +495,7 @@ export default function SalesPage() {
                           className={cn(
                             'font-semibold leading-tight break-words',
                             getRowAmountTextClass(totalAmountText),
-                            isCancelled ? 'text-gray-500 line-through' : 'text-white'
+                            isCancelled ? 'text-gray-500 line-through' : 'text-white',
                           )}
                         >
                           {totalAmountText}
@@ -535,10 +566,7 @@ export default function SalesPage() {
         }}
       />
 
-      <ReceiptModal
-        sale={receiptSale}
-        onClose={() => setReceiptSale(null)}
-      />
+      <ReceiptModal sale={receiptSale} onClose={() => setReceiptSale(null)} />
     </div>
   )
 }

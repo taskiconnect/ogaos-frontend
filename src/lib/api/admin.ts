@@ -3,30 +3,30 @@
 // All calls go to Next.js API proxy routes (/api/admin/*).
 // The proxy (src/lib/api/proxy.ts) forwards them server-side to the Go backend,
 
-import api from './adminClient'
 import type {
-  AdminLoginPayload,
+  AdminListApiResponse,
   AdminLoginApiResponse,
+  AdminLoginPayload,
+  AdminProfileApiResponse,
+  AdminResendOTPPayload,
+  AdminSetupPasswordPayload,
   AdminVerifyOTPPayload,
   AdminVerifyOTPResponse,
-  AdminSetupPasswordPayload,
-  AdminResendOTPPayload,
-  AdminProfileApiResponse,
-  AdminListApiResponse,
-  InviteAdminPayload,
-  UpdateAdminPayload,
   ApiResponse,
-  CreateCouponPayload,
-  UpdateCouponPayload,
   CouponApiResponse,
   CouponListApiResponse,
+  CreateCouponPayload,
+  InviteAdminPayload,
+  UpdateAdminPayload,
+  UpdateCouponPayload,
 } from '@/types/admin'
 import type {
-  AdminBusinessListParams,
-  AdminBusinessListApiResponse,
   AdminBusinessApiResponse,
+  AdminBusinessListApiResponse,
+  AdminBusinessListParams,
   AdminBusinessSubscriptionApiResponse,
 } from '@/types/admin-business'
+import api from './adminClient'
 
 // ── Auth flow ─────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,9 @@ export async function adminLogin(payload: AdminLoginPayload): Promise<AdminLogin
   return res.data
 }
 
-export async function adminVerifyOTP(payload: AdminVerifyOTPPayload): Promise<AdminVerifyOTPResponse> {
+export async function adminVerifyOTP(
+  payload: AdminVerifyOTPPayload,
+): Promise<AdminVerifyOTPResponse> {
   const res = await api.post<AdminVerifyOTPResponse>('/api/admin/auth/verify-otp', payload)
   return res.data
 }
@@ -135,7 +137,7 @@ export async function deleteCoupon(id: string): Promise<ApiResponse> {
 //    endpoints for write-role restrictions, enforced server-side) ─────────────
 
 export async function listAdminBusinesses(
-  params?: AdminBusinessListParams
+  params?: AdminBusinessListParams,
 ): Promise<AdminBusinessListApiResponse> {
   const res = await api.get<AdminBusinessListApiResponse>('/api/admin/businesses', { params })
   return res.data
@@ -146,7 +148,10 @@ export async function getAdminBusiness(id: string): Promise<AdminBusinessApiResp
   return res.data
 }
 
-export async function setAdminBusinessVerified(id: string, isVerified: boolean): Promise<ApiResponse> {
+export async function setAdminBusinessVerified(
+  id: string,
+  isVerified: boolean,
+): Promise<ApiResponse> {
   const res = await api.patch<ApiResponse>(`/api/admin/businesses/${id}/verify`, {
     is_verified: isVerified,
   })
@@ -156,22 +161,22 @@ export async function setAdminBusinessVerified(id: string, isVerified: boolean):
 export async function compAdminBusinessSubscription(
   id: string,
   plan: string,
-  durationDays: number
+  durationDays: number,
 ): Promise<AdminBusinessSubscriptionApiResponse> {
   const res = await api.post<AdminBusinessSubscriptionApiResponse>(
     `/api/admin/businesses/${id}/subscription/comp`,
-    { plan, duration_days: durationDays }
+    { plan, duration_days: durationDays },
   )
   return res.data
 }
 
 export async function extendAdminBusinessSubscription(
   id: string,
-  days: number
+  days: number,
 ): Promise<AdminBusinessSubscriptionApiResponse> {
   const res = await api.post<AdminBusinessSubscriptionApiResponse>(
     `/api/admin/businesses/${id}/subscription/extend`,
-    { days }
+    { days },
   )
   return res.data
 }

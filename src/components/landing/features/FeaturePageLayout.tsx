@@ -1,11 +1,11 @@
 'use client'
 
-import Link from 'next/link'
+import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
+import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
-import { LandingHeader } from '@/components/shared/LandingHeader'
-import { Footer } from '@/components/shared/Footer'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 export interface FeaturePageProps {
   tag: string
@@ -27,30 +27,40 @@ const easing = [0.22, 1, 0.36, 1] as const
 
 const item = {
   hidden: { opacity: 0, y: 22 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { 
-      duration: 0.7, 
-      ease: easing // Use the const assertion
-    } 
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.7,
+      ease: easing, // Use the const assertion
+    },
   },
 }
 
 const container = {
   hidden: { opacity: 0 },
-  visible: { 
-    opacity: 1, 
-    transition: { 
-      staggerChildren: 0.1, 
-      delayChildren: 0.1 
-    } 
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
   },
 }
 
 export function FeaturePageLayout({
-  tag, title, subtitle, description, accent, image, icon: Icon,
-  benefits, howItWorks, mockup, nextFeature, prevFeature,
+  tag,
+  title,
+  subtitle,
+  description,
+  accent,
+  image,
+  icon: Icon,
+  benefits,
+  howItWorks,
+  mockup,
+  nextFeature,
+  prevFeature,
 }: FeaturePageProps) {
   return (
     <div className="min-h-screen bg-background text-foreground antialiased">
@@ -59,17 +69,28 @@ export function FeaturePageLayout({
       {/* ── HERO ── */}
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
         {/* Full-bleed background image */}
-        <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-center" aria-hidden />
+        <img
+          src={image}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          aria-hidden
+        />
         <div className="absolute inset-0 bg-linear-to-r from-black/92 via-black/70 to-black/35" />
         <div className="absolute inset-0 bg-linear-to-b from-black/50 via-transparent to-black/70" />
         <div
           className="absolute inset-0 opacity-20"
-          style={{ background: `radial-gradient(ellipse at 15% 50%, ${accent}50, transparent 60%)` }}
+          style={{
+            background: `radial-gradient(ellipse at 15% 50%, ${accent}50, transparent 60%)`,
+          }}
         />
 
         <div className="relative z-10 container mx-auto max-w-7xl px-6 sm:px-10 lg:px-16 pt-28 pb-20">
           {/* Back link */}
-          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
+          <motion.div
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             <Link
               href="/#features"
               className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors mb-10 group"
@@ -83,10 +104,18 @@ export function FeaturePageLayout({
             {/* Left: copy */}
             <motion.div variants={container} initial="hidden" animate="visible">
               <motion.div variants={item} className="mb-6 inline-flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${accent}25` }}>
+                <div
+                  className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: `${accent}25` }}
+                >
                   <Icon className="w-4 h-4" style={{ color: accent }} />
                 </div>
-                <span className="text-xs font-bold tracking-[0.18em] uppercase" style={{ color: accent }}>{tag}</span>
+                <span
+                  className="text-xs font-bold tracking-[0.18em] uppercase"
+                  style={{ color: accent }}
+                >
+                  {tag}
+                </span>
               </motion.div>
 
               <motion.h1
@@ -96,11 +125,17 @@ export function FeaturePageLayout({
                 {title}
               </motion.h1>
 
-              <motion.p variants={item} className="text-lg lg:text-xl text-white/55 leading-relaxed mb-4 max-w-lg">
+              <motion.p
+                variants={item}
+                className="text-lg lg:text-xl text-white/55 leading-relaxed mb-4 max-w-lg"
+              >
                 {subtitle}
               </motion.p>
 
-              <motion.p variants={item} className="text-base text-white/40 leading-relaxed mb-10 max-w-md">
+              <motion.p
+                variants={item}
+                className="text-base text-white/40 leading-relaxed mb-10 max-w-md"
+              >
                 {description}
               </motion.p>
 
@@ -110,7 +145,7 @@ export function FeaturePageLayout({
                   className="h-13 px-8 text-base font-semibold rounded-full text-white shadow-lg transition-all"
                   style={{ background: `linear-gradient(135deg, ${accent}cc, ${accent})` }}
                 >
-                  Get started — it's free
+                  Get started — it&apos;s free
                 </Button>
                 <Button
                   size="lg"
@@ -201,7 +236,10 @@ export function FeaturePageLayout({
 
           <div className="relative">
             {/* Connector line */}
-            <div className="absolute left-6 top-8 bottom-8 w-px bg-border/60 hidden sm:block" aria-hidden />
+            <div
+              className="absolute left-6 top-8 bottom-8 w-px bg-border/60 hidden sm:block"
+              aria-hidden
+            />
 
             <div className="space-y-8">
               {howItWorks.map((step, i) => (
@@ -232,7 +270,12 @@ export function FeaturePageLayout({
 
       {/* ── CTA BANNER ── */}
       <section className="relative py-24 overflow-hidden">
-        <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover object-center opacity-30" aria-hidden />
+        <img
+          src={image}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-30"
+          aria-hidden
+        />
         <div className="absolute inset-0 bg-linear-to-r from-black/90 via-black/80 to-black/90" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -245,7 +288,8 @@ export function FeaturePageLayout({
             Ready to try {tag}?
           </h2>
           <p className="text-white/55 text-lg mb-8">
-            Join thousands of Nigerian business owners already using OgaOS. Free to start, no credit card needed.
+            Join thousands of Nigerian business owners already using OgaOS. Free to start, no credit
+            card needed.
           </p>
           <Button
             size="lg"
@@ -267,7 +311,10 @@ export function FeaturePageLayout({
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             <span>{prevFeature.label}</span>
           </Link>
-          <Link href="/" className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+          <Link
+            href="/"
+            className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          >
             All features
           </Link>
           <Link

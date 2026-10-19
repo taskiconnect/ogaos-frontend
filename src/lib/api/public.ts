@@ -1,18 +1,24 @@
 // src/lib/api/public.ts
 
 import type {
-  PublicBusinessPage,
-  PublicOrderFulfillmentResponse,
-  PublicBusinessSearchResponse,
-  SearchPublicBusinessesParams,
-  PublicDigitalStoreResponse,
-  PublicDigitalProductResponse,
   InitializeDigitalCheckoutRequest,
   InitializeDigitalCheckoutResponse,
+  PublicBusinessPage,
+  PublicBusinessSearchResponse,
+  PublicDigitalProductResponse,
+  PublicDigitalStoreResponse,
+  PublicOrderFulfillmentResponse,
+  SearchPublicBusinessesParams,
 } from '@/types/public'
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1'
+  typeof window !== 'undefined'
+    ? '/api'
+    : (
+        process.env.API_URL ??
+        process.env.NEXT_PUBLIC_API_URL ??
+        'http://127.0.0.1:8080/api/v1'
+      ).replace(/\/+$/, '')
 
 async function parseJson<T>(res: Response): Promise<T | null> {
   try {
@@ -26,9 +32,6 @@ export async function getPublicBusinessFull(slug: string): Promise<PublicBusines
   const res = await fetch(`${API_BASE}/public/business/${slug}/full`, {
     method: 'GET',
     next: { revalidate: 60 },
-    headers: {
-      Connection: 'close',
-    },
   })
 
   const json = await parseJson<{
@@ -51,7 +54,7 @@ export async function getPublicBusinessFull(slug: string): Promise<PublicBusines
 }
 
 export async function searchPublicBusinesses(
-  params: SearchPublicBusinessesParams
+  params: SearchPublicBusinessesParams,
 ): Promise<PublicBusinessSearchResponse> {
   const searchParams = new URLSearchParams()
 
@@ -99,15 +102,10 @@ export async function searchPublicBusinesses(
   return data
 }
 
-export async function getPublicDigitalStore(
-  slug: string
-): Promise<PublicDigitalStoreResponse> {
+export async function getPublicDigitalStore(slug: string): Promise<PublicDigitalStoreResponse> {
   const res = await fetch(`${API_BASE}/public/digital-store/${slug}`, {
     method: 'GET',
     next: { revalidate: 60 },
-    headers: {
-      Connection: 'close',
-    },
   })
 
   const json = await parseJson<{
@@ -129,15 +127,10 @@ export async function getPublicDigitalStore(
   return data
 }
 
-export async function getPublicDigitalProduct(
-  slug: string
-): Promise<PublicDigitalProductResponse> {
+export async function getPublicDigitalProduct(slug: string): Promise<PublicDigitalProductResponse> {
   const res = await fetch(`${API_BASE}/public/digital-store/product/${slug}`, {
     method: 'GET',
     next: { revalidate: 60 },
-    headers: {
-      Connection: 'close',
-    },
   })
 
   const json = await parseJson<{
@@ -161,19 +154,16 @@ export async function getPublicDigitalProduct(
 
 export async function initializeDigitalCheckout(
   productId: string,
-  payload: InitializeDigitalCheckoutRequest
+  payload: InitializeDigitalCheckoutRequest,
 ): Promise<InitializeDigitalCheckoutResponse> {
-  const res = await fetch(
-    `${API_BASE}/public/digital-store/${productId}/initialize-payment`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      cache: 'no-store',
-    }
-  )
+  const res = await fetch(`${API_BASE}/public/digital-store/${productId}/initialize-payment`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  })
 
   const json = await parseJson<InitializeDigitalCheckoutResponse>(res)
 
@@ -186,7 +176,7 @@ export async function initializeDigitalCheckout(
 
 export async function getOrderFulfillment(
   orderId: string,
-  token: string
+  token: string,
 ): Promise<PublicOrderFulfillmentResponse> {
   const qs = new URLSearchParams({ token })
 
@@ -195,7 +185,7 @@ export async function getOrderFulfillment(
     {
       method: 'GET',
       cache: 'no-store',
-    }
+    },
   )
 
   const json = await parseJson<PublicOrderFulfillmentResponse>(res)
@@ -208,5 +198,5 @@ export async function getOrderFulfillment(
 }
 
 export function getTokenDownloadUrl(token: string): string {
-  return `${API_BASE}/public/digital-downloads/${token}`
+  return `/api/public/digital-downloads/${encodeURIComponent(token)}`
 }

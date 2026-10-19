@@ -1,19 +1,15 @@
-import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { LandingHeader } from '@/components/shared/LandingHeader'
-import { Footer } from '@/components/shared/Footer'
-import { Button } from '@/components/ui/button'
 import { JobApplicationForm } from '@/components/recruit/JobApplicationForm'
+import { Footer } from '@/components/shared/Footer'
+import { LandingHeader } from '@/components/shared/LandingHeader'
+import { Button } from '@/components/ui/button'
 import { getPublicJobSSR } from '@/lib/server/recruitment'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
 
 type Params = Promise<{ slug: string }>
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Params
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params
   const job = await getPublicJobSSR(slug)
 
@@ -32,11 +28,7 @@ export async function generateMetadata({
   }
 }
 
-export default async function ApplyPage({
-  params,
-}: {
-  params: Params
-}) {
+export default async function ApplyPage({ params }: { params: Params }) {
   const { slug } = await params
   const job = await getPublicJobSSR(slug)
 

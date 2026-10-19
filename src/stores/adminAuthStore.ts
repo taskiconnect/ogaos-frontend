@@ -1,7 +1,8 @@
+import { clearPrivateCache } from '@/lib/query-client'
 // src/stores/adminAuthStore.ts
+import type { AdminProfile } from '@/types/admin'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { AdminProfile } from '@/types/admin'
 
 interface AdminAuthState {
   user: AdminProfile | null
@@ -19,36 +20,45 @@ interface AdminAuthState {
 
 export const useAdminAuthStore = create<AdminAuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       accessToken: null,
       isAuthenticated: false,
       tempToken: null,
       otpRequired: false,
 
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      setUser: (user) => {
+        if (get().user?.id !== user?.id) clearPrivateCache()
+        set({ user, isAuthenticated: !!user })
+      },
       setAccessToken: (token) => set({ accessToken: token }),
       setTempToken: (tempToken) => set({ tempToken }),
       setOTPRequired: (otpRequired) => set({ otpRequired }),
 
-      clearAuth: () =>
+      clearAuth: () => {
+        clearPrivateCache()
         set({
           user: null,
           accessToken: null,
           isAuthenticated: false,
           tempToken: null,
           otpRequired: false,
-        }),
+        })
+      },
     }),
     {
       name: 'ogaos-admin-auth-storage',
-      // Persist the token so the axios interceptor can rehydrate it on refresh.
+      version: 1,
+      migrate: (value) => {
+        const old = value as Partial<AdminAuthState>
+        return { user: old.user ?? null, isAuthenticated: !!old.user, accessToken: null }
+      },
+      // Only the profile is persisted. Access tokens stay in memory.
       // tempToken and otpRequired are ephemeral flow state — never persisted.
       partialize: (state) => ({
-        user:            state.user,
-        accessToken:     state.accessToken,
+        user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 )
