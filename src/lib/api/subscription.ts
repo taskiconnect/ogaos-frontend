@@ -1,3 +1,4 @@
+import { ApiError } from './errors'
 // src/lib/api/subscription.ts
 import api from './client'
 import type {
@@ -15,8 +16,8 @@ export const getMySubscription = async (): Promise<ApiSuccess<Subscription> | nu
   try {
     const { data } = await api.get<ApiSuccess<Subscription>>('/subscriptions/me')
     return data
-  } catch (err: any) {
-    if (err?.response?.status === 404) {
+  } catch (err: unknown) {
+    if (err instanceof ApiError && err.status === 404) {
       return null
     }
     throw err

@@ -1,5 +1,6 @@
 'use client'
 
+import { isSubscriptionUsable } from '@/lib/subscription-access'
 import type { Subscription } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 import { CalendarClock, Crown, ShieldCheck } from 'lucide-react'
@@ -19,7 +20,7 @@ export default function SubscriptionSummaryCard({
   subscription: Subscription | null
 }) {
   const plan = subscription?.plan ?? 'free'
-  const status = subscription?.status ?? 'active'
+  const status = subscription && subscription.plan !== 'free' && !isSubscriptionUsable(subscription) && ['active', 'grace_period'].includes(subscription.status) ? 'expired' : subscription?.status ?? 'active'
 
   return (
     <div className="rounded-3xl border border-white/10 bg-white/2 p-6">

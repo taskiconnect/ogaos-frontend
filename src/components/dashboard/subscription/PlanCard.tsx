@@ -9,12 +9,21 @@ interface Props {
   plan: SubscriptionPlan
   selected?: boolean
   currentPlan?: SubscriptionPlan
+  currentPlanActive: boolean
   onSelect?: (plan: SubscriptionPlan) => void
 }
 
-export default function PlanCard({ plan, selected, currentPlan, onSelect }: Props) {
+export default function PlanCard({
+  plan,
+  selected,
+  currentPlan,
+  currentPlanActive,
+  onSelect,
+}: Props) {
   const meta = PLAN_META[plan]
-  const isCurrent = currentPlan === plan
+  const isSamePlan = currentPlan === plan
+  const isCurrent = isSamePlan && currentPlanActive
+  const canRenew = isSamePlan && !currentPlanActive && (plan === 'growth' || plan === 'pro')
 
   return (
     <div
@@ -54,6 +63,7 @@ export default function PlanCard({ plan, selected, currentPlan, onSelect }: Prop
       </ul>
 
       <button
+        type="button"
         disabled={isCurrent}
         onClick={() => onSelect?.(plan)}
         className={cn(
@@ -70,7 +80,7 @@ export default function PlanCard({ plan, selected, currentPlan, onSelect }: Prop
             : undefined
         }
       >
-        {isCurrent ? 'Current Plan' : meta.cta}
+        {isCurrent ? 'Current Plan' : canRenew ? `Renew ${meta.label}` : meta.cta}
       </button>
     </div>
   )

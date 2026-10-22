@@ -32,18 +32,12 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
   const [lowThreshold, setLowThreshold] = useState('5')
   const [isActive, setIsActive] = useState(true)
   const [error, setError] = useState('')
-  const [idempotencyKey, setIdempotencyKey] = useState('')
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
 
   const [isUploadingImage, setIsUploadingImage] = useState(false)
 
-  useEffect(() => {
-    if (open && !editing) {
-      setIdempotencyKey(crypto.randomUUID())
-    }
-  }, [open, editing])
 
   useEffect(() => {
     if (editing) {
@@ -113,7 +107,7 @@ export default function ProductModal({ open, onOpenChange, onSuccess, editing }:
 
   const createMut = useMutation({
     mutationFn: async (d: CreateProductRequest) => {
-      const product = await createProduct(d, idempotencyKey)
+      const product = await createProduct(d)
       if (selectedImage) {
         setIsUploadingImage(true)
         try {

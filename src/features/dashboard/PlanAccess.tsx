@@ -33,7 +33,7 @@ export function PlanAccess({ children }: { children: React.ReactNode }) {
       </div>
     )
   const sub = q.subscription
-  const active = sub && ['active', 'grace_period'].includes(sub.status)
+  const active = sub && q.isActive
   const allowed =
     active &&
     (sub.plan === 'custom' || sub.plan === 'pro' || (need === 'growth' && sub.plan === 'growth'))

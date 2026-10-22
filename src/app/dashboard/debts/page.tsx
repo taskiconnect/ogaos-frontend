@@ -412,7 +412,9 @@ export default function DebtsPage() {
           onClose={() => setSelected(null)}
           onPayment={() => {
             qc.invalidateQueries({ queryKey: ['debts'] })
-            qc.invalidateQueries({ queryKey: ['sales', 'partial-for-debts'] })
+            qc.invalidateQueries({ queryKey: ['sales'] })
+            qc.invalidateQueries({ queryKey: ['customers'] })
+            qc.invalidateQueries({ queryKey: ['ledger'] })
             setSelected(null)
           }}
         />

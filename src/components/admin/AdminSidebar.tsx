@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
+  Mail,
   LogOut,
   Menu,
   ShieldCheck,
@@ -23,7 +24,7 @@ import { toast } from 'sonner'
 const NAV_GROUPS = [
   {
     label: 'Overview',
-    items: [{ label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }],
+    items: [{ label: 'Messages', href: '/admin/dashboard/messages', icon: Mail }, { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }],
   },
   {
     label: 'Management',

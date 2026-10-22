@@ -1,4 +1,5 @@
 'use client'
+import AccountControls from '@/features/messages/AccountControls'
 
 export const dynamic = 'force-dynamic'
 
@@ -136,6 +137,7 @@ export default function AdminBusinessDetailPage() {
 
           {business && (
             <>
+              <AccountControls id={businessId} />
               {/* Hero */}
               <div className="rounded-2xl border border-white/8 bg-white/2 overflow-hidden">
                 <div

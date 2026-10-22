@@ -11,6 +11,7 @@ import {
   CreditCard,
   Landmark,
   LayoutDashboard,
+  Mail,
   LogOut,
   Menu,
   Package,
@@ -32,7 +33,7 @@ import { toast } from 'sonner'
 const NAV_GROUPS = [
   {
     label: 'Overview',
-    items: [{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
+    items: [{ label: 'Messages', href: '/dashboard/messages', icon: Mail }, { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
   },
   {
     label: 'Finance',

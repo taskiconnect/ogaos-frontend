@@ -1,4 +1,5 @@
 'use client'
+import SubscriptionNotice from '@/features/messages/SubscriptionNotice'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
 import Sidebar from '@/components/dashboard/Sidebar'
 import { PlanAccess } from '@/features/dashboard/PlanAccess'
@@ -25,6 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="lg:pl-72">
         <DashboardHeader />
+        <SubscriptionNotice />
         <PlanAccess>{children}</PlanAccess>
       </div>
     </div>

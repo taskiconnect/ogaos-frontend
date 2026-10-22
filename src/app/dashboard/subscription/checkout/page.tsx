@@ -14,10 +14,12 @@ export default function SubscriptionCheckoutPage() {
   const params = useSearchParams()
   const router = useRouter()
 
-  const initialPlan = (params.get('plan') as SubscriptionPlan) || 'growth'
-  const initialPeriod = Number(params.get('period') || '1')
+  const requestedPlan = params.get('plan')
+  const initialPlan: SubscriptionPlan = requestedPlan === 'pro' ? 'pro' : 'growth'
+  const requestedPeriod = Number(params.get('period') || '1')
+  const initialPeriod = BILLING_OPTIONS.some(option => option.value === requestedPeriod) ? requestedPeriod : 1
 
-  const [plan, setPlan] = useState<SubscriptionPlan>(initialPlan)
+  const [plan] = useState<SubscriptionPlan>(initialPlan)
   const [periodMonths, setPeriodMonths] = useState(initialPeriod)
   const [couponCode, setCouponCode] = useState('')
   const [couponData, setCouponData] = useState<CouponValidationData | null>(null)
@@ -28,6 +30,7 @@ export default function SubscriptionCheckoutPage() {
   const finalAmount = couponData?.final_amount ?? originalAmount
 
   const handleProceed = async () => {
+    if (loading) return
     setLoading(true)
     try {
       const res = await initiateSubscription({

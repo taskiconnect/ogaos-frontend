@@ -191,20 +191,12 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
   const [activeProductQuery, setActiveProductQuery] = useState('')
   const [customerQuery, setCustomerQuery] = useState('')
   const [productSearch, setProductSearch] = useState<string[]>([])
-  const [idempotencyKey, setIdempotencyKey] = useState('')
 
   // ── Barcode scanner state ─────────────────────────────────────────────────
   const [scannerOpen, setScannerOpen] = useState(false)
   // Tracks which item row the scanner was opened for (-1 = add new row)
   const pendingScanRowRef = useRef<number>(-1)
 
-  useEffect(() => {
-    if (open) {
-      setIdempotencyKey(crypto.randomUUID())
-    } else {
-      setIdempotencyKey('')
-    }
-  }, [open])
 
   const customerSearch = useDebouncedValue(customerQuery)
   const productQuery = useDebouncedValue(activeProductQuery)
@@ -348,7 +340,6 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
     setCustomerMode('none')
     setSelectedCustomer(null)
     setProductSearch([])
-    setIdempotencyKey(crypto.randomUUID())
   }
 
   const mutation = useMutation({
@@ -401,7 +392,7 @@ export default function RecordSaleModal({ open, onOpenChange, onSuccess }: Props
             : {}),
       }
 
-      return createSale(payload, idempotencyKey)
+      return createSale(payload)
     },
     onSuccess: () => {
       toast.success('Sale recorded!')

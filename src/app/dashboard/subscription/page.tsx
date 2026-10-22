@@ -10,8 +10,10 @@ import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function SubscriptionPage() {
-  const { subscription, isLoading } = useSubscription()
+  const { subscription, isLoading, isActive } = useSubscription()
   const router = useRouter()
+  // Grace-period customers can renew even while temporary access remains.
+  const currentPlanActive = isActive && subscription?.status === 'active'
 
   const goToCheckout = (plan: SubscriptionPlan) => {
     if (plan === 'free') return
@@ -46,13 +48,13 @@ export default function SubscriptionPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   <PlanCard
                     plan="growth"
-                    currentPlan={subscription?.plan}
+                    currentPlan={subscription?.plan} currentPlanActive={currentPlanActive}
                     onSelect={goToCheckout}
                   />
-                  <PlanCard plan="pro" currentPlan={subscription?.plan} onSelect={goToCheckout} />
+                  <PlanCard plan="pro" currentPlan={subscription?.plan} currentPlanActive={currentPlanActive} onSelect={goToCheckout} />
                   <PlanCard
                     plan="custom"
-                    currentPlan={subscription?.plan}
+                    currentPlan={subscription?.plan} currentPlanActive={currentPlanActive}
                     onSelect={goToCheckout}
                   />
                 </div>
